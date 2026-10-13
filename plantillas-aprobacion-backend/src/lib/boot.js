@@ -26,12 +26,13 @@ module.exports = app => {
     }
   }
   app.set('ruta',rutas);
+    const isForce = process.env.FORCE === 'true' || process.env.FORCE === true;
     if (process.env.NODE_ENV !== "test") {
         app.src.db.sequelize.sync().then(() => {
-          if (process.env.FORCE || false){
+          if (isForce) {
             console.log("------------BASE DE DATOS CREADA--------------");
             process.exit(0);
-          }else{
+          } else {
             app.listen(app.get("port"), () => {
                 console.log(`
                        _.-'~~~~~~\`-._
@@ -53,12 +54,16 @@ module.exports = app => {
                 console.log(`Iniciando servidor en el puerto ${app.get('port')} `);
             });
           }
+        }).catch(err => {
+          console.error('[BOOT ERROR] Error al sincronizar Sequelize:', err);
         });
-    }else{
+    } else {
       app.src.db.sequelize.sync().then(() => {
         console.log("------------BASE DE DATOS CREADA--------------");
-        if (process.env.FORCE || false)
+        if (isForce)
             process.exit(0);
+      }).catch(err => {
+        console.error('[BOOT ERROR] Error al sincronizar Sequelize en modo test:', err);
       });
     }
 };

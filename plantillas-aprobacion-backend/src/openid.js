@@ -5,6 +5,9 @@ let issuer = null;
 module.exports = async (app) => {
   if (!client) {
     const config = app.src.config.config;
+    if (!config || !config.issuer) {
+      return null;
+    }
 
     async function discovery() {
       if (!issuer) {
