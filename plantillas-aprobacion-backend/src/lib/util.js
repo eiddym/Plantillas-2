@@ -6,11 +6,11 @@ const html_pdf = require('html-pdf');
 const html_pdf1 = require('html-pdf');
 const ejs = require("ejs");
 const moment = require('moment');
-const Uuid = require('uuid');
+const Uuid = require('./uuid');
 const config = require('../config/config')();
 const md5File = require('md5-file');
 const fs = require('fs');
-const jwt = require("jwt-simple");
+const jwt = require('./jwt');
 const Op = require('sequelize').Op;
 
 const raiz = "./";

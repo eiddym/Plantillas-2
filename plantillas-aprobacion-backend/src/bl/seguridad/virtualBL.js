@@ -1,7 +1,7 @@
 const blu = require('./usuarioBL');
 const moment = require('moment');
-const Uuid = require('uuid');
-const jwt = require('jwt-simple');
+const Uuid = require('../../lib/uuid');
+const jwt = require('../../lib/jwt');
 const logger = require('../../lib/logger');
 
 

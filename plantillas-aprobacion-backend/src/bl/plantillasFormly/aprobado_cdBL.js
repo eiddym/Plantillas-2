@@ -1,5 +1,5 @@
 const _ = require('lodash');
-const Uuid = require('uuid');
+const Uuid = require('../../lib/uuid');
 const { Issuer, TokenSet } = require('openid-client');
 Issuer.defaultHttpOptions = { timeout: 15000 };
 const config = require('./../../config/config')();

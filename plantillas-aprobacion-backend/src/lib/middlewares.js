@@ -8,7 +8,7 @@ const fileupload = require('express-fileupload');
 const moment = require('moment');
 // La fecha se obtiene por petición para evitar utilizar una fecha congelada
 // al cargar el módulo.
-const jwt = require("jwt-simple");
+const jwt = require("./jwt");
 const helmet = require('helmet');
 const nocache = require("nocache");
 

@@ -1,6 +1,6 @@
 require('colors');
 const Promise = require('bluebird');
-const Uuid = require('uuid');
+const Uuid = require('../../lib/uuid');
 const Archivo = require('../../lib/archivos');
 const sequelize = require('sequelize');
 const moment = require('moment');

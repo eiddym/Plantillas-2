@@ -4,8 +4,6 @@
  * eliminar
  */
 
- const Q = require('q');
-
 module.exports = {
 
   /**
@@ -13,32 +11,25 @@ module.exports = {
    * rol
    * @param  {Array} rutas       Array de objetos de tipo rutas
    * @param  {Array} roles_rutas Array de objetos de tipo roles_rutas
-   * @return {Array}             Array de objetos de tipo rutas con permisos
+   * @return {Promise<Array>}    Array de objetos de tipo rutas con permisos
    */
   establecerRutasPermisos: (rutas, roles_rutas) => {
-    const deferred = Q.defer();
-    let ruta;
-    for(let i = 0; i < rutas.length; i++){
-      ruta = rutas[i];
-      for(let k = 0; k < roles_rutas.length; k++){
-        if(ruta.id_ruta == roles_rutas[k].id_ruta){
-          if(roles_rutas[k].method_get)
+    for (let i = 0; i < rutas.length; i++) {
+      const ruta = rutas[i];
+      for (let k = 0; k < roles_rutas.length; k++) {
+        if (ruta.id_ruta == roles_rutas[k].id_ruta) {
+          if (roles_rutas[k].method_get)
             rutas[i].dataValues.get = true;
-          if(roles_rutas[k].method_post)
+          if (roles_rutas[k].method_post)
             rutas[i].dataValues.post = true;
-          if(roles_rutas[k].method_put)
+          if (roles_rutas[k].method_put)
             rutas[i].dataValues.put = true;
-          if(roles_rutas[k].method_delete)
+          if (roles_rutas[k].method_delete)
             rutas[i].dataValues.delete = true;
         }
       }
-
-      if(i+1  == rutas.length){
-          deferred.resolve(rutas);
-      }
     }
-
-    return deferred.promise
+    return Promise.resolve(rutas);
   },
   /**
    * [function description]

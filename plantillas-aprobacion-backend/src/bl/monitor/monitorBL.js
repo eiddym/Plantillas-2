@@ -1,5 +1,5 @@
 const Promise = require('bluebird');
-const Uuid = require('uuid');
+const Uuid = require('../../lib/uuid');
 const moment = require('moment');
 const logger = require('../../lib/logger');
 

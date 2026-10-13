@@ -4,7 +4,7 @@
 
   const fs = require('fs');
   const util = require('./util');
-  const Uuid = require('uuid');
+  const Uuid = require('./uuid');
   const { PDFDocument } = require('pdf-lib');
   const _ = require('lodash');
   const logger = require('./logger');

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const _ = require('lodash');
-const Uuid = require('uuid');
-const sequelizeFormly = require("sequelize-formly");
+const Uuid = require('../../lib/uuid');
+const sequelizeFormly = require('../../lib/modelToFormly');
 const { documento_enviar } = require('../../bl/plantillasFormly/documentoBL');
 const {forEach} = require('lodash');
 const sequelize = require('sequelize')

@@ -1,5 +1,5 @@
 const prompts = require("prompts");
-const jwt = require('jwt-simple');
+const jwt = require('./src/lib/jwt');
 const pg = require("pg");
 
 

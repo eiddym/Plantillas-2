@@ -1,10 +1,10 @@
-const jwt = require("jwt-simple");
+const jwt = require('../../lib/jwt');
 const LdapStrategy = require("passport-ldapauth");
 const passport = require("passport");
 const crypto = require("crypto");
 const util = require('../../lib/util');
 const bl = require('../../bl/seguridad/usuarioBL');
-const Uuid = require('uuid');
+const Uuid = require('../../lib/uuid');
 const moment = require('moment');
 
 module.exports = app => {

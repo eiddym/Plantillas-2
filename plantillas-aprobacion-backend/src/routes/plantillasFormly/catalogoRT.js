@@ -1,5 +1,5 @@
-const options = require('sequelize-formly');
-const sequelizeHandlers = require('sequelize-handlers');
+const options = require('../../lib/modelToFormly');
+const sequelizeHandlers = require('../../lib/crudHandler');
 const logger = require('../../lib/logger');
 
 module.exports = app => {

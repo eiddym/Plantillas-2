@@ -1,4 +1,3 @@
-const Q = require('q');
 const rolesMenusBl = require('../../bl/seguridad/roles_menusBL');
 const util = require('../../lib/util');
 

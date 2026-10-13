@@ -1,6 +1,6 @@
 /* eslint-disable arrow-body-style */
-const {ModelHandler} = require("sequelize-handlers");
-const sequelizeFormly = require("sequelize-formly");
+const { ModelHandler } = require("../../lib/crudHandler");
+const sequelizeFormly = require("../../lib/modelToFormly");
 const _ = require('lodash');
 const fs = require("fs");
 const moment = require('moment');

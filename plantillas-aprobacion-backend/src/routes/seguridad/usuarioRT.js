@@ -1,5 +1,5 @@
 require ('colors');
-const options = require('sequelize-formly');
+const options = require('../../lib/modelToFormly');
 const util = require('../../lib/util');
 const correo = require('../../lib/correo');
 const _ = require('lodash');
