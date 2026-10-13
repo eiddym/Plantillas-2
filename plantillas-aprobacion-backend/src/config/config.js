@@ -154,7 +154,7 @@ module.exports = () => {
       }
     },
     // Configuracion de cliente, para ciudadania digital
-    issuer: process.env.ISSUER || 'https://account-idetest.agetic.gob.bo/',
+    issuer: process.env.ISSUER || null,
     client: {
       post_logout_redirect_uris: [
         'http://localhost:3000/oauth/logout.html',

@@ -27,8 +27,11 @@ module.exports = app => {
   }
   app.set('ruta',rutas);
     const isForce = process.env.FORCE === 'true' || process.env.FORCE === true;
+    console.log('[BOOT] Verificando modo:', process.env.NODE_ENV, 'isForce:', isForce, 'Puerto:', app.get("port"));
     if (process.env.NODE_ENV !== "test") {
+        console.log('[BOOT] Ejecutando app.src.db.sequelize.sync()...');
         app.src.db.sequelize.sync().then(() => {
+          console.log('[BOOT] sequelize.sync() completado con exito.');
           if (isForce) {
             console.log("------------BASE DE DATOS CREADA--------------");
             process.exit(0);

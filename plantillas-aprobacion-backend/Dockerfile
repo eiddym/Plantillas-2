@@ -20,7 +20,7 @@ ENV NODE_OPTIONS="--openssl-legacy-provider"
 WORKDIR /app
 
 # Copiar manifiestos primero para aprovechar cache en builds posteriores
-COPY package.json package-lock.json ./
+COPY package.json ./
 
 # Instalar dependencias de aplicación dentro de la imagen
 RUN npm install --no-audit --no-fund

@@ -59,7 +59,7 @@
     "passport-jwt": "^4.0.0",
     "passport-ldapauth": "^0.5.0",
     "pdf-lib": "^1.17.1",
-    "pg": "^7.17.0",
+    "pg": "^8.11.3",
     "prompts": "^2.4.2",
     "puppeteer-core": "^13.7.0",
     "qrcode": "^1.5.4",
