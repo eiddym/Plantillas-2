@@ -76,6 +76,8 @@ services:
       - .env
     environment:
       NODE_ENV: ${NODE_ENV:-production}
+      NODE_OPTIONS: "--openssl-legacy-provider"
+      CHROMIUM_PATH: "/usr/bin/chromium"
       DB_HOST: ${DB_HOST:-db}
       DB_PUERTO: ${DB_PUERTO:-5432}
       DB_USUARIO: ${DB_USUARIO:-plantillas}

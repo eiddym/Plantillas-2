@@ -16,7 +16,11 @@ const configuracion=require(`./config.parchar.json`);
     const nestedPath = path.join(__dirname, `../node_modules/${relPath}`);
     if (fs.existsSync(nestedPath)) {
       console.log(`[PARCHE] Eliminando módulo anidado en: ${nestedPath}`);
-      fs.rmdirSync(nestedPath, { recursive: true, force: true });
+      if (fs.rmSync) {
+        fs.rmSync(nestedPath, { recursive: true, force: true });
+      } else {
+        fs.rmdirSync(nestedPath, { recursive: true });
+      }
     }
   } catch(e) {}
 });
@@ -95,9 +99,9 @@ try {
 
 // 3. Itera y aplica parches del JSON de configuración
 configuracion.parches.forEach((parche) => {
-  fs.exists(parche.ruta_destino,(resultadoLectura) => {
-    if(resultadoLectura){
-      const rutaOrigen = `${rutaParches}/${parche.ruta_origen}`;
+  if (fs.existsSync(parche.ruta_destino)) {
+    const rutaOrigen = `${rutaParches}/${parche.ruta_origen}`;
+    if (fs.existsSync(rutaOrigen)) {
       fs.readdirSync(rutaOrigen).filter((archivo) =>
         (archivo.indexOf('.')!==0) && (archivo!==basename) && (archivo.substr(archivo.lastIndexOf('.')+1,archivo.length)!='json')
       )
@@ -114,5 +118,5 @@ configuracion.parches.forEach((parche) => {
         });
       });
     }
-  });
+  }
 });
