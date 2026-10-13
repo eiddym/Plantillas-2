@@ -27,7 +27,13 @@
     "chart.js": "2.5.0",
     "pdf.js-viewer": "1.6.211",
     "ng-csv": "0.3.6",
-    "axios": "0.18.0"
+    "axios": "0.18.0",
+    "tinymce-dist": "5.10.9"
+  },
+  "overrides": {
+    "tinymce-dist": {
+      "main": []
+    }
   },
   "devDependencies": {
     "angular-mocks": "1.5.8"

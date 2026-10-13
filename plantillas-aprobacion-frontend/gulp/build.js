@@ -115,4 +115,11 @@ gulp.task('copy-pdf-worker', function () {
   .pipe(gulp.dest(path.join(conf.paths.dist, '/lib')));
 });
 
-gulp.task('build', ['html', 'fonts', 'other', 'oauth', 'copy-pdf-worker']);
+gulp.task('copy-tinymce', function () {
+  return gulp.src([
+    'bower_components/tinymce-dist/**/*'
+  ])
+  .pipe(gulp.dest(path.join(conf.paths.dist, '/lib/tinymce')));
+});
+
+gulp.task('build', ['html', 'fonts', 'other', 'oauth', 'copy-pdf-worker', 'copy-tinymce']);

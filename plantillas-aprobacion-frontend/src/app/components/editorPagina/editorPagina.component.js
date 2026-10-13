@@ -3,99 +3,123 @@
 
     angular
         .module('app')
-        .constant('simditorConfig', {
-            placeholder: 'Ingrese contenido aquí...',
-            toolbar: [ 'underline', 'ols', '|', 'indent', 'outdent', 'alignment', '|', 'table', 'link', 'hr' ],
-            allowedTags: ['br', 'u', 'p', 'li', 'div'],
-            toolbarHidden: true
+        .constant('tinymceConfig', {
+            menubar: false,
+            branding: false,
+            statusbar: true,
+            elementpath: false,
+            plugins: 'advlist autolink lists link table paste autoresize code hr charmap',
+            toolbar: 'undo redo | formatselect | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | table link hr | removeformat code',
+            block_formats: 'Párrafo=p;Título 1=h1;Título 2=h2;Título 3=h3',
+            table_default_attributes: {
+                border: '1'
+            },
+            table_default_styles: {
+                'width': '100%',
+                'border-collapse': 'collapse'
+            },
+            paste_data_images: false,
+            min_height: 220,
+            autoresize_bottom_margin: 20,
+            content_style: "body { font-family: 'Open Sans', Arial, Helvetica, sans-serif; font-size: 11pt; line-height: 1.35; color: #222; margin: 10px; } p { margin: 0 0 6px 0; } table { width: 100%; border-collapse: collapse; margin-bottom: 8px; } td, th { border: 1px solid #BDBDBD; padding: 4px; }"
         })
-        .directive('ngSimditor', ['$timeout', 'simditorConfig', function ($timeout, simditorConfig) {
-            Simditor.locale = 'en-US';  // eslint-disable-line no-undef
-            Simditor.i18n['en-US'] = {  // eslint-disable-line no-undef
-                'bold': 'Negrita',
-                'italic': 'Itálica',
-                'underline': 'Subrayar',
-                'color': 'Color',
-                'indent': 'Aumentar sangría',
-                'outdent': 'Quitar sangría',
-                'alignment': 'Alinear',
-                'table': 'Tabla',
-                'link': 'Enlace',
-                'hr': 'Línea',
-                'deleteRow': 'Eliminar fila',
-                'insertRowAbove': 'Insertar fila arriba',
-                'insertRowBelow': 'Insertar fila abajo',
-                'deleteColumn': 'Eliminar columna',
-                'insertColumnLeft': 'Insertar columna a la izquierda',
-                'insertColumnRight': 'Insertar columna a la derecha',
-                'paintRow': 'Pintar fila',
-                'paintCell': 'Pintar celda',
-                'dissolveRow': 'Despintar fila',
-                'dissolveCell': 'Despintar celda',
-                'deleteTable': 'Eliminar tabla',
-                'addBorder': 'Agregar bordes',
-                'removeBorder': 'Eliminar bordes',
-                'listDisc': 'Circulos llenos',
-                'listCircle': 'Circulos vacios',
-                'listSquare': 'Cuadrados llenos',
-                'listDecimal': '1, 2, 3, 4...',
-                'listDecimal0': '01, 02, 03, 04...',
-                'listUpperRoman': 'I, II, III, IV...',
-                'listLowerRoman': 'i, ii, iii, iv...',
-                'listUpperAlpha': 'A, B, C, D...',
-                'listLowerAlpha': 'a, b, c, d...',
-                'listGreek': 'Letras griegas',
-                'toggleList': 'Añadir/quitar Lista'
-            };
+        .directive('ngTinymce', ngTinymceDirective)
+        .directive('ngSimditor', ngTinymceDirective);
 
-            // Runs during compile
-            return {
-                // name: '',
-                // priority: 1,
-                // terminal: true,
-                scope: {
-                    content: '=',
-                    disabled: '=',
-                    save: '@'
-                }, // {} = isolate, true = child, false/undefined = no change
-                // controller: function($scope, $element, $attrs, $transclude) {},
-                // require: 'ngModel', // Array = multiple requires, ? = optional, ^ = check parent elements
-                restrict: 'E', // E = Element, A = Attribute, C = Class, M = Comment
-                template: '<textarea data-autosave="editor-content"></textarea>',
-                // templateUrl: '',
-                replace: true,
-                // transclude: true,
-                // compile: function(tElement, tAttrs, function transclude(function(scope, cloneLinkingFn){ return function linking(scope, elm, attrs){}})),
-                link: function ($scope, iElm, iAttrs, controller) { // eslint-disable-line no-unused-vars
-                    var sc = $scope;
-                    var editor = new Simditor( // eslint-disable-line no-undef
-                        angular.extend({ textarea: iElm }, simditorConfig)
-                    );
+    /** @ngInject */
+    function ngTinymceDirective($timeout, tinymceConfig) {
+        var idCounter = 0;
 
-                    //cargar valor inicial si tiene
-                    $timeout(function() {
-                        editor.body[0].contentEditable = (angular.isDefined(sc.disabled))? !sc.disabled : true;
-                        if(angular.isDefined(sc.content))  editor.setValue(sc.content);
-                    })
+        return {
+            restrict: 'EA',
+            scope: {
+                content: '=',
+                disabled: '='
+            },
+            template: '<textarea></textarea>',
+            replace: true,
+            link: function ($scope, iElm) {
+                var uniqueId = 'tinymce_editor_' + (++idCounter);
+                iElm.attr('id', uniqueId);
 
-                    //actualizar el content
-                    var changed = function (ev) {  // eslint-disable-line no-unused-vars
-                        sc.content = editor.getValue();
-                    };
+                function initTinyMCE() {
+                    if (!window.tinymce) {
+                        $timeout(initTinyMCE, 100);
+                        return;
+                    }
 
-                    editor.on('valuechanged', changed);
+                    if (!window.tinymce.baseURL) {
+                        window.tinymce.baseURL = window.location.origin + '/lib/tinymce';
+                    }
 
-                    editor.on('focus', function (ev) {  // eslint-disable-line no-unused-vars
-                        angular.element(iElm).prev().prev().prev().addClass('active-editor');
+                    var options = angular.extend({}, tinymceConfig, {
+                        target: iElm[0],
+                        setup: function (editor) {
+                            editor.on('init', function () {
+                                if (angular.isDefined($scope.content) && $scope.content !== null) {
+                                    editor.setContent($scope.content);
+                                }
+                                if (angular.isDefined($scope.disabled)) {
+                                    editor.setMode($scope.disabled ? 'readonly' : 'design');
+                                }
+                            });
+
+                            var updateModel = function () {
+                                var val = editor.getContent();
+                                if ($scope.content !== val) {
+                                    $timeout(function () {
+                                        $scope.content = val;
+                                    });
+                                }
+                            };
+
+                            editor.on('change input undo redo SetContent', updateModel);
+
+                            editor.on('focus', function () {
+                                angular.element(iElm).closest('.formly-field-editorTexto').addClass('active-editor');
+                            });
+
+                            editor.on('blur', function () {
+                                updateModel();
+                                $timeout(function () {
+                                    angular.element(iElm).closest('.formly-field-editorTexto').removeClass('active-editor');
+                                }, 150);
+                            });
+                        }
                     });
 
-                    editor.on('blur', function (ev) {  // eslint-disable-line no-unused-vars
-                        $timeout(function () {
-                            angular.element(iElm).prev().prev().prev().removeClass('active-editor');
-                        }, 200);
-                    });
+                    window.tinymce.init(options);
                 }
-            };
-        }]);
 
+                $timeout(initTinyMCE);
+
+                $scope.$watch('content', function (newVal, oldVal) {
+                    if (newVal !== oldVal && window.tinymce) {
+                        var editor = window.tinymce.get(uniqueId);
+                        if (editor && editor.initialized && newVal !== editor.getContent()) {
+                            editor.setContent(newVal || '');
+                        }
+                    }
+                });
+
+                $scope.$watch('disabled', function (newVal) {
+                    if (angular.isDefined(newVal) && window.tinymce) {
+                        var editor = window.tinymce.get(uniqueId);
+                        if (editor && editor.initialized) {
+                            editor.setMode(newVal ? 'readonly' : 'design');
+                        }
+                    }
+                });
+
+                $scope.$on('$destroy', function () {
+                    if (window.tinymce) {
+                        var editor = window.tinymce.get(uniqueId);
+                        if (editor) {
+                            editor.destroy();
+                        }
+                    }
+                });
+            }
+        };
+    }
 })();
