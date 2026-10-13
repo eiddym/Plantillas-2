@@ -5,7 +5,7 @@
   const fs = require('fs');
   const util = require('./util');
   const Uuid = require('uuid');
-  const pdftk = require('node-pdftk');
+  const { PDFDocument } = require('pdf-lib');
   const _ = require('lodash');
   const logger = require('./logger');
 
@@ -131,41 +131,67 @@
       }
     },
 
-    anular: (rutaDocumento, buffer) =>
-    new Promise((resolve,reject) => {
-      if(fs.existsSync(rutaDocumento)===false) return reject('El documento a anular no existe.');
-      return pdftk.input(fs.readFileSync(rutaDocumento))
-      .stamp(buffer)
-      .output()
-      .then(buffer =>
-        fs.writeFile(rutaDocumento, buffer, {flag:'w+'}, error => { error ? reject(error): resolve('OK') })
-      )
-    }),
-
-    obtenerBufferLista: (rutaBase, lista) => {
-      const documentos = {};
-      let generar = true;
-
-      lista.map((item, indice) => {
-        const nombreDocumento = util.formatoNombreDoc(item.nombre);
-        const rutaDocumento = `${rutaBase}${nombreDocumento}.pdf`;
-        let clave = util.generarCodigo(6, 'A');
-
-        while(generar === true) {
-          if(!documentos[clave]) generar = false;
-          else clave = util.generarCodigo(6, 'A');
+    anular: async (rutaDocumento, buffer) => {
+      try {
+        if (!fs.existsSync(rutaDocumento)) {
+          throw new Error('El documento a anular no existe.');
         }
 
-        documentos[clave] = fs.readFileSync(rutaDocumento);
-      });
+        let stampBuffer = buffer;
+        if (typeof buffer === 'string') {
+          stampBuffer = await util.generarAnulador({ cite: buffer });
+        }
 
-      return pdftk.input(documentos)
-      .output()
-      .then(respBuffer => respBuffer)
-      .catch(error => {
-        logger.error('Error en la obtencion del buffer de documentos', error);
-        return error;
-      });
+        const docBytes = fs.readFileSync(rutaDocumento);
+        const docPdf = await PDFDocument.load(docBytes);
+        const stampPdf = await PDFDocument.load(stampBuffer);
+        const [embeddedStamp] = await docPdf.embedPdf(stampPdf, [0]);
+
+        const pages = docPdf.getPages();
+        for (const page of pages) {
+          const { width, height } = page.getSize();
+          page.drawPage(embeddedStamp, {
+            x: 0,
+            y: 0,
+            width: width,
+            height: height
+          });
+        }
+
+        const pdfBytes = await docPdf.save();
+        fs.writeFileSync(rutaDocumento, Buffer.from(pdfBytes));
+        return 'OK';
+      } catch (error) {
+        logger.error('Error al anular documento con pdf-lib:', error);
+        throw error;
+      }
+    },
+
+    obtenerBufferLista: async (rutaBase, lista) => {
+      try {
+        const mergedPdf = await PDFDocument.create();
+
+        for (let i = 0; i < lista.length; i++) {
+          const item = lista[i];
+          const nombreDocumento = util.formatoNombreDoc(item.nombre);
+          const rutaDocumento = `${rutaBase}${nombreDocumento}.pdf`;
+
+          if (fs.existsSync(rutaDocumento)) {
+            const docBytes = fs.readFileSync(rutaDocumento);
+            const doc = await PDFDocument.load(docBytes);
+            const copiedPages = await mergedPdf.copyPages(doc, doc.getPageIndices());
+            copiedPages.forEach((page) => mergedPdf.addPage(page));
+          } else {
+            logger.warn(`[PDF-LIB] Documento no encontrado para unir: ${rutaDocumento}`);
+          }
+        }
+
+        const mergedPdfBytes = await mergedPdf.save();
+        return Buffer.from(mergedPdfBytes);
+      } catch (error) {
+        logger.error('Error en la obtencion del buffer de documentos con pdf-lib', error);
+        throw error;
+      }
     },
 
     corregirAnulacion: (datos, models, sequelize) =>

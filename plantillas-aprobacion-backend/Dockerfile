@@ -1,6 +1,6 @@
 FROM node:22-bookworm-slim
 
-# Dependencias necesarias para Chromium (Puppeteer), PDF (pdftk), tipografías y utilidades
+# Dependencias necesarias para Chromium (Puppeteer), tipografías y utilidades
 RUN apt-get update && \
     apt-get install --no-install-recommends -y \
       bzip2 \
@@ -8,7 +8,6 @@ RUN apt-get update && \
       chromium \
       curl \
       fontconfig \
-      pdftk-java \
       python3 \
       tini && \
     npm install -g sequelize-cli pg && \
