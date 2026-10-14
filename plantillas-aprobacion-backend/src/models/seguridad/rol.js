@@ -51,7 +51,7 @@ module.exports = (sequelize, DataType) => {
           buscar: (condicion) => rol.findAll({
               attributes: ["id_rol", "nombre", "descripcion", "peso", "estado"],
               where: condicion,
-              order: 'fecha_creacion ASC',
+              order: [['_fecha_creacion', 'ASC']],
           }),
         },
     });

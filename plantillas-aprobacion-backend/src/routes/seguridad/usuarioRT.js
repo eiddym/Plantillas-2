@@ -185,11 +185,18 @@ module.exports = app => {
         req.query.where = {usuario: {[Op.iLike]: `%${req.query.filter}%`} };
       }
       if(req.query.order) {
+        let orderDir = 'ASC';
+        let orderCol = req.query.order;
         if(req.query.order.charAt(0) == '-'){
-          req.query.order = `${req.query.order.substring(1, req.query.order.length)} DESC`;
+          orderDir = 'DESC';
+          orderCol = req.query.order.substring(1);
+        } else if(req.query.order.includes(' ')) {
+          const parts = req.query.order.trim().split(/\s+/);
+          orderCol = parts[0];
+          orderDir = (parts[1] || 'ASC').toUpperCase();
         }
+        req.query.order = [[orderCol, orderDir]];
       }
-      req.query.order = [req.query.order.split(' ')];
 
       if(req.query.where && req.query.estado) req.query.where.estado={[Op.in]:req.query.estado.split(',')};
       else if(req.query.estado) req.query.where= {estado:{[Op.in]:req.query.estado.split(',')}};
@@ -304,11 +311,10 @@ module.exports = app => {
       opciones.limit = req.query.limit;
     if (req.query.page)
       opciones.offset = (req.query.limit * ((req.query.page || 1) - 1)) || 0;
-    let order;
     if (req.query.order) {
-      order = (req.query.order.charAt(0) == '-') ? ' DESC' : '';
-      req.query.order = (req.query.order.charAt(0) == '-') ? req.query.order.substring(1, req.query.order.length) : req.query.order;
-      opciones.order = req.query.order + order;
+      const orderDir = (req.query.order.charAt(0) == '-') ? 'DESC' : 'ASC';
+      const orderCol = (req.query.order.charAt(0) == '-') ? req.query.order.substring(1) : req.query.order;
+      opciones.order = [[orderCol, orderDir]];
     }
 
     return Usuario.findAndCountAll(opciones)
@@ -612,7 +618,7 @@ module.exports = app => {
                 id_usuario:{ [Op.ne]:req.params.id },
                 fid_unidad:{ [Op.ne]:null },
               },
-              order:'nombres ASC',
+              order: [['nombres', 'ASC']],
             })
             .then(pUsuarios =>
               res.status(201).send(util.formatearMensaje("EXITO","Obtencion de dependientes correcta.",{total:pUsuarios.length, resultado:pUsuarios}))

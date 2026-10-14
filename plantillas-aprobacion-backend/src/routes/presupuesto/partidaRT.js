@@ -93,7 +93,7 @@ module.exports = app => {
           gestion: `${moment().tz("America/La_Paz").year()}`,
           estado: 'ACTIVO',
         },
-        order: 'numero',
+        order: [['numero', 'ASC']],
         limit: 3,
       };
 

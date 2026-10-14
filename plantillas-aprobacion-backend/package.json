@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "test": "mocha --exit --timeout 15000",
     "lint": "eslint *.js lib/*.js src/models/*/*.js src/routes/*/*.js test/*.js src/bl/*/*.js",
     "apidoc": "apidoc -i src/routes/ -o public/apidoc",
     "setup": "sequelize db:seed:all --config src/config/sequelize-cli-config.js --seeders-path src/seeders",

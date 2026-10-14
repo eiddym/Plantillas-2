@@ -82,14 +82,16 @@ module.exports = (sequelize, DataType) => {
                   where: {estado: 'ACTIVO'},
                   paranoid: false,
                   required: false,
-                  order: 'orden ASC',
+                  order: [['orden', 'ASC']],
                 },
               ],
-              order: 'orden ASC',
+              order: [['orden', 'ASC']],
           }),
-          buscarPorId: (id_menu) => menu.findById(id_menu, {
+          buscarPorId: (id_menu) => (menu.findByPk ? menu.findByPk(id_menu, {
             attributes: ["id_menu", "nombre", "descripcion", "orden", "ruta", "icono", "estado", "fid_menu_padre"],
-          }),
+          }) : menu.findById(id_menu, {
+            attributes: ["id_menu", "nombre", "descripcion", "orden", "ruta", "icono", "estado", "fid_menu_padre"],
+          })),
         },
     });
     menu.associate = (models) => {

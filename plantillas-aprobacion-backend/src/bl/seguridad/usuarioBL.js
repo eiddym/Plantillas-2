@@ -394,7 +394,7 @@ module.exports={
   }),
   buscarRolTodos: (UsuarioRol, Rol, Usuario, Oficina, condicion) => Usuario.findAll({
     where: condicion,
-    order: 'estado ASC, usuario ASC',
+    order: [['estado', 'ASC'], ['usuario', 'ASC']],
     include: [{
       model: UsuarioRol,
       as: 'usuario_rol',
@@ -402,7 +402,7 @@ module.exports={
       where: {
         estado: 'ACTIVO',
       },
-      order: 'nombre',
+      order: [['id_usuario_rol', 'ASC']],
       include: [{
         model: Rol,
         as: 'rol',

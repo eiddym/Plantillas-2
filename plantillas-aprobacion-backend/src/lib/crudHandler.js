@@ -72,10 +72,14 @@ function parse(params, { rawAttributes }) {
   };
   const keywords = ['fields', 'limit', 'offset', 'sort', 'filter', 'page', 'searchPro', 'tipoBus', 'campoSel'];
 
-  options.attributes = parseString(params.fields);
-  options.limit = parseInteger(params.limit);
-  options.offset = parseInteger(params.offset);
-  options.order = parseSort(params.sort);
+  const attr = parseString(params.fields);
+  if (attr) options.attributes = attr;
+  const lim = parseInteger(params.limit);
+  if (lim !== undefined) options.limit = lim;
+  const off = parseInteger(params.offset);
+  if (off !== undefined) options.offset = off;
+  const ord = parseSort(params.sort);
+  if (ord) options.order = ord;
 
   _(params)
     .omit(keywords)
