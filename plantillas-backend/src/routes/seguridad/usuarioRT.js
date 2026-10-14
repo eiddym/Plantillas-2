@@ -551,7 +551,7 @@ module.exports = app => {
 /**
  * PARCHE para el endpoint:
  *   GET /api/v1/seguridad/usuario/:id/informacion
- * en plantillas-aprobacion-backend/src/routes/seguridad/usuarioRT.js
+ * en plantillas-backend/src/routes/seguridad/usuarioRT.js
  *
  * PROBLEMA ORIGINAL (2 bugs):
  * 1. Las ramas "director" y "CORRESPONDENCIA" listaban TODOS los

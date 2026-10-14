@@ -6,7 +6,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "plantillas-frontend-v17": {
+    "plantillas-frontend": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -20,7 +20,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/plantillas-frontend-v17",
+            "outputPath": "dist/plantillas-frontend",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": [
@@ -68,10 +68,10 @@
           },
           "configurations": {
             "production": {
-              "buildTarget": "plantillas-frontend-v17:build:production"
+              "buildTarget": "plantillas-frontend:build:production"
             },
             "development": {
-              "buildTarget": "plantillas-frontend-v17:build:development"
+              "buildTarget": "plantillas-frontend:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -79,7 +79,7 @@
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "buildTarget": "plantillas-frontend-v17:build"
+            "buildTarget": "plantillas-frontend:build"
           }
         },
         "test": {

@@ -35,7 +35,7 @@ services:
   # 2. Servidor Backend (Node.js)
   backend:
     build:
-      context: ./plantillas-aprobacion-backend
+      context: ./plantillas-backend
       dockerfile: Dockerfile
     restart: always
     ports:
@@ -67,7 +67,7 @@ services:
     tty: true
     stdin_open: true
     volumes:
-      - ./plantillas-aprobacion-backend:/app
+      - ./plantillas-backend:/app
       - backend_node_modules:/app/node_modules
       - plantillas-documentos:/app/public
       - shared-config:/shared:ro
@@ -117,7 +117,7 @@ services:
   # 3. Servidor Frontend Angular 17 (Nginx)
   frontend:
     build:
-      context: ./plantillas-frontend-v17
+      context: ./plantillas-frontend
       dockerfile: Dockerfile
     restart: always
     ports:

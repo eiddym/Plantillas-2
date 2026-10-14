@@ -8,7 +8,7 @@ RUN npm run build -- --configuration=production
 
 # Etapa 2: Servidor Web Nginx
 FROM nginx:1.25-alpine
-COPY --from=builder /app/dist/plantillas-frontend-v17/browser /usr/share/nginx/html
+COPY --from=builder /app/dist/plantillas-frontend/browser /usr/share/nginx/html
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
