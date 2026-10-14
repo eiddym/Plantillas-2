@@ -62,8 +62,8 @@ services:
              echo '[backend] Asegurando directorios de almacenamiento en /app/public...';
              mkdir -p /app/public/documentos /app/public/externos /app/public/aprobacion /app/public/adjuntos 2>/dev/null || true;
              chown -R node:node /app/public 2>/dev/null || true;
-             echo '[backend] Aplicando parches e inicializando API...';
-             npm run parchar && node index.js"
+             echo '[backend] Inicializando API...';
+              node index.js"
     tty: true
     stdin_open: true
     volumes:
