@@ -25,7 +25,7 @@ COPY package.json ./
 # Instalar dependencias de aplicación dentro de la imagen
 RUN npm install --no-audit --no-fund
 
-# Copiar el resto del backend: index.js, src, parches, public y recursos
+# Copiar el resto del backend: index.js, src, public y recursos
 COPY . .
 
 # Registrar tipografías institucionales (Teko) en la caché del sistema fontconfig

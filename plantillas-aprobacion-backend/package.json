@@ -9,7 +9,6 @@
     "apidoc": "apidoc -i src/routes/ -o public/apidoc",
     "setup": "sequelize db:seed:all --config src/config/sequelize-cli-config.js --seeders-path src/seeders",
     "startdev": "nodemon --exec 'node index.js'",
-    "parchar": "echo 'No se requieren parches externos'",
     "generar": "node generarToken.js",
     "migrar": "sequelize db:migrate --config src/config/sequelize-cli-config.js --migrations-path src/migrations",
     "setup:clean": "FORCE=true node index.js && sequelize db:seed:all --config src/config/sequelize-cli-config.js --seeders-path src/seeders"
@@ -43,7 +42,6 @@
     "express-fileupload": "^1.1.10",
     "file-type": "15.0.1",
     "helmet": "^3.4.0",
-    "html-pdf": "^3.0.1",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.5",
     "lzma": "^2.3.2",
