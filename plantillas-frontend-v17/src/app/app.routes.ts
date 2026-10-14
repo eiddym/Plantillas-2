@@ -26,19 +26,52 @@ export const routes: Routes = [
       },
       {
         path: 'plantillas',
-        redirectTo: 'dashboard'
+        loadComponent: () =>
+          import('./features/editor-plantillas/plantillas-list.component').then(
+            (m) => m.PlantillasListComponent
+          )
+      },
+      {
+        path: 'plantillas/nuevo',
+        loadComponent: () =>
+          import('./features/editor-plantillas/plantilla-editor.component').then(
+            (m) => m.PlantillaEditorComponent
+          )
+      },
+      {
+        path: 'plantillas/:id/editar',
+        loadComponent: () =>
+          import('./features/editor-plantillas/plantilla-editor.component').then(
+            (m) => m.PlantillaEditorComponent
+          )
       },
       {
         path: 'documentos',
-        redirectTo: 'dashboard'
+        loadComponent: () =>
+          import('./features/documentos/documentos-list.component').then(
+            (m) => m.DocumentosListComponent
+          )
       },
       {
         path: 'aprobacion',
-        redirectTo: 'dashboard'
+        loadComponent: () =>
+          import('./features/documentos/documentos-list.component').then(
+            (m) => m.DocumentosListComponent
+          )
       },
       {
         path: 'firmar',
-        redirectTo: 'dashboard'
+        loadComponent: () =>
+          import('./features/documentos/documentos-list.component').then(
+            (m) => m.DocumentosListComponent
+          )
+      },
+      {
+        path: 'archivo',
+        loadComponent: () =>
+          import('./features/documentos/documentos-list.component').then(
+            (m) => m.DocumentosListComponent
+          )
       },
       {
         path: 'catalogos',

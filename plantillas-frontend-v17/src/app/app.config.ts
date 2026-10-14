@@ -7,6 +7,7 @@ import { FormlyMaterialModule } from '@ngx-formly/material';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { CUSTOM_FORMLY_TYPES } from './shared/formly-types';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -15,6 +16,7 @@ export const appConfig: ApplicationConfig = {
     provideAnimationsAsync(),
     importProvidersFrom(
       FormlyModule.forRoot({
+        types: CUSTOM_FORMLY_TYPES,
         validationMessages: [
           { name: 'required', message: 'Este campo es obligatorio' }
         ]
