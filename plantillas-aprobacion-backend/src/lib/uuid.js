@@ -1,7 +1,10 @@
 const crypto = require('crypto');
 
-const uuid = {
-  v4: () => crypto.randomUUID(),
-};
+function uuid() {
+  return crypto.randomUUID();
+}
+
+uuid.v4 = () => crypto.randomUUID();
+uuid.v1 = () => crypto.randomUUID();
 
 module.exports = uuid;
