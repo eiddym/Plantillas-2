@@ -114,11 +114,11 @@ services:
     networks:
       - red-plantillas
 
-  # 3. Servidor Frontend (Nginx)
+  # 3. Servidor Frontend Angular 17 (Nginx)
   frontend:
     build:
-      context: ./plantillas-aprobacion-frontend
-      dockerfile: docker/Dockerfile
+      context: ./plantillas-frontend-v17
+      dockerfile: Dockerfile
     restart: always
     ports:
       - "${FRONTEND_PUERTO:-80}:80"
