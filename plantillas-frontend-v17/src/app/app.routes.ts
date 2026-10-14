@@ -9,6 +9,16 @@ export const routes: Routes = [
       import('./features/auth/login/login.component').then((m) => m.LoginComponent)
   },
   {
+    path: 'login',
+    redirectTo: 'auth/login',
+    pathMatch: 'full'
+  },
+  {
+    path: 'verificar',
+    loadComponent: () =>
+      import('./features/auth/verificar/verificar.component').then((m) => m.VerificarComponent)
+  },
+  {
     path: '',
     canActivate: [authGuard],
     loadComponent: () =>
@@ -72,6 +82,31 @@ export const routes: Routes = [
           import('./features/documentos/documentos-list.component').then(
             (m) => m.DocumentosListComponent
           )
+      },
+      {
+        path: 'usuario',
+        loadComponent: () =>
+          import('./features/administracion/usuarios-list.component').then(
+            (m) => m.UsuariosListComponent
+          )
+      },
+      {
+        path: 'rol',
+        loadComponent: () =>
+          import('./features/administracion/roles-list.component').then(
+            (m) => m.RolesListComponent
+          )
+      },
+      {
+        path: 'unidad',
+        loadComponent: () =>
+          import('./features/administracion/unidades-list.component').then(
+            (m) => m.UnidadesListComponent
+          )
+      },
+      {
+        path: 'menu',
+        redirectTo: 'dashboard'
       },
       {
         path: 'catalogos',
