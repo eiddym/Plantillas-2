@@ -1,11 +1,11 @@
 # Plantillas 2
 
 > **Sistema de Gestión, Diseñador y Aprobación Digital de Documentos**  
-> Arquitectura moderna y de alto rendimiento basada en **Node.js 22 LTS**, **Angular 17** y **PostgreSQL 13**.
+> Arquitectura moderna y de alto rendimiento basada en **Node.js 22 LTS**, **Angular 17** y **PostgreSQL 16**.
 
 [![Node.js Version](https://img.shields.io/badge/Node.js-22%20LTS-green.svg)](https://nodejs.org/)
 [![Angular Version](https://img.shields.io/badge/Angular-17%20Standalone-dd0031.svg)](https://angular.dev/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-13%20Alpine-336791.svg)](https://www.postgresql.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20Alpine-336791.svg)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-Multi--Stage-2496ed.svg)](https://www.docker.com/)
 [![License Status](https://img.shields.io/badge/Licencia-En%20Desarrollo-orange.svg)](#licencia)
 
@@ -24,7 +24,7 @@ El proyecto fue refactorizado y modernizado desde cero para eliminar por complet
 ### Backend (`plantillas-backend`)
 * **Runtime**: Node.js 22 LTS.
 * **Framework**: Express con consign y arquitectura modular.
-* **Base de Datos**: PostgreSQL 13 con ORM Sequelize 6.
+* **Base de Datos**: PostgreSQL 16 con ORM Sequelize 6.
 * **Motor de PDF**: `pdf-lib` nativo en JavaScript + `puppeteer-core` con Chromium.
 * **Warm Browser Pool**: Instancia singleton caliente de Chromium con reciclaje automático de memoria cada 100 documentos (renderizado de PDFs en ~150 ms).
 * **Caché**: Capa de memoria en tiempo de ejecución (`MemoryCache`) con TTL y desalojo LRU para plantillas y esquemas de roles.
