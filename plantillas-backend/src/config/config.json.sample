@@ -7,9 +7,11 @@
     "port": 5432,
     "dialect": "postgres",
     "pool": {
-      "max": 15,
-      "min": 0,
-      "idle": 10000
+      "max": 20,
+      "min": 4,
+      "acquire": 30000,
+      "idle": 10000,
+      "evict": 1000
     },
     "timezone": "America/La_Paz"
   },

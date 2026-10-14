@@ -20,9 +20,19 @@ const dirAdjuntosAprobacion = config.aprobacionCD.ruta_externos_aprobacion;
 const puppeteer = require('puppeteer-core');
 
 let puppeteerBrowser = null;
+let renderCount = 0;
+const MAX_RENDERS_BEFORE_RECYCLE = 100;
+
 async function getPuppeteerBrowser() {
   if (puppeteerBrowser && puppeteerBrowser.isConnected()) {
-    return puppeteerBrowser;
+    if (renderCount >= MAX_RENDERS_BEFORE_RECYCLE) {
+      console.log('[PUPPETEER] Reciclando proceso de Chromium tras ' + renderCount + ' renders para liberar memoria...');
+      try { await puppeteerBrowser.close(); } catch (e) {}
+      puppeteerBrowser = null;
+      renderCount = 0;
+    } else {
+      return puppeteerBrowser;
+    }
   }
   const executablePath = process.env.CHROMIUM_PATH || process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
   puppeteerBrowser = await puppeteer.launch({
@@ -42,7 +52,17 @@ async function getPuppeteerBrowser() {
     handleSIGTERM: false,
     handleSIGHUP: false
   });
+  renderCount = 0;
   return puppeteerBrowser;
+}
+
+async function closePuppeteerBrowser() {
+  if (puppeteerBrowser) {
+    console.log('[PUPPETEER] Cerrando instancia singleton de Chromium...');
+    try { await puppeteerBrowser.close(); } catch (e) {}
+    puppeteerBrowser = null;
+    renderCount = 0;
+  }
 }
 
 function marginToInches(val, defaultInches = 0) {
@@ -63,26 +83,13 @@ function marginToInches(val, defaultInches = 0) {
 }
 
 async function renderPdfPuppeteer({ html, headerHtml, footerHtml, format, outputPath }) {
-  console.log('[PUPPETEER STEP 1] Launching Chromium...');
-  const executablePath = process.env.CHROMIUM_PATH || process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
-  const browser = await puppeteer.launch({
-    executablePath,
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--headless',
-      '--disable-web-security',
-      '--allow-file-access-from-files'
-    ]
-  });
-  console.log('[PUPPETEER STEP 2] Browser launched. Creating new page...');
+  console.log('[PUPPETEER STEP 1] Obteniendo instancia Chromium desde Warm Pool...');
+  const browser = await getPuppeteerBrowser();
+  renderCount++;
+  console.log('[PUPPETEER STEP 2] Abriendo pestaña reutilizable (render #' + renderCount + ')...');
   const page = await browser.newPage();
 
   try {
-
     console.log('[PUPPETEER STEP 3] Setting HTML content (length: ' + (html ? html.length : 0) + ')...');
     await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 10000 });
     console.log('[PUPPETEER STEP 4] HTML content set. Preparing PDF params...');
@@ -137,9 +144,10 @@ async function renderPdfPuppeteer({ html, headerHtml, footerHtml, format, output
     console.error('[PUPPETEER EXCEPTION]', err);
     throw err;
   } finally {
-    console.log('[PUPPETEER STEP 7] Closing page and browser...');
-    await page.close().catch(() => {});
-    await browser.close().catch(() => {});
+    console.log('[PUPPETEER STEP 7] Cerrando pestaña...');
+    if (page) {
+      await page.close().catch(() => {});
+    }
   }
 }
 
@@ -1663,4 +1671,6 @@ module.exports = {
   obtenerArchivoAprobacionAdjunto,
   crearPdfConPartes,
   renderPdfPuppeteer,
+  getPuppeteerBrowser,
+  closePuppeteerBrowser,
 };

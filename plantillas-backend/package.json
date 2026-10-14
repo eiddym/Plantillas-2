@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "mocha --exit --timeout 15000",
+    "test": "NODE_ENV=test mocha --exit --timeout 15000",
     "lint": "eslint *.js lib/*.js src/models/*/*.js src/routes/*/*.js test/*.js src/bl/*/*.js",
     "apidoc": "apidoc -i src/routes/ -o public/apidoc",
     "setup": "sequelize db:seed:all --config src/config/sequelize-cli-config.js --seeders-path src/seeders",
@@ -32,8 +32,6 @@
     "ad": "^0.3.2",
     "axios": "^0.24.0",
     "body-parser": "^1.15.0",
-    "child_process": "^1.0.2",
-    "coffee-script": "^1.10.0",
     "colors": "^1.4.0",
     "consign": "^0.1.2",
     "cookie-parser": "^1.4.7",

@@ -26,41 +26,69 @@ module.exports = app => {
     }
   }
   app.set('ruta',rutas);
-    const isForce = process.env.FORCE === 'true' || process.env.FORCE === true;
-    console.log('[BOOT] Verificando modo:', process.env.NODE_ENV, 'isForce:', isForce, 'Puerto:', app.get("port"));
-    if (process.env.NODE_ENV !== "test") {
-        console.log('[BOOT] Ejecutando app.src.db.sequelize.sync()...');
-        app.src.db.sequelize.sync().then(() => {
-          console.log('[BOOT] sequelize.sync() completado con exito.');
-          if (isForce) {
-            console.log("------------BASE DE DATOS CREADA--------------");
-            process.exit(0);
-          } else {
-            app.listen(app.get("port"), () => {
-                console.log(`
-                       _.-'~~~~~~\`-._
-                      /      ||      \\
-                     /       ||       \\        PLANTILLAS
-                    |        ||        |        FORMLY
-                    | _______||_______ |
-                    |/ ----- \\/ ----- \\|
-                   /  (     )  (     )  \\
-                  / \\  ----- () -----  / \\
-                 /   \\      /||\\      /   \\
-                /     \\    /||||\\    /     \\
-               /       \\  /||||||\\  /       \\
-              /_        \\o========o/        _\\
-                \`--...__|\`-._  _.-'|__...--'
-                        |    \`'    |
 
-	              `);
-                console.log(`Iniciando servidor en el puerto ${app.get('port')} `);
-            });
-          }
-        }).catch(err => {
-          console.error('[BOOT ERROR] Error al sincronizar Sequelize:', err);
-        });
-    } else {
+
+  const isForce = process.env.FORCE === 'true' || process.env.FORCE === true;
+  console.log('[BOOT] Verificando modo:', process.env.NODE_ENV, 'isForce:', isForce, 'Puerto:', app.get("port"));
+  if (process.env.NODE_ENV !== "test") {
+      console.log('[BOOT] Ejecutando app.src.db.sequelize.sync()...');
+      app.src.db.sequelize.sync().then(() => {
+        console.log('[BOOT] sequelize.sync() completado con exito.');
+        if (isForce) {
+          console.log("------------BASE DE DATOS CREADA--------------");
+          process.exit(0);
+        } else {
+          const server = app.listen(app.get("port"), () => {
+              console.log(`
+                     _.-'~~~~~~\`-._
+                    /      ||      \\
+                   /       ||       \\        PLANTILLAS
+                  |        ||        |        FORMLY
+                  | _______||_______ |
+                  |/ ----- \\/ ----- \\|
+                 /  (     )  (     )  \\
+                / \\  ----- () -----  / \\
+               /   \\      /||\\      /   \\
+              /     \\    /||||\\    /     \\
+             /       \\  /||||||\\  /       \\
+            /_        \\o========o/        _\\
+              \`--...__|\`-._  _.-'|__...--'
+                      |    \`'    |
+
+	            `);
+              console.log(`Iniciando servidor en el puerto ${app.get('port')} `);
+          });
+
+          // Graceful Shutdown
+          const gracefulShutdown = async (signal) => {
+            console.log(`[SHUTDOWN] Señal ${signal} recibida. Cerrando conexiones limpiamente...`);
+            try {
+              if (server) {
+                await new Promise((resolve) => server.close(resolve));
+                console.log('[SHUTDOWN] Servidor HTTP Express cerrado.');
+              }
+              if (app.src && app.src.db && app.src.db.sequelize) {
+                await app.src.db.sequelize.close();
+                console.log('[SHUTDOWN] Conexión Sequelize / Postgres cerrada.');
+              }
+              if (app.src && app.src.lib && app.src.lib.util && app.src.lib.util.closePuppeteerBrowser) {
+                await app.src.lib.util.closePuppeteerBrowser();
+                console.log('[SHUTDOWN] Instancia Chromium de Puppeteer cerrada.');
+              }
+            } catch (e) {
+              console.error('[SHUTDOWN ERROR]', e);
+            } finally {
+              process.exit(0);
+            }
+          };
+
+          process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+          process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+        }
+      }).catch(err => {
+        console.error('[BOOT ERROR] Error al sincronizar Sequelize:', err);
+      });
+  } else {
       app.src.db.sequelize.sync().then(() => {
         console.log("------------BASE DE DATOS CREADA--------------");
         if (isForce)
