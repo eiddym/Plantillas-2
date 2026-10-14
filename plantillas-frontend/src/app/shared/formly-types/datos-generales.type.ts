@@ -13,58 +13,80 @@ import { FieldType, FieldTypeConfig } from '@ngx-formly/core';
   template: `
     <div class="datos-generales-box">
       <!-- Section warning if not visible in print -->
-      <div *ngIf="to['showItem'] === false" class="warning-banner">
-        Esta sección no se mostrará al imprimir en PDF.
-      </div>
-
-      <div class="field-row" *ngIf="to['show']?.para !== false">
-        <span class="label-col">PARA:</span>
-        <div class="val-col">
-          <span class="user-name" *ngIf="formControl.value?.para?.nombres">
-            {{ formControl.value.para.nombres }} {{ formControl.value.para.apellidos }}
-            <span class="user-cargo">({{ formControl.value.para.cargo }})</span>
-          </span>
-          <span class="placeholder-text" *ngIf="!formControl.value?.para?.nombres">
-            [Seleccionar destinatario / Autoridad destino]
-          </span>
+      @if (to['showItem'] === false) {
+        <div class="warning-banner">
+          Esta sección no se mostrará al imprimir en PDF.
         </div>
-      </div>
+      }
 
-      <div class="field-row" *ngIf="to['show']?.via">
-        <span class="label-col">VÍA:</span>
-        <div class="val-col">
-          <span class="user-name" *ngIf="formControl.value?.via?.nombres">
-            {{ formControl.value.via.nombres }} {{ formControl.value.via.apellidos }}
-            <span class="user-cargo">({{ formControl.value.via.cargo }})</span>
-          </span>
-          <span class="placeholder-text" *ngIf="!formControl.value?.via?.nombres">
-            [Vía de revisión / Jefe inmediato]
-          </span>
+      @if (to['show']?.para !== false) {
+        <div class="field-row">
+          <span class="label-col">PARA:</span>
+          <div class="val-col">
+            @if (formControl.value?.para?.nombres) {
+              <span class="user-name">
+                {{ formControl.value.para.nombres }} {{ formControl.value.para.apellidos }}
+                <span class="user-cargo">({{ formControl.value.para.cargo }})</span>
+              </span>
+            } @else {
+              <span class="placeholder-text">
+                [Seleccionar destinatario / Autoridad destino]
+              </span>
+            }
+          </div>
         </div>
-      </div>
+      }
 
-      <div class="field-row" *ngIf="to['show']?.de !== false">
-        <span class="label-col">DE:</span>
-        <div class="val-col">
-          <span class="user-name" *ngIf="formControl.value?.de?.nombres">
-            {{ formControl.value.de.nombres }} {{ formControl.value.de.apellidos }}
-            <span class="user-cargo">({{ formControl.value.de.cargo }})</span>
-          </span>
-          <span class="placeholder-text" *ngIf="!formControl.value?.de?.nombres">
-            [Remitente del documento]
-          </span>
+      @if (to['show']?.via) {
+        <div class="field-row">
+          <span class="label-col">VÍA:</span>
+          <div class="val-col">
+            @if (formControl.value?.via?.nombres) {
+              <span class="user-name">
+                {{ formControl.value.via.nombres }} {{ formControl.value.via.apellidos }}
+                <span class="user-cargo">({{ formControl.value.via.cargo }})</span>
+              </span>
+            } @else {
+              <span class="placeholder-text">
+                [Vía de revisión / Jefe inmediato]
+              </span>
+            }
+          </div>
         </div>
-      </div>
+      }
 
-      <div class="field-row" *ngIf="to['show']?.ref !== false">
-        <span class="label-col">REF.:</span>
-        <div class="val-col">
-          <span class="ref-text" *ngIf="formControl.value?.ref">{{ formControl.value.ref }}</span>
-          <span class="placeholder-text" *ngIf="!formControl.value?.ref">
-            [Referencia o Asunto del documento]
-          </span>
+      @if (to['show']?.de !== false) {
+        <div class="field-row">
+          <span class="label-col">DE:</span>
+          <div class="val-col">
+            @if (formControl.value?.de?.nombres) {
+              <span class="user-name">
+                {{ formControl.value.de.nombres }} {{ formControl.value.de.apellidos }}
+                <span class="user-cargo">({{ formControl.value.de.cargo }})</span>
+              </span>
+            } @else {
+              <span class="placeholder-text">
+                [Remitente del documento]
+              </span>
+            }
+          </div>
         </div>
-      </div>
+      }
+
+      @if (to['show']?.ref !== false) {
+        <div class="field-row">
+          <span class="label-col">REF.:</span>
+          <div class="val-col">
+            @if (formControl.value?.ref) {
+              <span class="ref-text">{{ formControl.value.ref }}</span>
+            } @else {
+              <span class="placeholder-text">
+                [Referencia o Asunto del documento]
+              </span>
+            }
+          </div>
+        </div>
+      }
     </div>
   `,
   styles: [`

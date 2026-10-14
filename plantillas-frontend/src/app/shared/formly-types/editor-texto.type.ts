@@ -10,12 +10,25 @@ import { FieldType, FieldTypeConfig } from '@ngx-formly/core';
   imports: [CommonModule, ReactiveFormsModule, EditorModule],
   template: `
     <div class="editor-texto-container">
-      <label *ngIf="to.label" class="editor-label">{{ to.label }}</label>
-      <editor
-        [formControl]="formControl"
-        [init]="tinyConfig"
-        [disabled]="to.disabled || false">
-      </editor>
+      @if (to.label) {
+        <label class="editor-label">{{ to.label }}</label>
+      }
+      @defer (on viewport; prefetch on idle) {
+        <editor
+          [formControl]="formControl"
+          [init]="tinyConfig"
+          [disabled]="to.disabled || false">
+        </editor>
+      } @placeholder {
+        <div class="editor-skeleton">
+          <div class="skeleton-header">
+            <span class="skeleton-pill"></span>
+            <span class="skeleton-pill"></span>
+            <span class="skeleton-pill"></span>
+          </div>
+          <div class="skeleton-body">Cargando editor de texto enriquecido (TinyMCE)...</div>
+        </div>
+      }
     </div>
   `,
   styles: [`
@@ -28,6 +41,34 @@ import { FieldType, FieldTypeConfig } from '@ngx-formly/core';
       font-weight: 600;
       color: #37474f;
       font-size: 0.9rem;
+    }
+    .editor-skeleton {
+      border: 1px dashed #b0bec5;
+      border-radius: 4px;
+      background: #fafafa;
+      padding: 16px;
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      .skeleton-header {
+        display: flex;
+        gap: 8px;
+        .skeleton-pill {
+          width: 60px;
+          height: 24px;
+          background: #e0e0e0;
+          border-radius: 4px;
+        }
+      }
+      .skeleton-body {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #78909c;
+        font-style: italic;
+      }
     }
   `]
 })

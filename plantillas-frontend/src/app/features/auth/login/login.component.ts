@@ -35,22 +35,26 @@ import { AuthService } from '../../../core/auth/auth.service';
             <p class="subtitle">Sistema de Gestión y Aprobación Documental</p>
           </div>
 
-          <mat-progress-bar *ngIf="loading()" mode="indeterminate"></mat-progress-bar>
+          @if (loading()) {
+            <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+          }
 
           <mat-card-content>
-            <div *ngIf="errorMessage()" class="error-banner">
-              <mat-icon>error_outline</mat-icon>
-              <span>{{ errorMessage() }}</span>
-            </div>
+            @if (errorMessage()) {
+              <div class="error-banner">
+                <mat-icon>error_outline</mat-icon>
+                <span>{{ errorMessage() }}</span>
+              </div>
+            }
 
             <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
               <mat-form-field appearance="outline" class="w-full">
                 <mat-label>Usuario o Correo</mat-label>
                 <input matInput formControlName="username" placeholder="Ej. sys_default" autocomplete="username">
                 <mat-icon matPrefix>person</mat-icon>
-                <mat-error *ngIf="loginForm.get('username')?.hasError('required')">
-                  El usuario es obligatorio
-                </mat-error>
+                @if (loginForm.get('username')?.hasError('required')) {
+                  <mat-error>El usuario es obligatorio</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="w-full">
@@ -60,9 +64,9 @@ import { AuthService } from '../../../core/auth/auth.service';
                 <button type="button" mat-icon-button matSuffix (click)="hidePassword.set(!hidePassword())">
                   <mat-icon>{{ hidePassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
                 </button>
-                <mat-error *ngIf="loginForm.get('password')?.hasError('required')">
-                  La contraseña es obligatoria
-                </mat-error>
+                @if (loginForm.get('password')?.hasError('required')) {
+                  <mat-error>La contraseña es obligatoria</mat-error>
+                }
               </mat-form-field>
 
               <button mat-raised-button color="primary" type="submit" class="submit-btn" [disabled]="loginForm.invalid || loading()">

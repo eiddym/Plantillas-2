@@ -32,28 +32,35 @@ export interface VisorPdfData {
     </div>
 
     <mat-dialog-content class="dialog-body">
-      <!-- PDF iframe viewer -->
-      <iframe
-        *ngIf="safePdfUrl"
-        [src]="safePdfUrl"
-        class="pdf-iframe"
-        title="Visor PDF">
-      </iframe>
-
-      <!-- HTML preview container when rendering HTML directly -->
-      <div
-        *ngIf="!safePdfUrl && data.htmlContent"
-        [innerHTML]="safeHtml"
-        class="html-preview-container">
-      </div>
+      @if (safePdfUrl) {
+        @defer (on viewport) {
+          <iframe
+            [src]="safePdfUrl"
+            class="pdf-iframe"
+            title="Visor PDF">
+          </iframe>
+        } @placeholder {
+          <div class="pdf-skeleton">
+            <mat-icon>picture_as_pdf</mat-icon>
+            <p>Cargando visor de documento PDF...</p>
+          </div>
+        }
+      } @else if (data.htmlContent) {
+        <div
+          [innerHTML]="safeHtml"
+          class="html-preview-container">
+        </div>
+      }
     </mat-dialog-content>
 
     <mat-dialog-actions align="end" class="dialog-footer">
       <button mat-stroked-button mat-dialog-close>Cerrar</button>
-      <a *ngIf="data.pdfUrl" mat-raised-button color="primary" [href]="data.pdfUrl" target="_blank" download>
-        <mat-icon>download</mat-icon>
-        <span>Descargar PDF</span>
-      </a>
+      @if (data.pdfUrl) {
+        <a mat-raised-button color="primary" [href]="data.pdfUrl" target="_blank" download>
+          <mat-icon>download</mat-icon>
+          <span>Descargar PDF</span>
+        </a>
+      }
     </mat-dialog-actions>
   `,
   styles: [`

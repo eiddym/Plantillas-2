@@ -70,13 +70,17 @@ interface PaletteItem {
           <mat-form-field appearance="outline" class="meta-field">
             <mat-label>Nombre de la Plantilla</mat-label>
             <input matInput formControlName="nombre" placeholder="Ej. Informe Técnico Circunstanciado">
-            <mat-error *ngIf="metaForm.get('nombre')?.hasError('required')">El nombre es obligatorio</mat-error>
+            @if (metaForm.get('nombre')?.hasError('required')) {
+              <mat-error>El nombre es obligatorio</mat-error>
+            }
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="meta-field-short">
             <mat-label>Abreviación (Sigla)</mat-label>
             <input matInput formControlName="abreviacion" placeholder="Ej. ITC">
-            <mat-error *ngIf="metaForm.get('abreviacion')?.hasError('required')">Requerido</mat-error>
+            @if (metaForm.get('abreviacion')?.hasError('required')) {
+              <mat-error>Requerido</mat-error>
+            }
           </mat-form-field>
         </form>
       </mat-card>
@@ -97,13 +101,12 @@ interface PaletteItem {
             [cdkDropListData]="paletteItems"
             [cdkDropListConnectedTo]="[canvasList]"
             class="palette-list">
-            <div
-              *ngFor="let item of paletteItems"
-              cdkDrag
-              class="palette-item">
-              <mat-icon class="item-icon">{{ item.icon }}</mat-icon>
-              <span class="item-name">{{ item.name }}</span>
-            </div>
+            @for (item of paletteItems; track item.type) {
+              <div cdkDrag class="palette-item">
+                <mat-icon class="item-icon">{{ item.icon }}</mat-icon>
+                <span class="item-name">{{ item.name }}</span>
+              </div>
+            }
           </div>
         </mat-card>
 
@@ -121,26 +124,25 @@ interface PaletteItem {
             [cdkDropListData]="canvasFields"
             (cdkDropListDropped)="onDrop($event)"
             class="canvas-list">
-            <div *ngIf="canvasFields.length === 0" class="canvas-placeholder">
-              <mat-icon>drag_indicator</mat-icon>
-              <p>Arrastre componentes desde la paleta izquierda aquí para comenzar el diseño.</p>
-            </div>
-
-            <div
-              *ngFor="let field of canvasFields; let i = index"
-              cdkDrag
-              class="canvas-item">
-              <div class="canvas-item-handle" cdkDragHandle>
+            @for (field of canvasFields; track field; let i = $index) {
+              <div cdkDrag class="canvas-item">
+                <div class="canvas-item-handle" cdkDragHandle>
+                  <mat-icon>drag_indicator</mat-icon>
+                </div>
+                <div class="canvas-item-info">
+                  <span class="type-badge">{{ field.type }}</span>
+                  <strong>{{ field.templateOptions?.label || field.key || field.type }}</strong>
+                </div>
+                <button mat-icon-button color="warn" (click)="eliminarCampo(i)" matTooltip="Eliminar del lienzo">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            } @empty {
+              <div class="canvas-placeholder">
                 <mat-icon>drag_indicator</mat-icon>
+                <p>Arrastre componentes desde la paleta izquierda aquí para comenzar el diseño.</p>
               </div>
-              <div class="canvas-item-info">
-                <span class="type-badge">{{ field.type }}</span>
-                <strong>{{ field.templateOptions?.label || field.key || field.type }}</strong>
-              </div>
-              <button mat-icon-button color="warn" (click)="eliminarCampo(i)" matTooltip="Eliminar del lienzo">
-                <mat-icon>close</mat-icon>
-              </button>
-            </div>
+            }
           </div>
         </mat-card>
 
@@ -153,13 +155,17 @@ interface PaletteItem {
           </mat-card-header>
 
           <div class="preview-content">
-            <form [formGroup]="previewForm">
-              <formly-form
-                [form]="previewForm"
-                [fields]="canvasFields"
-                [model]="previewModel">
-              </formly-form>
-            </form>
+            @defer (on idle) {
+              <form [formGroup]="previewForm">
+                <formly-form
+                  [form]="previewForm"
+                  [fields]="canvasFields"
+                  [model]="previewModel">
+                </formly-form>
+              </form>
+            } @placeholder {
+              <div class="preview-placeholder">Generando vista previa dinámica...</div>
+            }
           </div>
         </mat-card>
       </div>

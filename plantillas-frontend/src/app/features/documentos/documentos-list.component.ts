@@ -66,7 +66,9 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
           </mat-form-field>
         </div>
 
-        <mat-progress-bar *ngIf="loading()" mode="indeterminate"></mat-progress-bar>
+        @if (loading()) {
+          <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+        }
 
         <table mat-table [dataSource]="documentos()" class="w-full">
           <!-- ID / CITE Column -->
@@ -74,7 +76,9 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
             <th mat-header-cell *matHeaderCellDef>CITE / Nombre</th>
             <td mat-cell *matCellDef="let d">
               <strong class="doc-cite">{{ d.nombre }}</strong>
-              <small class="doc-meta" *ngIf="d.ref">{{ d.ref }}</small>
+              @if (d.ref) {
+                <small class="doc-meta">{{ d.ref }}</small>
+              }
             </td>
           </ng-container>
 
@@ -83,8 +87,12 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
             <th mat-header-cell *matHeaderCellDef>De / Para</th>
             <td mat-cell *matCellDef="let d">
               <div class="participantes-col">
-                <span *ngIf="d.de"><strong>DE:</strong> {{ d.de }}</span>
-                <span *ngIf="d.para"><strong>PARA:</strong> {{ d.para }}</span>
+                @if (d.de) {
+                  <span><strong>DE:</strong> {{ d.de }}</span>
+                }
+                @if (d.para) {
+                  <span><strong>PARA:</strong> {{ d.para }}</span>
+                }
               </div>
             </td>
           </ng-container>
