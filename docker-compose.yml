@@ -137,7 +137,10 @@ services:
       LDAP_BIND_DN: ${LDAP_BIND_DN:-}
       LDAP_BIND_PASSWORD: ${LDAP_BIND_PASSWORD:-}
       LDAP_SEARCHBASE: ${LDAP_SEARCHBASE:-}
-      LDAP_SEARCHFILTER: ${LDAP_SEARCHFILTER}
+      LDAP_SEARCHFILTER: ${LDAP_SEARCHFILTER:-}
+      ISSUER: ${ISSUER:-}
+      CLIENT_ID: ${CLIENT_ID:-}
+      CLIENT_SECRET: ${CLIENT_SECRET:-}
     depends_on:
       db:
         condition: service_healthy

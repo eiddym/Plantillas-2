@@ -159,8 +159,8 @@ module.exports = () => {
       post_logout_redirect_uris: [
         'http://localhost:3000/oauth/logout.html',
       ],
-      client_id: 'IaaIMscMLSJZDoI9JQ7YK',
-      client_secret: '1xpviV31Fte0wvVW-LncpVF_J6KVNj73H-6E0XUxriNqGb8yL_iGVoaOxSVGZtAxm6GYCPP6Htft0oz2OJQTGA',
+      client_id: process.env.CLIENT_ID || 'IaaIMscMLSJZDoI9JQ7YK',
+      client_secret: process.env.CLIENT_SECRET || '1xpviV31Fte0wvVW-LncpVF_J6KVNj73H-6E0XUxriNqGb8yL_iGVoaOxSVGZtAxm6GYCPP6Htft0oz2OJQTGA',
       redirect_uris: [
         'http://localhost:3000/oauth/login.html',
       ],

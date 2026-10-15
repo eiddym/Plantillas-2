@@ -132,10 +132,21 @@ module.exports = app => {
   app.post('/api/v1/plantillasFormly/documento', (req, res) => {
     let xdoc;
     const msg = "La operación se realizó correctamente.";
-    const sw = req.body.sw;
+    const sw = req.body.sw || {};
     sw.xenviar = !sw.enviado && sw.enviar;
-    const model = JSON.parse(req.body.plantilla_valor);
+    const model = JSON.parse(req.body.plantilla_valor || '{}');
     let respuestaMultiple;
+
+    // Resguardo: asegurarse de que _usuario_creacion esté establecido
+    if (!req.body._usuario_creacion) {
+      if (req.user && (req.user.id || req.user.id_usuario)) {
+        req.body._usuario_creacion = req.user.id || req.user.id_usuario;
+      } else if (req.body.audit_usuario && req.body.audit_usuario.id_usuario) {
+        req.body._usuario_creacion = req.body.audit_usuario.id_usuario;
+      } else {
+        req.body._usuario_creacion = 1;
+      }
+    }
 
     sequelize.transaction().then(t => {
         const transaccion = { transaction: t };

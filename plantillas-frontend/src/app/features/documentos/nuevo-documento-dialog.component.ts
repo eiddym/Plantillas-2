@@ -10,6 +10,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { PlantillaFormly, PlantillasService } from '../../core/services/plantillas.service';
 import { DocumentosService } from '../../core/services/documentos.service';
+import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
   selector: 'app-nuevo-documento-dialog',
@@ -282,6 +283,7 @@ import { DocumentosService } from '../../core/services/documentos.service';
 export class NuevoDocumentoDialogComponent implements OnInit {
   private readonly plantillasService = inject(PlantillasService);
   private readonly documentosService = inject(DocumentosService);
+  private readonly authService = inject(AuthService);
   private readonly dialogRef = inject(MatDialogRef<NuevoDocumentoDialogComponent>);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
@@ -344,12 +346,16 @@ export class NuevoDocumentoDialogComponent implements OnInit {
     if (this.creando()) return;
     this.creando.set(true);
 
+    const currentUser = this.authService.currentUser();
+    const usuarioId = currentUser?.id || 1;
+
     const payload = {
       nombre: 'BORRADOR',
       plantilla: p.plantilla,
       plantilla_valor: JSON.stringify({ inputSelect: 'Reservado' }),
       sw: { enviado: false, enviar: false },
-      fid_plantilla: p.id_plantilla_formly
+      fid_plantilla: p.id_plantilla_formly,
+      _usuario_creacion: usuarioId
     };
 
     this.documentosService.crearDocumento(payload).subscribe({
