@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
@@ -129,7 +129,10 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
           <ng-container matColumnDef="acciones">
             <th mat-header-cell *matHeaderCellDef class="text-right">Acciones</th>
             <td mat-cell *matCellDef="let d" class="text-right">
-              <button mat-icon-button color="primary" (click)="verPdf(d)" matTooltip="Ver PDF">
+              <button mat-icon-button (click)="abrirWorkbench(d)" matTooltip="Abrir Hoja de Trabajo">
+                <mat-icon style="color: #0284c7;">description</mat-icon>
+              </button>
+              <button mat-icon-button color="primary" (click)="verPdf(d)" matTooltip="Ver PDF Oficial">
                 <mat-icon>picture_as_pdf</mat-icon>
               </button>
             </td>
@@ -242,6 +245,7 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
 export class DocumentosListComponent implements OnInit {
   private readonly documentosService = inject(DocumentosService);
   private readonly dialog = inject(MatDialog);
+  private readonly router = inject(Router);
 
   readonly displayedColumns = ['nombre', 'participantes', 'clasificacion', 'estado', 'fecha', 'acciones'];
   readonly documentos = signal<Documento[]>([]);
@@ -293,6 +297,12 @@ export class DocumentosListComponent implements OnInit {
     this.searchFilter = input.value.trim();
     this.pageIndex.set(0);
     this.cargarDocumentos();
+  }
+
+  abrirWorkbench(doc: Documento): void {
+    if (doc.id_documento) {
+      this.router.navigate(['/documentos', doc.id_documento]);
+    }
   }
 
   verPdf(doc: Documento): void {

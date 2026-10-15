@@ -63,6 +63,13 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'documentos/:id',
+        loadComponent: () =>
+          import('./features/documentos/document-workbench.component').then(
+            (m) => m.DocumentWorkbenchComponent
+          )
+      },
+      {
         path: 'aprobacion',
         loadComponent: () =>
           import('./features/documentos/documentos-list.component').then(

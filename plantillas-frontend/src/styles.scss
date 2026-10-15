@@ -5,8 +5,34 @@
    SISTEMA DE DISEÑO INSTITUCIONAL COOPERATIVA MARABUNTA R.L. (ORIGINAL + v17)
    ========================================================================== */
 
-/* Variables Semánticas y Tokens de Identidad */
+/* Variables Semánticas y Tokens de Identidad (6 Tokens Intencionales) */
 :root {
+  /* 1. Canvas / Fondo de trabajo */
+  --color-canvas: #f8fafc;
+  --color-canvas-dark: #0f141c;
+
+  /* 2. Superficie */
+  --color-surface: #ffffff;
+  --color-surface-dark: #171e29;
+
+  /* 3. Hoja de documento físico */
+  --color-document: #ffffff;
+
+  /* 4. Tinta de alta legibilidad (WCAG AAA) */
+  --color-ink: #0f172a;
+  --color-ink-muted: #64748b;
+  --color-ink-dark: #f1f5f9;
+
+  /* 5. Acento de acción primaria (Azul Cerúleo Profundo) */
+  --color-brand: #0284c7;
+  --color-brand-hover: #0369a1;
+
+  /* 6. Sistema Semántico de Estados */
+  --color-status-aprobado: #059669;  /* Verde Esmeralda */
+  --color-status-revision: #d97706;  /* Ámbar Ocre */
+  --color-status-observado: #dc2626; /* Carmín */
+
+  /* Identidad Institucional y Gradientes Petróleo Originales */
   --color-primary: #0f2027;
   --color-secondary: #203a43;
   --color-info: #2c5364;
@@ -19,7 +45,7 @@
   --color-cyan-alt: #00b8d4;
   --color-electric-blue: #0284c7;
 
-  /* Colores de Estados Documentales Originales */
+  /* Colores de Estados Documentales */
   --color-pendiente: #ffab00;
   --color-sin-datos: #00b8d4;
   --color-con-datos: #304ffe;
@@ -32,7 +58,7 @@
   --color-warning: #f59e0b;
   --color-success: #10b981;
 
-  --bg-body: #eef1f4;
+  --bg-body: #f8fafc;
   --bg-card: #ffffff;
   --border-color: #e2e8f0;
 }
@@ -40,10 +66,20 @@
 html, body {
   height: 100%;
   margin: 0;
-  font-family: 'Poppins', Roboto, 'Helvetica Neue', sans-serif;
-  background-color: var(--bg-body);
-  color: #1e293b;
+  font-family: 'Plus Jakarta Sans', 'Poppins', sans-serif;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Tipografía de lectura documental (Literata con máx 75 caracteres por línea) */
+.document-prose, .hoja-contenido, .documento-cuerpo {
+  font-family: 'Literata', Georgia, serif;
+  font-size: 1.05rem;
+  line-height: 1.75;
+  color: var(--color-ink);
+  max-width: 75ch; /* Regla estricta para descanso visual */
+  margin: 0 auto;
 }
 
 * {
