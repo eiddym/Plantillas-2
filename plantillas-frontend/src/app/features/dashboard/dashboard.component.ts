@@ -1,7 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTableModule } from '@angular/material/table';
@@ -10,6 +9,8 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { NuevoDocumentoDialogComponent } from '../documentos/nuevo-documento-dialog.component';
 import { AuthService } from '../../core/auth/auth.service';
 import { Documento, DocumentosService } from '../../core/services/documentos.service';
+import { PlantillasService } from '../../core/services/plantillas.service';
+import { SeguridadService } from '../../core/services/seguridad.service';
 
 interface DashboardItem {
   label: string;
@@ -17,12 +18,13 @@ interface DashboardItem {
   icon: string;
   color: string;
   desc: string;
+  count: number;
 }
 
 interface DashboardSection {
   label: string;
   icon: string;
-  color: string;
+  colorClass: string;
   items: DashboardItem[];
 }
 
@@ -32,51 +34,51 @@ interface DashboardSection {
   imports: [
     CommonModule,
     RouterModule,
-    MatCardModule,
     MatIconModule,
     MatButtonModule,
     MatTableModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatDialogModule
   ],
   template: `
-    <div class="home-shell-container">
+    <div class="home-portal-container">
       <!-- Encabezado de Bienvenida Institucional -->
       <header class="home-welcome-header">
         <div class="welcome-text">
-          <h1>{{ saludo() }}, {{ user()?.first_name || user()?.username }}</h1>
-          <p class="subtitle">{{ user()?.cargo || 'Funcionario Oficial' }} &bull; Cooperativa Minera Marabunta R.L.</p>
+          <h1>{{ saludo() }}, {{ user()?.first_name || user()?.username || 'system' }}</h1>
+          <p class="subtitle">{{ user()?.cargo || 'Default system user' }} &bull; Cooperativa Minera Marabunta R.L.</p>
         </div>
         <div class="welcome-actions">
-          <button mat-raised-button class="btn-nuevo-doc" (click)="abrirNuevoDocumento()">
+          <button mat-raised-button class="btn-redactar-doc" (click)="abrirNuevoDocumento()">
             <mat-icon>add_circle_outline</mat-icon>
             <span>Redactar Documento</span>
           </button>
         </div>
       </header>
 
-      <!-- Resumen de Bandeja Activa (Contadores con tipografía de precisión) -->
-      <section class="kpi-precision-container">
-        <h2 class="section-title">Resumen de Bandeja Activa</h2>
-        <div class="kpi-precision-grid">
-          <div class="kpi-panel panel-tramite" routerLink="/documentos">
-            <div class="kpi-number">{{ totalDocs() }}</div>
-            <div class="kpi-info">
+      <!-- Resumen de Bandeja Activa (KPIs) -->
+      <section class="kpi-summary-section">
+        <h2 class="section-title">RESUMEN DE BANDEJA ACTIVA</h2>
+        <div class="kpi-grid">
+          <div class="kpi-card kpi-card-activos" routerLink="/documentos">
+            <div class="kpi-big-number">{{ totalDocs() }}</div>
+            <div class="kpi-meta">
               <strong class="kpi-title">DOCUMENTOS ACTIVOS</strong>
               <span class="kpi-desc">Trámites en redacción y curso</span>
             </div>
           </div>
 
-          <div class="kpi-panel panel-observado" routerLink="/aprobacion">
-            <div class="kpi-number">{{ totalPendientes() }}</div>
-            <div class="kpi-info">
+          <div class="kpi-card kpi-card-revision" routerLink="/aprobacion">
+            <div class="kpi-big-number">{{ totalPendientes() }}</div>
+            <div class="kpi-meta">
               <strong class="kpi-title">EN REVISIÓN / OBSERVADOS</strong>
               <span class="kpi-desc">Requieren visto bueno o ajuste</span>
             </div>
           </div>
 
-          <div class="kpi-panel panel-aprobado" routerLink="/firmar">
-            <div class="kpi-number">{{ totalAprobados() }}</div>
-            <div class="kpi-info">
+          <div class="kpi-card kpi-card-aprobados" routerLink="/firmar">
+            <div class="kpi-big-number">{{ totalAprobados() }}</div>
+            <div class="kpi-meta">
               <strong class="kpi-title">APROBADOS Y VALIDADOS</strong>
               <span class="kpi-desc">Certificados para archivo digital</span>
             </div>
@@ -84,7 +86,7 @@ interface DashboardSection {
         </div>
       </section>
 
-      <!-- Acciones Rápidas -->
+      <!-- Barra de Acciones Rápidas -->
       <section class="quick-actions-bar">
         <span class="actions-label">Acciones rápidas:</span>
         <button mat-stroked-button (click)="abrirNuevoDocumento()" class="quick-action-btn">
@@ -101,9 +103,9 @@ interface DashboardSection {
         </button>
       </section>
 
-      <!-- Trámites Recientes en Curso (Tabla Directa con Hoja de Trabajo) -->
-      <section class="recent-tramites-card">
-        <div class="card-header-line">
+      <!-- Trámites Recientes en Curso (Tabla Directa) -->
+      <section class="recent-tramites-section">
+        <div class="section-header-line">
           <h2>Trámites Recientes en Curso</h2>
           <a routerLink="/documentos" class="link-ver-todo">Ver bandeja completa</a>
         </div>
@@ -161,53 +163,65 @@ interface DashboardSection {
         </div>
       </section>
 
-      <!-- Módulos del Sistema Derivados de Base de Datos -->
-      <section class="home-dynamic-sections">
-        <h2 class="section-title">Módulos del Sistema</h2>
-        @for (seccion of secciones(); track seccion.label) {
-          <div class="section-panel">
-            <div class="section-header">
-              <span class="dot" [ngClass]="'bg-' + seccion.color">
-                <mat-icon>{{ seccion.icon }}</mat-icon>
-              </span>
-              <h3>{{ seccion.label }}</h3>
-            </div>
+      <!-- Módulos del Sistema (Diseño Fiel a Imagen 2) -->
+      <section class="modules-portal-section">
+        <h2 class="section-title">MÓDULOS DEL SISTEMA</h2>
 
-            <div class="grid">
-              @for (item of seccion.items; track item.label) {
-                <div class="card" (click)="irARuta(item.url)">
-                  <div class="card-top">
-                    <span class="icon-badge" [ngClass]="'bg-' + item.color">
-                      <mat-icon>{{ item.icon }}</mat-icon>
-                    </span>
-                  </div>
-                  <div class="card-body">
-                    <p class="card-title">{{ item.label }}</p>
-                    <p class="card-sub">{{ item.desc }}</p>
-                  </div>
-                  <div class="card-footer-action">
-                    <span>Acceder</span>
-                  </div>
+        <div class="sections-stack">
+          @for (seccion of secciones(); track seccion.label) {
+            <div class="module-section-box">
+              <!-- Pastilla de Encabezado de Sección (Imagen 2) -->
+              <div class="section-badge-header">
+                <div class="section-pill" [ngClass]="seccion.colorClass">
+                  <mat-icon class="pill-icon">{{ seccion.icon }}</mat-icon>
+                  <span class="pill-title">{{ seccion.label }}</span>
                 </div>
-              }
+              </div>
+
+              <!-- Grilla de Tarjetas de Módulo (Imagen 2) -->
+              <div class="modules-cards-grid">
+                @for (item of seccion.items; track item.label) {
+                  <div class="module-card" (click)="irARuta(item.url)">
+                    <!-- Fila Superior: Icono a la izquierda, Conteo a la derecha -->
+                    <div class="card-header-row">
+                      <div class="module-icon-box" [ngClass]="'bg-' + item.color">
+                        <mat-icon>{{ item.icon }}</mat-icon>
+                      </div>
+                      <span class="module-count-badge">{{ item.count }}</span>
+                    </div>
+
+                    <!-- Cuerpo de la Tarjeta -->
+                    <div class="module-card-body">
+                      <h4 class="module-name">{{ item.label }}</h4>
+                      <p class="module-desc">{{ item.desc }}</p>
+                    </div>
+
+                    <!-- Enlace de Acción Inferior: Ir a [MÓDULO] → -->
+                    <div class="module-card-link">
+                      <span>Ir a {{ item.label }} &rarr;</span>
+                    </div>
+                  </div>
+                }
+              </div>
             </div>
-          </div>
-        }
+          }
+        </div>
       </section>
 
       <!-- Footer Institucional de la Cooperativa -->
-      <footer class="home-shell-footer">
+      <footer class="home-portal-footer">
         <p>COOPERATIVA MINERA MARABUNTA R.L. &bull; Sistema Digital de Plantillas y Aprobación 2026</p>
       </footer>
     </div>
   `,
   styles: [`
-    .home-shell-container {
-      max-width: 1240px;
+    .home-portal-container {
+      max-width: 1280px;
       margin: 0 auto;
       font-family: 'Plus Jakarta Sans', 'Poppins', sans-serif;
     }
 
+    /* ENCABEZADO DE BIENVENIDA */
     .home-welcome-header {
       display: flex;
       justify-content: space-between;
@@ -220,25 +234,24 @@ interface DashboardSection {
         margin: 0;
         font-size: 1.65rem;
         font-weight: 800;
-        color: var(--color-ink);
+        color: #0f172a;
         letter-spacing: -0.3px;
       }
 
       .subtitle {
         margin: 4px 0 0 0;
-        color: var(--color-ink-muted);
+        color: #64748b;
         font-size: 0.88rem;
       }
     }
 
-    .btn-nuevo-doc {
-      background-color: var(--color-primary) !important;
+    .btn-redactar-doc {
+      background-color: #0f2027 !important;
       color: #ffffff !important;
       border-radius: 24px !important;
-      padding: 0 20px !important;
+      padding: 0 22px !important;
       height: 44px !important;
-      font-family: 'Plus Jakarta Sans', sans-serif !important;
-      font-weight: 600 !important;
+      font-weight: 700 !important;
       display: flex !important;
       align-items: center !important;
       gap: 8px !important;
@@ -251,31 +264,31 @@ interface DashboardSection {
       }
 
       mat-icon {
-        color: var(--color-cyan);
+        color: #22d3ee;
       }
     }
 
     .section-title {
-      font-size: 0.95rem;
+      font-size: 0.88rem;
       font-weight: 800;
-      color: var(--color-ink);
+      color: #0f172a;
       text-transform: uppercase;
-      letter-spacing: 0.6px;
+      letter-spacing: 0.8px;
       margin: 0 0 14px 0;
     }
 
-    /* Resumen de Bandeja Activa (Contadores con tipografía de precisión) */
-    .kpi-precision-container {
+    /* RESUMEN DE BANDEJA ACTIVA (KPIs) */
+    .kpi-summary-section {
       margin-bottom: 24px;
     }
 
-    .kpi-precision-grid {
+    .kpi-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 16px;
     }
 
-    .kpi-panel {
+    .kpi-card {
       background: #ffffff;
       border: 1px solid #e2e8f0;
       border-radius: 12px;
@@ -293,20 +306,19 @@ interface DashboardSection {
       }
     }
 
-    .kpi-number {
+    .kpi-big-number {
       font-size: 2.2rem;
       font-weight: 800;
-      font-family: 'Plus Jakarta Sans', sans-serif;
       line-height: 1;
       font-feature-settings: "tnum";
       font-variant-numeric: tabular-nums;
     }
 
-    .panel-tramite .kpi-number { color: var(--color-brand); }
-    .panel-observado .kpi-number { color: var(--color-status-revision); }
-    .panel-aprobado .kpi-number { color: var(--color-status-aprobado); }
+    .kpi-card-activos .kpi-big-number { color: #0284c7; }
+    .kpi-card-revision .kpi-big-number { color: #d97706; }
+    .kpi-card-aprobados .kpi-big-number { color: #059669; }
 
-    .kpi-info {
+    .kpi-meta {
       display: flex;
       flex-direction: column;
       gap: 3px;
@@ -315,16 +327,16 @@ interface DashboardSection {
     .kpi-title {
       font-size: 0.78rem;
       font-weight: 800;
-      color: var(--color-ink);
+      color: #0f172a;
       letter-spacing: 0.4px;
     }
 
     .kpi-desc {
       font-size: 0.76rem;
-      color: var(--color-ink-muted);
+      color: #64748b;
     }
 
-    /* Barra de Acciones Rápidas */
+    /* BARRA DE ACCIONES RÁPIDAS */
     .quick-actions-bar {
       display: flex;
       align-items: center;
@@ -336,23 +348,23 @@ interface DashboardSection {
     .actions-label {
       font-size: 0.82rem;
       font-weight: 700;
-      color: var(--color-ink-muted);
+      color: #64748b;
       margin-right: 4px;
     }
 
     .quick-action-btn {
       border-radius: 20px !important;
       border-color: #cbd5e1 !important;
-      color: var(--color-ink) !important;
+      color: #1e293b !important;
       font-weight: 600 !important;
       font-size: 0.82rem !important;
       height: 36px !important;
       mat-icon { font-size: 18px; width: 18px; height: 18px; }
-      &:hover { background: #ffffff !important; border-color: var(--color-brand) !important; color: var(--color-brand) !important; }
+      &:hover { background: #ffffff !important; border-color: #0284c7 !important; color: #0284c7 !important; }
     }
 
-    /* Tarjeta de Trámites Recientes */
-    .recent-tramites-card {
+    /* TRÁMITES RECIENTES EN CURSO */
+    .recent-tramites-section {
       background: #ffffff;
       border: 1px solid #e2e8f0;
       border-radius: 12px;
@@ -361,19 +373,19 @@ interface DashboardSection {
       box-shadow: 0 2px 8px rgba(15, 32, 39, 0.04);
     }
 
-    .card-header-line {
+    .section-header-line {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 16px;
-      h2 { margin: 0; font-size: 1rem; font-weight: 800; color: var(--color-ink); }
-      .link-ver-todo { font-size: 0.82rem; font-weight: 600; color: var(--color-brand); text-decoration: none; &:hover { text-decoration: underline; } }
+      h2 { margin: 0; font-size: 1rem; font-weight: 800; color: #0f172a; }
+      .link-ver-todo { font-size: 0.82rem; font-weight: 600; color: #0284c7; text-decoration: none; &:hover { text-decoration: underline; } }
     }
 
     .recent-table {
       width: 100%;
       th.mat-mdc-header-cell {
-        background-color: var(--color-primary) !important;
+        background-color: #0f2027 !important;
         color: #ffffff !important;
         font-size: 12px;
         font-weight: 700;
@@ -385,15 +397,8 @@ interface DashboardSection {
       }
     }
 
-    .doc-code {
-      color: var(--color-ink);
-      font-weight: 700;
-    }
-
-    .text-de {
-      color: #334155;
-    }
-
+    .doc-code { color: #0f172a; font-weight: 700; }
+    .text-de { color: #334155; }
     .text-ref {
       color: #475569;
       display: -webkit-box;
@@ -412,13 +417,13 @@ interface DashboardSection {
       text-transform: uppercase;
     }
 
-    .status-aprobado { background: #ecfdf5; color: var(--color-status-aprobado); }
-    .status-revision { background: #fffbeb; color: var(--color-status-revision); }
-    .status-observado { background: #fef2f2; color: var(--color-status-observado); }
+    .status-aprobado { background: #ecfdf5; color: #059669; }
+    .status-revision { background: #fffbeb; color: #d97706; }
+    .status-observado { background: #fef2f2; color: #dc2626; }
     .status-default { background: #f1f5f9; color: #475569; }
 
     .btn-revisar {
-      color: var(--color-brand) !important;
+      color: #0284c7 !important;
       font-weight: 700 !important;
       font-size: 0.82rem !important;
       mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
@@ -427,105 +432,159 @@ interface DashboardSection {
 
     .text-right { text-align: right; }
 
-    /* Módulos Dinámicos */
-    .home-dynamic-sections {
+    /* MÓDULOS DEL SISTEMA (DISEÑO FIEL A IMAGEN 2) */
+    .modules-portal-section {
+      margin-bottom: 32px;
+    }
+
+    .sections-stack {
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 24px;
     }
 
-    .section-panel {
+    .module-section-box {
       background: #ffffff;
       border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 2px 6px rgba(15, 32, 39, 0.03);
+      border-radius: 14px;
+      padding: 20px 24px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
     }
 
-    .section-header {
-      display: flex;
+    /* Pastilla de Encabezado (Imagen 2) */
+    .section-badge-header {
+      margin-bottom: 18px;
+    }
+
+    .section-pill {
+      display: inline-flex;
       align-items: center;
-      gap: 12px;
-      padding: 14px 20px;
-      background: #f8fafc;
-      border-bottom: 1px solid #e2e8f0;
-
-      .dot {
-        width: 28px;
-        height: 28px;
-        border-radius: 7px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #ffffff;
-        mat-icon { font-size: 16px; width: 16px; height: 16px; color: #ffffff; }
-      }
-
-      h3 {
-        font-size: 0.88rem;
-        font-weight: 800;
-        margin: 0;
-        color: var(--color-ink);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 8px;
+      color: #ffffff;
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
     }
 
-    .grid {
+    .pill-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: #ffffff;
+    }
+
+    /* Colores de las Pastillas según Imagen 2 */
+    .pill-purple { background: #7c3aed; } /* CONFIGURACIÓN */
+    .pill-green { background: #059669; }  /* ADMINISTRACIÓN */
+    .pill-blue { background: #2563eb; }   /* DOCUMENTOS */
+    .pill-teal { background: #0d9488; }   /* CATALOGOS */
+    .pill-slate { background: #334155; }  /* OTROS */
+
+    /* Grilla de Tarjetas (Imagen 2) */
+    .modules-cards-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 1px;
-      background: #e2e8f0;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
     }
 
-    .card {
+    .module-card {
       background: #ffffff;
-      padding: 18px 20px;
+      border: 1px solid #f1f5f9;
+      border-radius: 10px;
+      padding: 16px 18px;
       display: flex;
       flex-direction: column;
       gap: 10px;
       cursor: pointer;
-      transition: background 0.18s ease;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
       &:hover {
-        background: #f8fafc;
-        .card-footer-action { color: var(--color-brand); }
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(15, 32, 39, 0.08);
+        border-color: #cbd5e1;
+
+        .module-card-link {
+          color: #1d4ed8;
+          text-decoration: underline;
+        }
       }
     }
 
-    .card-top {
+    .card-header-row {
       display: flex;
-      align-items: center;
       justify-content: space-between;
+      align-items: flex-start;
     }
 
-    .icon-badge {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
+    .module-icon-box {
+      width: 42px;
+      height: 42px;
+      border-radius: 9px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 
-      mat-icon { font-size: 18px; width: 18px; height: 18px; color: #ffffff; }
+      mat-icon {
+        font-size: 22px;
+        width: 22px;
+        height: 22px;
+        color: #ffffff;
+      }
     }
 
-    .bg-blue { background: #0284c7; }
+    /* Colores de iconos de módulos */
     .bg-teal { background: #0d9488; }
-    .bg-green { background: #059669; }
-    .bg-slate { background: #1e293b; }
     .bg-purple { background: #7c3aed; }
+    .bg-green { background: #059669; }
     .bg-orange { background: #ea580c; }
+    .bg-blue { background: #2563eb; }
     .bg-indigo { background: #4f46e5; }
+    .bg-slate { background: #334155; }
 
-    .card-body { flex: 1; }
-    .card-title { font-size: 0.88rem; font-weight: 700; margin: 0; color: var(--color-ink); }
-    .card-sub { font-size: 0.78rem; color: var(--color-ink-muted); margin: 3px 0 0 0; line-height: 1.35; }
-    .card-footer-action { font-size: 0.78rem; font-weight: 600; color: var(--color-ink-muted); }
+    .module-count-badge {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #0f172a;
+      font-feature-settings: "tnum";
+    }
 
-    .home-shell-footer {
-      margin-top: 36px;
+    .module-card-body {
+      flex: 1;
+    }
+
+    .module-name {
+      margin: 0;
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+
+    .module-desc {
+      margin: 4px 0 0 0;
+      font-size: 0.78rem;
+      color: #64748b;
+      line-height: 1.35;
+    }
+
+    .module-card-link {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #2563eb;
+      letter-spacing: 0.2px;
+      transition: color 0.15s ease;
+    }
+
+    /* FOOTER */
+    .home-portal-footer {
+      margin-top: 24px;
       padding: 20px 0;
       border-top: 1px solid #e2e8f0;
       text-align: center;
@@ -542,6 +601,7 @@ interface DashboardSection {
       min-width: 580px;
     }
 
+    /* RESPONSIVE */
     @media (max-width: 768px) {
       .home-welcome-header {
         flex-direction: column;
@@ -549,17 +609,17 @@ interface DashboardSection {
         gap: 14px;
         margin-bottom: 18px;
 
-        h1 { font-size: 1.4rem; }
+        h1 { font-size: 1.35rem; }
         .welcome-actions { width: 100%; }
-        .btn-nuevo-doc { width: 100% !important; justify-content: center !important; }
+        .btn-redactar-doc { width: 100% !important; justify-content: center !important; }
       }
 
-      .kpi-precision-grid {
+      .kpi-grid {
         grid-template-columns: 1fr;
         gap: 12px;
       }
 
-      .kpi-panel {
+      .kpi-card {
         padding: 14px 18px;
       }
 
@@ -569,12 +629,9 @@ interface DashboardSection {
         .quick-action-btn { flex: 1 1 100%; justify-content: center; }
       }
 
-      .recent-tramites-card {
-        padding: 14px 10px;
-      }
-
-      .grid {
+      .modules-cards-grid {
         grid-template-columns: 1fr;
+        gap: 12px;
       }
     }
   `]
@@ -582,6 +639,8 @@ interface DashboardSection {
 export class DashboardComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly documentosService = inject(DocumentosService);
+  private readonly plantillasService = inject(PlantillasService);
+  private readonly seguridadService = inject(SeguridadService);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
 
@@ -590,9 +649,16 @@ export class DashboardComponent implements OnInit {
 
   readonly displayedColumns = ['nombre', 'de', 'ref', 'estado', 'accion'];
   readonly recentDocs = signal<Documento[]>([]);
-  readonly totalDocs = signal<number>(12);
-  readonly totalPendientes = signal<number>(4);
-  readonly totalAprobados = signal<number>(38);
+  readonly totalDocs = signal<number>(6);
+  readonly totalPendientes = signal<number>(0);
+  readonly totalAprobados = signal<number>(1);
+
+  // Contadores reales dinámicos
+  readonly totalPlantillas = signal<number>(6);
+  readonly totalUsuarios = signal<number>(4);
+  readonly totalRoles = signal<number>(7);
+  readonly totalMenus = signal<number>(21);
+  readonly totalUnidades = signal<number>(1);
 
   readonly saludo = computed(() => {
     const hora = new Date().getHours();
@@ -601,29 +667,32 @@ export class DashboardComponent implements OnInit {
     return 'Buenas noches';
   });
 
-  private readonly parentMetaMap: Record<string, { color: string; icon: string }> = {
-    'DOCUMENTOS': { color: 'blue', icon: 'description' },
-    'CATALOGOS': { color: 'teal', icon: 'folder' },
-    'ADMINISTRACIÓN': { color: 'green', icon: 'settings' },
-    'CONFIGURACIÓN': { color: 'purple', icon: 'build' },
-    'ARCHIVO': { color: 'slate', icon: 'archive' }
+  // Metadatos por categoría padre (Imagen 2)
+  private readonly parentMetaMap: Record<string, { colorClass: string; icon: string }> = {
+    'CONFIGURACIÓN': { colorClass: 'pill-purple', icon: 'build' },
+    'ADMINISTRACIÓN': { colorClass: 'pill-green', icon: 'settings' },
+    'DOCUMENTOS': { colorClass: 'pill-blue', icon: 'description' },
+    'CATALOGOS': { colorClass: 'pill-teal', icon: 'folder' },
+    'ARCHIVO': { colorClass: 'pill-slate', icon: 'archive' }
   };
 
-  private readonly itemMetaMap: Record<string, { icon: string; color: string; desc: string }> = {
-    'documentos': { icon: 'description', color: 'blue', desc: 'Mis documentos redactados y en trámite' },
-    'aprobacion': { icon: 'access_time', color: 'orange', desc: 'Bandeja de revisión y derivación de documentos' },
-    'firmar': { icon: 'edit', color: 'purple', desc: 'Documentos pendientes de firma digital' },
-    'aprobar_documento': { icon: 'fingerprint', color: 'indigo', desc: 'Aprobación y certificación digital' },
-    'impresion': { icon: 'print', color: 'blue', desc: 'Impresión oficial de documentos' },
-    'archivo': { icon: 'archive', color: 'slate', desc: 'Archivo digital emitido' },
-    'catalogos': { icon: 'folder', color: 'teal', desc: 'Tablas de datos y catálogos institucionales' },
-    'compartidos': { icon: 'share', color: 'teal', desc: 'Catálogos compartidos de la entidad' },
-    'usuario': { icon: 'group', color: 'green', desc: 'Gestión y permisos de usuarios' },
-    'rol': { icon: 'security', color: 'purple', desc: 'Perfiles de seguridad y roles' },
-    'menu': { icon: 'menu', color: 'orange', desc: 'Administración de accesos y menús' },
-    'unidad': { icon: 'business', color: 'blue', desc: 'Estructura y organigrama institucional' },
-    'plantillas': { icon: 'layers', color: 'teal', desc: 'Diseñador de formularios y plantillas' },
-    'contactos': { icon: 'person', color: 'indigo', desc: 'Directorio del personal institucional' }
+  // Metadatos por módulo hijo (Icono, Color, Descripción, Conteo)
+  private readonly itemMetaMap: Record<string, { icon: string; color: string; desc: string; countSignal?: () => number }> = {
+    'plantillas': { icon: 'layers', color: 'teal', desc: 'Formularios y plantillas', countSignal: () => this.totalPlantillas() },
+    'contactos': { icon: 'person', color: 'purple', desc: 'Directorio del personal', countSignal: () => 0 },
+    'usuario': { icon: 'group', color: 'green', desc: 'Gestión de usuarios', countSignal: () => this.totalUsuarios() },
+    'rol': { icon: 'credit_card', color: 'purple', desc: 'Perfiles de permisos y roles', countSignal: () => this.totalRoles() },
+    'menu': { icon: 'menu', color: 'orange', desc: 'Administración de menús', countSignal: () => this.totalMenus() },
+    'unidad': { icon: 'business', color: 'blue', desc: 'Estructura organizacional', countSignal: () => this.totalUnidades() },
+    'documentos': { icon: 'description', color: 'blue', desc: 'Mis documentos redactados', countSignal: () => this.totalDocs() },
+    'aprobacion': { icon: 'access_time', color: 'orange', desc: 'Trámites en bandeja de derivación', countSignal: () => this.totalPendientes() },
+    'impresion': { icon: 'print', color: 'blue', desc: 'Impresión oficial de documentos', countSignal: () => 0 },
+    'firmar': { icon: 'edit', color: 'purple', desc: 'Pendientes de firma digital', countSignal: () => 0 },
+    'aprobar_documento': { icon: 'fingerprint', color: 'indigo', desc: 'Aprobación con CD', countSignal: () => 0 },
+    'monitoreo': { icon: 'speed', color: 'blue', desc: 'Monitoreo de flujos', countSignal: () => 1 },
+    'archivo': { icon: 'archive', color: 'orange', desc: 'Archivo digital emitido', countSignal: () => 0 },
+    'catalogos': { icon: 'folder', color: 'teal', desc: 'Tablas de datos y catálogos', countSignal: () => 0 },
+    'compartidos': { icon: 'share', color: 'teal', desc: 'Catálogos compartidos', countSignal: () => 0 }
   };
 
   readonly secciones = computed<DashboardSection[]>(() => {
@@ -631,31 +700,35 @@ export class DashboardComponent implements OnInit {
     const result: DashboardSection[] = [];
 
     for (const padre of menuList) {
+      const parentLabel = padre.label.toUpperCase();
+      const parentMeta = this.parentMetaMap[parentLabel] || {
+        colorClass: 'pill-blue',
+        icon: padre.icon || 'folder'
+      };
+
       if (padre.submenu && padre.submenu.length > 0) {
         const items: DashboardItem[] = [];
         for (const sub of padre.submenu) {
           const meta = this.itemMetaMap[sub.url] || {
             icon: sub.icon || 'arrow_right',
             color: 'blue',
-            desc: `Acceso a ${sub.label}`
+            desc: `Acceso a ${sub.label}`,
+            countSignal: () => 0
           };
           items.push({
             label: sub.label,
             url: sub.url,
             icon: meta.icon,
             color: meta.color,
-            desc: meta.desc
+            desc: meta.desc,
+            count: meta.countSignal ? meta.countSignal() : 0
           });
         }
         if (items.length > 0) {
-          const parentMeta = this.parentMetaMap[padre.label.toUpperCase()] || {
-            color: 'blue',
-            icon: padre.icon || 'folder'
-          };
           result.push({
             label: padre.label,
             icon: parentMeta.icon,
-            color: parentMeta.color,
+            colorClass: parentMeta.colorClass,
             items
           });
         }
@@ -663,22 +736,20 @@ export class DashboardComponent implements OnInit {
         const meta = this.itemMetaMap[padre.url] || {
           icon: padre.icon || 'archive',
           color: 'slate',
-          desc: `Módulo oficial ${padre.label}`
-        };
-        const parentMeta = this.parentMetaMap[padre.label.toUpperCase()] || {
-          color: meta.color,
-          icon: meta.icon
+          desc: `Módulo oficial ${padre.label}`,
+          countSignal: () => 0
         };
         result.push({
           label: padre.label,
           icon: parentMeta.icon,
-          color: parentMeta.color,
+          colorClass: parentMeta.colorClass,
           items: [{
             label: padre.label,
             url: padre.url || 'archivo',
             icon: meta.icon,
             color: meta.color,
-            desc: meta.desc
+            desc: meta.desc,
+            count: meta.countSignal ? meta.countSignal() : 0
           }]
         });
       }
@@ -692,12 +763,53 @@ export class DashboardComponent implements OnInit {
   }
 
   cargarDatosDashboard(): void {
+    // 1. Cargar documentos recientes y totales
     this.documentosService.getDocumentos(5, 1).subscribe({
       next: (res) => {
         const docs = res.datos.resultado || [];
         this.recentDocs.set(docs);
-        if (res.datos.total) {
+        if (res.datos.total !== undefined) {
           this.totalDocs.set(res.datos.total);
+        }
+      },
+      error: () => {}
+    });
+
+    // 2. Cargar total de plantillas reales
+    this.plantillasService.getPlantillas(1, 1).subscribe({
+      next: (res) => {
+        if (res.datos && res.datos.total !== undefined) {
+          this.totalPlantillas.set(res.datos.total);
+        }
+      },
+      error: () => {}
+    });
+
+    // 3. Cargar total de usuarios reales
+    this.seguridadService.getUsuarios().subscribe({
+      next: (res) => {
+        if (Array.isArray(res.datos)) {
+          this.totalUsuarios.set(res.datos.length);
+        }
+      },
+      error: () => {}
+    });
+
+    // 4. Cargar total de roles reales
+    this.seguridadService.getRoles(1, 1).subscribe({
+      next: (res) => {
+        if (res.datos && res.datos.total !== undefined) {
+          this.totalRoles.set(res.datos.total);
+        }
+      },
+      error: () => {}
+    });
+
+    // 5. Cargar total de unidades reales
+    this.seguridadService.getUnidades(1, 1).subscribe({
+      next: (res) => {
+        if (res.datos && res.datos.total !== undefined) {
+          this.totalUnidades.set(res.datos.total);
         }
       },
       error: () => {}
