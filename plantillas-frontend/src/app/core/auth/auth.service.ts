@@ -49,6 +49,20 @@ export class AuthService {
     return roles.some((r) => r.rol?.nombre?.toUpperCase() === roleName.toUpperCase());
   }
 
+  updateSessionFromVirtual(datos: { token: string; user: any; menu: any; roles: any }): void {
+    const token = datos.token;
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(datos.user));
+    const menuList = datos.menu?.menu || (Array.isArray(datos.menu) ? datos.menu : []);
+    localStorage.setItem('menu', JSON.stringify(menuList));
+    localStorage.setItem('roles', JSON.stringify(datos.roles || []));
+
+    this.currentToken.set(token);
+    this.currentUser.set(datos.user);
+    this.currentMenu.set(menuList);
+    this.currentRoles.set(datos.roles || []);
+  }
+
   private setSession(authRes: AuthResponse): void {
     const { token, datos } = authRes;
     localStorage.setItem('token', token);

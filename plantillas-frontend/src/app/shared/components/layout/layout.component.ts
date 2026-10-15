@@ -12,7 +12,9 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { AuthService } from '../../../core/auth/auth.service';
+import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-usuario-dialog.component';
 
 @Component({
   selector: 'app-layout',
@@ -28,7 +30,8 @@ import { AuthService } from '../../../core/auth/auth.service';
     MatMenuModule,
     MatBadgeModule,
     MatTooltipModule,
-    MatDividerModule
+    MatDividerModule,
+    MatDialogModule
   ],
   template: `
     <div class="layout-container" [class.is-home-view]="isHomePage()">
@@ -610,6 +613,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly breakpointObserver = inject(BreakpointObserver);
   private readonly router = inject(Router);
+  private readonly dialog = inject(MatDialog);
 
   private bpSub?: Subscription;
   private routerSub?: Subscription;
@@ -801,7 +805,11 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   cambiarUsuario(): void {
-    this.authService.logout();
+    this.dialog.open(CambioUsuarioDialogComponent, {
+      width: '540px',
+      panelClass: 'custom-dialog-container',
+      backdropClass: 'blur-backdrop'
+    });
   }
 
   logout(): void {

@@ -81,4 +81,21 @@ export class SeguridadService {
   actualizarMenu(id: number, menu: Partial<MenuAdmin>): Observable<ApiResponse<MenuAdmin>> {
     return this.http.put<ApiResponse<MenuAdmin>>(`${this.baseUrl}/menu/${id}`, menu);
   }
+
+  getUsuariosVirtuales(): Observable<ApiResponse<{ total: number; resultado: any[] }>> {
+    return this.http.get<ApiResponse<{ total: number; resultado: any[] }>>(`${this.baseUrl}/virtual`);
+  }
+
+  getTodosUsuariosVirtuales(): Observable<ApiResponse<{ total: number; resultado: any[] }>> {
+    return this.http.get<ApiResponse<{ total: number; resultado: any[] }>>(`${this.baseUrl}/virtual/todos`);
+  }
+
+  cambiarUsuarioVirtual(idUsuario: number): Observable<ApiResponse<any>> {
+    return this.http.get<ApiResponse<any>>(`${this.baseUrl}/virtual/cambiar/${idUsuario}`);
+  }
+
+  verificarUsuarioVirtual(): Observable<ApiResponse<{ esVirtual: boolean; nroDocumento?: string }>> {
+    return this.http.get<ApiResponse<{ esVirtual: boolean; nroDocumento?: string }>>(`${this.baseUrl}/virtual/verificar`);
+  }
 }
+

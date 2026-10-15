@@ -298,7 +298,13 @@ module.exports = app => {
       estado: {
         [Op.ne]: 'INACTIVO',
       },
-    }
+      fid_unidad: {
+        [Op.ne]: null,
+      },
+      usuario: {
+        [Op.notIn]: ['admin', 'administrador'],
+      },
+    };
     if (req.query.filter !== '' && req.xfilter) {
       opciones.where[Op.or] = req.xfilter;
     }
@@ -600,6 +606,7 @@ module.exports = app => {
               estado:'ACTIVO',
               id_usuario:{ [Op.ne]:req.params.id },
               fid_unidad:{ [Op.ne]:null },
+              usuario: { [Op.notIn]: ['admin', 'administrador'] },
             },
             order:[['nombres','ASC']],
           })
@@ -617,6 +624,7 @@ module.exports = app => {
                 estado:'ACTIVO',
                 id_usuario:{ [Op.ne]:req.params.id },
                 fid_unidad:{ [Op.ne]:null },
+                usuario: { [Op.notIn]: ['admin', 'administrador'] },
               },
               order: [['nombres', 'ASC']],
             })
@@ -631,6 +639,7 @@ module.exports = app => {
                 estado: 'ACTIVO',
                 id_usuario:{ [Op.ne]:req.params.id },
                 fid_unidad:pUnidad.fid_unidad,
+                usuario: { [Op.notIn]: ['admin', 'administrador'] },
               },
               order:[['nombres','ASC']],
             })

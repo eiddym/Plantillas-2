@@ -19,6 +19,11 @@ export const routes: Routes = [
       import('./features/auth/verificar/verificar.component').then((m) => m.VerificarComponent)
   },
   {
+    path: 'ventanilla-virtual',
+    loadComponent: () =>
+      import('./features/ventanilla/ventanilla-virtual.component').then((m) => m.VentanillaVirtualComponent)
+  },
+  {
     path: '',
     canActivate: [authGuard],
     loadComponent: () =>
@@ -86,8 +91,22 @@ export const routes: Routes = [
       {
         path: 'archivo',
         loadComponent: () =>
-          import('./features/documentos/documentos-list.component').then(
-            (m) => m.DocumentosListComponent
+          import('./features/archivo/archivo.component').then(
+            (m) => m.ArchivoComponent
+          )
+      },
+      {
+        path: 'archivo/:tipo',
+        loadComponent: () =>
+          import('./features/archivo/archivo.component').then(
+            (m) => m.ArchivoComponent
+          )
+      },
+      {
+        path: 'ventanilla-unica',
+        loadComponent: () =>
+          import('./features/ventanilla/ventanilla-unica.component').then(
+            (m) => m.VentanillaUnicaComponent
           )
       },
       {
@@ -145,7 +164,17 @@ export const routes: Routes = [
       },
       {
         path: 'catalogos',
-        redirectTo: 'dashboard'
+        loadComponent: () =>
+          import('./features/catalogos/catalogos-list.component').then(
+            (m) => m.CatalogosListComponent
+          )
+      },
+      {
+        path: 'compartidos',
+        loadComponent: () =>
+          import('./features/catalogos/compartidos-list.component').then(
+            (m) => m.CompartidosListComponent
+          )
       }
     ]
   },
