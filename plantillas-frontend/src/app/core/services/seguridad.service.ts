@@ -36,6 +36,19 @@ export interface UsuarioAdmin {
   }>;
 }
 
+export interface MenuAdmin {
+  id_menu?: number;
+  fid_menu_padre?: number | null;
+  nombre: string;
+  descripcion?: string;
+  orden: number;
+  ruta: string;
+  icono?: string;
+  estado: string;
+  _fecha_creacion?: string;
+  _fecha_modificacion?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -55,5 +68,17 @@ export class SeguridadService {
   getUnidades(limit = 20, page = 1): Observable<ApiResponse<PaginatedResult<Unidad>>> {
     const params = new HttpParams().set('limit', limit.toString()).set('page', page.toString());
     return this.http.get<ApiResponse<PaginatedResult<Unidad>>>(`${this.baseUrl}/unidad`, { params });
+  }
+
+  getMenus(): Observable<ApiResponse<PaginatedResult<MenuAdmin>>> {
+    return this.http.get<ApiResponse<PaginatedResult<MenuAdmin>>>(`${this.baseUrl}/menu`);
+  }
+
+  crearMenu(menu: MenuAdmin): Observable<ApiResponse<MenuAdmin>> {
+    return this.http.post<ApiResponse<MenuAdmin>>(`${this.baseUrl}/menu`, menu);
+  }
+
+  actualizarMenu(id: number, menu: Partial<MenuAdmin>): Observable<ApiResponse<MenuAdmin>> {
+    return this.http.put<ApiResponse<MenuAdmin>>(`${this.baseUrl}/menu/${id}`, menu);
   }
 }

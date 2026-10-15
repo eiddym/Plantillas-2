@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -14,6 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { Documento, DocumentosService } from '../../core/services/documentos.service';
+import { AuthService } from '../../core/auth/auth.service';
 import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component';
 import { NuevoDocumentoDialogComponent } from './nuevo-documento-dialog.component';
 
@@ -40,68 +41,98 @@ import { NuevoDocumentoDialogComponent } from './nuevo-documento-dialog.componen
     <div class="page-container">
       <div class="page-header">
         <div>
-          <h1>Bandeja Documental</h1>
-          <p class="subtitle">Gestión, aprobación y monitoreo del flujo de documentos</p>
+          <h1>{{ headerTitle() }}</h1>
+          <p class="subtitle">{{ headerSubtitle() }}</p>
         </div>
-        <button mat-raised-button color="primary" (click)="abrirNuevoDocumento()">
+
+        <button 
+          *ngIf="modoVista() === 'documentos'" 
+          mat-raised-button 
+          class="btn-nuevo" 
+          (click)="abrirNuevoDocumento()"
+        >
           <mat-icon>post_add</mat-icon>
           <span>Nuevo Documento</span>
         </button>
       </div>
 
       <mat-card class="table-card">
-        <!-- Filter Tabs by Document State -->
-        <mat-tab-group (selectedTabChange)="onTabChange($event.index)">
-          <mat-tab label="Todos los Documentos"></mat-tab>
-          <mat-tab label="Nuevos / Borrador"></mat-tab>
-          <mat-tab label="En Curso / Derivados"></mat-tab>
-          <mat-tab label="Aprobados"></mat-tab>
-          <mat-tab label="Cerrados / Archivo"></mat-tab>
+        <!-- Tabs de filtro por estado (Ocultos en bandeja de firmar) -->
+        <mat-tab-group *ngIf="modoVista() !== 'firmar'" (selectedTabChange)="onTabChange($event.index)">
+          <ng-container *ngIf="modoVista() === 'documentos'">
+            <mat-tab label="Todos los Documentos"></mat-tab>
+            <mat-tab label="Nuevos / Borrador"></mat-tab>
+            <mat-tab label="En Curso / Derivados"></mat-tab>
+            <mat-tab label="Aprobados"></mat-tab>
+            <mat-tab label="Cerrados / Archivo"></mat-tab>
+          </ng-container>
+
+          <ng-container *ngIf="modoVista() === 'derivados'">
+            <mat-tab label="Trámites Derivados"></mat-tab>
+            <mat-tab label="En Curso"></mat-tab>
+            <mat-tab label="Revisados"></mat-tab>
+          </ng-container>
+
+          <ng-container *ngIf="modoVista() === 'impresion'">
+            <mat-tab label="Todos los Listos para Impresión"></mat-tab>
+            <mat-tab label="Aprobados"></mat-tab>
+            <mat-tab label="Cerrados / Oficiales"></mat-tab>
+          </ng-container>
         </mat-tab-group>
 
+        <!-- Filtros y Búsqueda -->
         <div class="toolbar-filter">
-          <mat-form-field appearance="outline" class="search-field">
-            <mat-label>Buscar por CITE, asunto o usuario...</mat-label>
-            <input matInput (input)="onFilterChange($event)" placeholder="Ej. INF-2026, Memorando...">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search-field">
             <mat-icon matPrefix>search</mat-icon>
+            <input 
+              matInput 
+              (keyup)="onFilterChange($event)" 
+              [placeholder]="modoVista() === 'firmar' ? 'Buscar CITE de documento para firmar...' : 'Buscar por CITE, asunto, remitente o destinatario...'"
+            >
           </mat-form-field>
+
+          <span class="toolbar-spacer"></span>
+
+          <!-- Mensaje informativo para la bandeja de firmar -->
+          <div *ngIf="modoVista() === 'firmar'" class="firmar-info-badge">
+            <mat-icon>verified_user</mat-icon>
+            <span>Solo documentos con CITE aprobados por jefatura</span>
+          </div>
+
+          <!-- Mensaje informativo de restricción para impresión -->
+          <div *ngIf="modoVista() === 'impresion'" class="impresion-role-badge" [class.badge-allowed]="esSecretariaOMae()">
+            <mat-icon>{{ esSecretariaOMae() ? 'check_circle' : 'lock' }}</mat-icon>
+            <span>{{ esSecretariaOMae() ? 'Rol Secretaría Habilitado para Impresión' : 'Impresión y Descarga Exclusiva de Secretaría' }}</span>
+          </div>
         </div>
 
-        @if (loading()) {
-          <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-        }
+        <mat-progress-bar *ngIf="loading()" mode="indeterminate"></mat-progress-bar>
 
         <div class="table-responsive">
           <table mat-table [dataSource]="documentos()" class="w-full">
-            <!-- ID / CITE Column -->
+            <!-- CITE / Documento Column -->
             <ng-container matColumnDef="nombre">
-              <th mat-header-cell *matHeaderCellDef>CITE / Nombre</th>
+              <th mat-header-cell *matHeaderCellDef>CITE / DOCUMENTO</th>
               <td mat-cell *matCellDef="let d">
-                <strong class="doc-cite">{{ d.nombre }}</strong>
-                @if (d.ref) {
-                  <small class="doc-meta">{{ d.ref }}</small>
-                }
+                <span class="doc-cite">{{ d.nombre }}</span>
+                <span class="doc-meta">{{ d.ref || 'Trámite oficial en curso' }}</span>
               </td>
             </ng-container>
 
-            <!-- De / Para Column -->
+            <!-- Participantes Column -->
             <ng-container matColumnDef="participantes">
-              <th mat-header-cell *matHeaderCellDef>De / Para</th>
+              <th mat-header-cell *matHeaderCellDef>PARTICIPANTES</th>
               <td mat-cell *matCellDef="let d">
                 <div class="participantes-col">
-                  @if (d.de) {
-                    <span><strong>DE:</strong> {{ d.de }}</span>
-                  }
-                  @if (d.para) {
-                    <span><strong>PARA:</strong> {{ d.para }}</span>
-                  }
+                  <span><strong>De:</strong> {{ d.de || 'Funcionario Solicitante' }}</span>
+                  <span><strong>Para:</strong> {{ d.para || 'Jefatura de Área' }}</span>
                 </div>
               </td>
             </ng-container>
 
             <!-- Clasificación Column -->
             <ng-container matColumnDef="clasificacion">
-              <th mat-header-cell *matHeaderCellDef>Clasificación</th>
+              <th mat-header-cell *matHeaderCellDef>CLASIFICACIÓN</th>
               <td mat-cell *matCellDef="let d">
                 <span class="badge-tag" [ngClass]="getClasificacionClass(d.clasificacion)">
                   {{ d.clasificacion || 'ORDINARIO' }}
@@ -111,7 +142,7 @@ import { NuevoDocumentoDialogComponent } from './nuevo-documento-dialog.componen
 
             <!-- Estado Column -->
             <ng-container matColumnDef="estado">
-              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <th mat-header-cell *matHeaderCellDef>ESTADO</th>
               <td mat-cell *matCellDef="let d">
                 <span class="badge-tag" [ngClass]="getEstadoClass(d.estado)">
                   {{ d.estado }}
@@ -121,32 +152,64 @@ import { NuevoDocumentoDialogComponent } from './nuevo-documento-dialog.componen
 
             <!-- Fecha Column -->
             <ng-container matColumnDef="fecha">
-              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+              <th mat-header-cell *matHeaderCellDef>FECHA</th>
               <td mat-cell *matCellDef="let d">
-                {{ d._fecha_creacion | date:'dd/MM/yyyy HH:mm' }}
+                {{ d.fecha || (d._fecha_creacion | date:'dd/MM/yyyy') }}
               </td>
             </ng-container>
 
             <!-- Acciones Column -->
             <ng-container matColumnDef="acciones">
-              <th mat-header-cell *matHeaderCellDef class="text-right">Acciones</th>
+              <th mat-header-cell *matHeaderCellDef class="text-right">ACCIONES</th>
               <td mat-cell *matCellDef="let d" class="text-right">
-                <button mat-icon-button (click)="abrirWorkbench(d)" matTooltip="Abrir Hoja de Trabajo">
-                  <mat-icon style="color: #0284c7;">description</mat-icon>
-                </button>
-                <button mat-icon-button color="primary" (click)="verPdf(d)" matTooltip="Ver PDF Oficial">
-                  <mat-icon>picture_as_pdf</mat-icon>
-                </button>
+                <!-- ACCIÓN PARA BANDEJA DE FIRMAR -->
+                <ng-container *ngIf="modoVista() === 'firmar'">
+                  <button mat-raised-button color="primary" class="btn-firmar-action" (click)="abrirWorkbench(d)">
+                    <mat-icon>fingerprint</mat-icon>
+                    <span>Firmar</span>
+                  </button>
+                  <button mat-icon-button (click)="verPdf(d)" matTooltip="Vista previa PDF">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                </ng-container>
+
+                <!-- ACCIÓN PARA BANDEJA DE IMPRESIÓN (ROL SECRETARÍA) -->
+                <ng-container *ngIf="modoVista() === 'impresion'">
+                  <button 
+                    *ngIf="esSecretariaOMae()" 
+                    mat-raised-button 
+                    class="btn-imprimir-action" 
+                    (click)="verPdf(d)"
+                  >
+                    <mat-icon>print</mat-icon>
+                    <span>Imprimir / Descargar</span>
+                  </button>
+                  <span *ngIf="!esSecretariaOMae()" class="locked-action" matTooltip="Solo secretaría puede imprimir o descargar este documento oficial">
+                    <mat-icon>lock</mat-icon> Bloqueado
+                  </span>
+                </ng-container>
+
+                <!-- ACCIÓN PARA BANDEJAS REGULARES -->
+                <ng-container *ngIf="modoVista() !== 'firmar' && modoVista() !== 'impresion'">
+                  <button mat-icon-button (click)="abrirWorkbench(d)" matTooltip="Editar / Revisar">
+                    <mat-icon>edit_note</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                </ng-container>
               </td>
             </ng-container>
 
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
 
+            <!-- Fila Vacía -->
             <tr class="mat-row" *matNoDataRow>
               <td class="mat-cell empty-cell" [attr.colspan]="displayedColumns.length">
-                <mat-icon class="empty-icon">inbox</mat-icon>
-                <p>No se encontraron documentos en esta bandeja.</p>
+                <mat-icon class="empty-icon">{{ modoVista() === 'firmar' ? 'done_all' : 'folder_open' }}</mat-icon>
+                <p *ngIf="modoVista() === 'firmar'">No tiene documentos cerrados pendientes de su firma en este momento.</p>
+                <p *ngIf="modoVista() !== 'firmar'">No se encontraron documentos en esta bandeja.</p>
               </td>
             </tr>
           </table>
@@ -155,54 +218,150 @@ import { NuevoDocumentoDialogComponent } from './nuevo-documento-dialog.componen
         <mat-paginator
           [length]="total()"
           [pageSize]="pageSize()"
-          [pageSizeOptions]="[5, 10, 25]"
-          (page)="onPageChange($event)">
+          [pageSizeOptions]="[10, 20, 50]"
+          (page)="onPageChange($event)"
+          showFirstLastButtons
+        >
         </mat-paginator>
       </mat-card>
     </div>
   `,
   styles: [`
     .page-container {
-      max-width: 1300px;
+      max-width: 1240px;
       margin: 0 auto;
+      font-family: 'Plus Jakarta Sans', 'Poppins', sans-serif;
     }
+
     .page-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 24px;
-      h1 { margin: 0; color: #0f2027; font-size: 1.8rem; font-family: 'Poppins', sans-serif; font-weight: 700; }
-      .subtitle { margin: 4px 0 0 0; color: #64748b; font-family: 'Poppins', sans-serif; }
-      button { display: flex; align-items: center; gap: 6px; background-color: #1e293b; border-radius: 20px; }
+      gap: 16px;
+      flex-wrap: wrap;
+
+      h1 {
+        margin: 0;
+        color: #0f172a;
+        font-size: 1.65rem;
+        font-weight: 800;
+        letter-spacing: -0.3px;
+      }
+
+      .subtitle {
+        margin: 4px 0 0 0;
+        color: #64748b;
+        font-size: 0.88rem;
+      }
     }
+
+    .btn-nuevo {
+      background: #0f2027 !important;
+      color: #ffffff !important;
+      border-radius: 20px !important;
+      font-weight: 700 !important;
+      height: 42px !important;
+      padding: 0 20px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      box-shadow: 0 4px 12px rgba(15, 32, 39, 0.2) !important;
+    }
+
     .table-card {
       border-radius: 12px;
       overflow: hidden;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 4px 16px rgba(15, 32, 39, 0.06);
-    }
-    .toolbar-filter {
-      padding: 16px;
       background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 2px 8px rgba(15, 32, 39, 0.04);
     }
+
+    .toolbar-filter {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid #e2e8f0;
+      flex-wrap: wrap;
+    }
+
     .search-field {
-      width: 380px;
-      margin-bottom: -1.25em;
-    }
-    .w-full { width: 100%; }
-    .text-right { text-align: right; }
-
-    th.mat-mdc-header-cell {
-      background-color: #0f2027 !important;
-      color: #ffffff !important;
-      font-family: 'Poppins', sans-serif;
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
+      width: 360px;
+      font-size: 0.88rem;
     }
 
-    tr.mat-mdc-row:hover {
-      background-color: #f8fafc !important;
+    .toolbar-spacer {
+      flex: 1 1 auto;
+    }
+
+    .firmar-info-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #f5f3ff;
+      color: #7c3aed;
+      border: 1px solid #ddd6fe;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    .impresion-role-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    .badge-allowed {
+      background: #ecfdf5 !important;
+      color: #059669 !important;
+      border-color: #a7f3d0 !important;
+    }
+
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+      width: 100%;
+      min-width: 660px;
+
+      th.mat-mdc-header-cell {
+        background-color: #0f2027 !important;
+        color: #ffffff !important;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.6px;
+        padding: 14px 16px;
+      }
+
+      td.mat-mdc-cell {
+        font-size: 0.86rem;
+        padding: 12px 16px;
+      }
     }
 
     .doc-cite {
@@ -211,27 +370,33 @@ import { NuevoDocumentoDialogComponent } from './nuevo-documento-dialog.componen
       font-weight: 700;
       font-family: 'Poppins', sans-serif;
     }
+
     .doc-meta {
       display: block;
       color: #64748b;
       font-size: 0.8rem;
+      max-width: 280px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
+
     .participantes-col {
       display: flex;
       flex-direction: column;
-      font-size: 0.85rem;
+      font-size: 0.84rem;
       gap: 2px;
+      color: #334155;
     }
-    .empty-cell {
-      text-align: center;
-      padding: 40px !important;
-      color: #94a3b8;
-    }
-    .empty-icon {
-      font-size: 48px;
-      width: 48px;
-      height: 48px;
-      color: #cbd5e1;
+
+    .badge-tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
     }
 
     .badge-ordinario { background: #e0f2fe; color: #0369a1; }
@@ -239,43 +404,87 @@ import { NuevoDocumentoDialogComponent } from './nuevo-documento-dialog.componen
     .badge-confidencial { background: #f3e8ff; color: #7e22ce; }
     .badge-secreto { background: #fee2e2; color: #b91c1c; }
 
-    .badge-nuevo { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
-    .badge-derivado { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
-    .badge-aprobado { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
-    .badge-cerrado { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+    .badge-nuevo { background: #e0f2fe; color: #0284c7; }
+    .badge-derivado { background: #fff7ed; color: #ea580c; }
+    .badge-aprobado { background: #ecfdf5; color: #059669; }
+    .badge-cerrado { background: #f1f5f9; color: #475569; }
 
-    .table-responsive {
-      width: 100%;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
+    .btn-firmar-action {
+      background: #7c3aed !important;
+      color: #ffffff !important;
+      border-radius: 18px !important;
+      font-weight: 700 !important;
+      font-size: 0.82rem !important;
+      padding: 0 16px !important;
+      height: 36px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      margin-right: 4px;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
     }
 
-    .table-responsive table {
-      min-width: 660px;
+    .btn-imprimir-action {
+      background: #0284c7 !important;
+      color: #ffffff !important;
+      border-radius: 18px !important;
+      font-weight: 700 !important;
+      font-size: 0.82rem !important;
+      padding: 0 16px !important;
+      height: 36px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    .locked-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: #94a3b8;
+      font-size: 0.78rem;
+      font-weight: 600;
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        color: #cbd5e1;
+      }
+    }
+
+    .text-right { text-align: right; }
+
+    .empty-cell {
+      text-align: center;
+      padding: 40px !important;
+      color: #94a3b8;
+    }
+
+    .empty-icon {
+      font-size: 44px;
+      width: 44px;
+      height: 44px;
+      color: #cbd5e1;
+      margin-bottom: 8px;
     }
 
     @media (max-width: 768px) {
-      .page-header {
+      .toolbar-filter {
         flex-direction: column;
         align-items: stretch;
-        gap: 12px;
-        margin-bottom: 16px;
-
-        h1 {
-          font-size: 1.45rem;
-        }
-
-        button {
-          width: 100%;
-          justify-content: center;
-          height: 42px;
-        }
       }
-
-      .toolbar-filter {
-        padding: 12px;
-      }
-
       .search-field {
         width: 100%;
       }
@@ -284,9 +493,11 @@ import { NuevoDocumentoDialogComponent } from './nuevo-documento-dialog.componen
 })
 export class DocumentosListComponent implements OnInit {
   private readonly documentosService = inject(DocumentosService);
+  private readonly authService = inject(AuthService);
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
 
+  readonly user = this.authService.currentUser;
   readonly displayedColumns = ['nombre', 'participantes', 'clasificacion', 'estado', 'fecha', 'acciones'];
   readonly documentos = signal<Documento[]>([]);
   readonly total = signal(0);
@@ -297,31 +508,101 @@ export class DocumentosListComponent implements OnInit {
   private currentEstado = '';
   private searchFilter = '';
 
-  private readonly estadoTabs = ['', 'NUEVO', 'DERIVADO', 'APROBADO', 'CERRADO'];
+  readonly currentUrl = signal<string>(this.router.url);
+
+  readonly modoVista = computed<'documentos' | 'derivados' | 'firmar' | 'impresion'>(() => {
+    const url = this.currentUrl();
+    if (url.includes('/firmar')) return 'firmar';
+    if (url.includes('/aprobacion')) return 'derivados';
+    if (url.includes('/impresion')) return 'impresion';
+    return 'documentos';
+  });
+
+  readonly headerTitle = computed(() => {
+    switch (this.modoVista()) {
+      case 'firmar': return 'Documentos para Firma Digital';
+      case 'derivados': return 'Bandeja de Derivados';
+      case 'impresion': return 'Imprimir Documentos Oficiales';
+      default: return 'Bandeja Documental';
+    }
+  });
+
+  readonly headerSubtitle = computed(() => {
+    switch (this.modoVista()) {
+      case 'firmar': return 'Trámites cerrados y aprobados con CITE oficial que esperan su firma en la cadena de flujo';
+      case 'derivados': return 'Bandeja de documentos derivados y en revisión de flujo institucional';
+      case 'impresion': return 'Bandeja oficial de expedición física e impresión certificada (Secretaría)';
+      default: return 'Gestión, redacción y seguimiento de trámites';
+    }
+  });
+
+  readonly esSecretariaOMae = computed(() => {
+    const u = this.user();
+    if (!u) return false;
+    if (u.es_mae || u.username === 'admin' || u.username === 'sys_default') return true;
+    const cargo = (u.cargo || '').toLowerCase();
+    if (cargo.includes('secretari') || cargo.includes('recepcion') || cargo.includes('correspondencia')) return true;
+    return this.authService.hasRole('SECRETARIA') || this.authService.hasRole('ADMIN') || this.authService.hasRole('SUPERADMIN');
+  });
+
+  private readonly estadoTabsDocumentos = ['', 'NUEVO', 'DERIVADO', 'APROBADO', 'CERRADO'];
+  private readonly estadoTabsDerivados = ['DERIVADO', 'EN CURSO', 'APROBADO'];
+  private readonly estadoTabsImpresion = ['', 'APROBADO', 'CERRADO'];
 
   ngOnInit(): void {
+    this.currentUrl.set(this.router.url);
     this.cargarDocumentos();
   }
 
   cargarDocumentos(): void {
     this.loading.set(true);
-    this.documentosService
-      .getDocumentos(this.pageSize(), this.pageIndex() + 1, this.currentEstado, this.searchFilter)
-      .subscribe({
-        next: (res) => {
-          this.loading.set(false);
-          const data = res.datos;
-          this.documentos.set(data.resultado || []);
-          this.total.set(data.total || 0);
-        },
-        error: () => {
-          this.loading.set(false);
-        }
-      });
+
+    if (this.modoVista() === 'firmar') {
+      this.documentosService
+        .getDocumentosParaFirmar(this.pageSize(), this.pageIndex() + 1, this.searchFilter)
+        .subscribe({
+          next: (res) => {
+            this.loading.set(false);
+            const data = res.datos;
+            this.documentos.set(data.resultado || []);
+            this.total.set(data.total || 0);
+          },
+          error: () => {
+            this.loading.set(false);
+          }
+        });
+    } else {
+      let estadoFiltro = this.currentEstado;
+      if (this.modoVista() === 'derivados' && !estadoFiltro) {
+        estadoFiltro = 'DERIVADO';
+      } else if (this.modoVista() === 'impresion' && !estadoFiltro) {
+        estadoFiltro = 'APROBADO,CERRADO';
+      }
+
+      this.documentosService
+        .getDocumentos(this.pageSize(), this.pageIndex() + 1, estadoFiltro, this.searchFilter)
+        .subscribe({
+          next: (res) => {
+            this.loading.set(false);
+            const data = res.datos;
+            this.documentos.set(data.resultado || []);
+            this.total.set(data.total || 0);
+          },
+          error: () => {
+            this.loading.set(false);
+          }
+        });
+    }
   }
 
   onTabChange(tabIndex: number): void {
-    this.currentEstado = this.estadoTabs[tabIndex] || '';
+    if (this.modoVista() === 'documentos') {
+      this.currentEstado = this.estadoTabsDocumentos[tabIndex] || '';
+    } else if (this.modoVista() === 'derivados') {
+      this.currentEstado = this.estadoTabsDerivados[tabIndex] || 'DERIVADO';
+    } else if (this.modoVista() === 'impresion') {
+      this.currentEstado = this.estadoTabsImpresion[tabIndex] || '';
+    }
     this.pageIndex.set(0);
     this.cargarDocumentos();
   }

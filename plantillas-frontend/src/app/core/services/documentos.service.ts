@@ -73,4 +73,17 @@ export class DocumentosService {
   generarPdfDocumento(cite: string, force = false): Observable<Blob> {
     return this.http.post(`${this.baseUrl}/documentoPDF`, { cite, force }, { responseType: 'blob' });
   }
+
+  getDocumentosParaFirmar(limit = 10, page = 1, filter = ''): Observable<ApiResponse<PaginatedResult<Documento>>> {
+    let params = new HttpParams()
+      .set('limit', limit.toString())
+      .set('page', page.toString())
+      .set('order', '-id_documento');
+
+    if (filter) {
+      params = params.set('filter', filter);
+    }
+
+    return this.http.get<ApiResponse<PaginatedResult<Documento>>>('/api/v1/documento/firmar', { params });
+  }
 }

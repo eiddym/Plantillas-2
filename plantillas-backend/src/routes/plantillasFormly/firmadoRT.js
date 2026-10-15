@@ -223,13 +223,14 @@ module.exports = app => {
   app.get('/api/v1/documento/firmar', filtros, (req, res) => {
     let order;
     const usuario = req.body.audit_usuario.id_usuario;
-    const estadosValidos = ['CERRADO', 'DERIVADO'];
+    const estadosValidos = ['CERRADO'];
     const opcionesDocumento = {
       attributes: ['id_documento', 'nombre', 'nombre_plantilla', 'fecha', 'estado', 'impreso', '_fecha_creacion', '_fecha_modificacion', '_usuario_creacion', 'firmado', 'firmaron'],
       where: {
         firmante_actual: usuario,
-        estado: { [Op.in]: estadosValidos},
+        estado: { [Op.in]: estadosValidos },
         firmado: false,
+        nombre: { [Op.like]: '%/%' }
       },
     };
 

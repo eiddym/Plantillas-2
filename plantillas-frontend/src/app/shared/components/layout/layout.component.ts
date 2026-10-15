@@ -649,7 +649,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
     if (url.startsWith('/profile') || url.startsWith('/cuenta')) return 'Profile';
     if (url.startsWith('/documentos')) return 'Documentos';
     if (url.startsWith('/plantillas')) return 'Plantillas';
-    if (url.startsWith('/aprobacion')) return 'Documentos Pendientes';
+    if (url.startsWith('/aprobacion')) return 'Derivados';
     if (url.startsWith('/firmar')) return 'Firmar';
     if (url.startsWith('/archivo')) return 'Archivo';
     if (url.startsWith('/usuario')) return 'Usuarios';
@@ -683,7 +683,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
       'menu': 'menu',
       'unidad': 'business',
       'documentos': 'description',
-      'aprobacion': 'access_time',
+      'aprobacion': 'low_priority',
       'firmar': 'edit',
       'aprobar_documento': 'fingerprint',
       'impresion': 'print',

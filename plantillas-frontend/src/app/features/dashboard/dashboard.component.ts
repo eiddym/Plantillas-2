@@ -71,8 +71,8 @@ interface DashboardSection {
           <div class="kpi-card kpi-card-revision" routerLink="/aprobacion">
             <div class="kpi-big-number">{{ totalPendientes() }}</div>
             <div class="kpi-meta">
-              <strong class="kpi-title">EN REVISIÓN / OBSERVADOS</strong>
-              <span class="kpi-desc">Requieren visto bueno o ajuste</span>
+              <strong class="kpi-title">TRÁMITES DERIVADOS</strong>
+              <span class="kpi-desc">Trámites derivados en curso y revisión</span>
             </div>
           </div>
 
@@ -685,7 +685,7 @@ export class DashboardComponent implements OnInit {
     'menu': { icon: 'menu', color: 'orange', desc: 'Administración de menús', countSignal: () => this.totalMenus() },
     'unidad': { icon: 'business', color: 'blue', desc: 'Estructura organizacional', countSignal: () => this.totalUnidades() },
     'documentos': { icon: 'description', color: 'blue', desc: 'Mis documentos redactados', countSignal: () => this.totalDocs() },
-    'aprobacion': { icon: 'access_time', color: 'orange', desc: 'Trámites en bandeja de derivación', countSignal: () => this.totalPendientes() },
+    'aprobacion': { icon: 'low_priority', color: 'orange', desc: 'Trámites derivados en curso y revisión', countSignal: () => this.totalPendientes() },
     'impresion': { icon: 'print', color: 'blue', desc: 'Impresión oficial de documentos', countSignal: () => 0 },
     'firmar': { icon: 'edit', color: 'purple', desc: 'Pendientes de firma digital', countSignal: () => 0 },
     'aprobar_documento': { icon: 'fingerprint', color: 'indigo', desc: 'Aprobación con CD', countSignal: () => 0 },

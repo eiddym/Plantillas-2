@@ -91,6 +91,13 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'impresion',
+        loadComponent: () =>
+          import('./features/documentos/documentos-list.component').then(
+            (m) => m.DocumentosListComponent
+          )
+      },
+      {
         path: 'usuario',
         loadComponent: () =>
           import('./features/administracion/usuarios-list.component').then(
@@ -124,7 +131,17 @@ export const routes: Routes = [
       },
       {
         path: 'menu',
-        redirectTo: 'dashboard'
+        loadComponent: () =>
+          import('./features/administracion/menus-list.component').then(
+            (m) => m.MenusListComponent
+          )
+      },
+      {
+        path: 'monitoreo',
+        loadComponent: () =>
+          import('./features/monitoreo/monitoreo.component').then(
+            (m) => m.MonitoreoComponent
+          )
       },
       {
         path: 'catalogos',
