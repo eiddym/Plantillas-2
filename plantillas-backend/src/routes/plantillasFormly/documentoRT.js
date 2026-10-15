@@ -476,19 +476,21 @@ module.exports = app => {
   @apiSampleRequest off
 */
 
-  app.post('/api/v1/plantillasFormly/documentoPDF', (req, res) => {
+  const procesarDocumentoPDF = (req, res) => {
+    const rawCite = req.body?.cite || req.params?.cite || req.query?.cite || '';
     let dirArch = '.';
-    if (req.body.cite && req.body.cite.indexOf(dirExternos.replace('./', '/')) == 0)
-      dirArch += req.body.cite;
-    else if (req.body.cite && req.body.cite.indexOf(dirExternosAprobacion.replace('./', '/')) == 0)
-      dirArch += req.body.cite;
-    else dirArch = `${dirDocumento}${req.body.cite}`;
-    const usuarioPeticion = req.body.audit_usuario;
-    const forceRegen = req.body.force === true || req.body.force === 'true' || req.query.force === 'true';
+    if (rawCite && rawCite.indexOf(dirExternos.replace('./', '/')) == 0)
+      dirArch += rawCite;
+    else if (rawCite && rawCite.indexOf(dirExternosAprobacion.replace('./', '/')) == 0)
+      dirArch += rawCite;
+    else dirArch = `${dirDocumento}${rawCite}`;
+    const usuarioPeticion = req.body?.audit_usuario || req.user;
+    const forceRegen = req.body?.force === true || req.body?.force === 'true' || req.query?.force === 'true';
 
     const sendFileIfExists = (filePath, callback) => {
       fs.readFile(filePath, (pError, pData) => {
         if (!pError && pData && pData.length > 0) {
+          res.set('Content-Type', 'application/pdf');
           return res.send(pData);
         }
         callback();
@@ -496,7 +498,7 @@ module.exports = app => {
     };
 
     const renderFreshDocument = () => {
-      let citeBuscado = req.body.cite || '';
+      let citeBuscado = rawCite || '';
       if (citeBuscado.endsWith('.pdf')) {
         citeBuscado = citeBuscado.slice(0, -4);
       }
@@ -508,10 +510,10 @@ module.exports = app => {
       })
       .then(docList => {
         let matchedDoc = docList.find(d => 
-          d.nombre === req.body.cite ||
+          d.nombre === rawCite ||
           d.nombre === citeBuscado ||
           util.formatoNombreDoc(d.nombre) === citeBuscado ||
-          `${util.formatoNombreDoc(d.nombre)}.pdf` === req.body.cite
+          `${util.formatoNombreDoc(d.nombre)}.pdf` === rawCite
         );
 
         if (!matchedDoc) {
@@ -519,7 +521,19 @@ module.exports = app => {
         }
 
         if (!matchedDoc) {
-          throw new Error(`No se pudo encontrar el documento ${req.body.cite}`);
+          throw new Error(`No se pudo encontrar el documento ${rawCite}`);
+        }
+
+        const targetFileName = `${util.formatoNombreDoc(matchedDoc.nombre)}.pdf`;
+        const targetFilePath = `${dirDocumento}${targetFileName}`;
+
+        // Si el archivo ya existe y no se pide regenerar forzado, enviarlo directamente
+        if (!forceRegen && fs.existsSync(targetFilePath)) {
+          const pDataCache = fs.readFileSync(targetFilePath);
+          if (pDataCache && pDataCache.length > 0) {
+            res.set('Content-Type', 'application/pdf');
+            return res.send(pDataCache);
+          }
         }
 
         const datos = {
@@ -538,15 +552,13 @@ module.exports = app => {
           datos.model_actual['cite-0'].fecha = util.formatearFecha(datos.model_actual['cite-0'].fecha);
         }
 
-        const targetFileName = `${util.formatoNombreDoc(matchedDoc.nombre)}.pdf`;
-        const targetFilePath = `${dirDocumento}${targetFileName}`;
-
         return util.generarDocumento(datos, true).then(() => {
           const fileToRead = fs.existsSync(targetFilePath) ? targetFilePath : (fs.existsSync(dirArch) ? dirArch : null);
           if (!fileToRead) {
             throw new Error('No se pudo encontrar el archivo generado.');
           }
           const pData2 = fs.readFileSync(fileToRead);
+          res.set('Content-Type', 'application/pdf');
           res.send(pData2);
         });
       })
@@ -558,7 +570,11 @@ module.exports = app => {
     };
 
     renderFreshDocument();
-  });
+  };
+
+  app.post('/api/v1/plantillasFormly/documentoPDF', procesarDocumentoPDF);
+  app.get('/api/v1/plantillasFormly/documentoPDF/:cite(*)', procesarDocumentoPDF);
+  app.get('/public/documentos/:cite(*)', procesarDocumentoPDF);
 
   app.post('/api/v1/plantillasFormly/multiple', (req, res) => {
     console.log('Iniciando la busqueda de documentos multiples', req.body.cite);

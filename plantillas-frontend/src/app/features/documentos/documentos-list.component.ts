@@ -307,13 +307,13 @@ export class DocumentosListComponent implements OnInit {
   }
 
   verPdf(doc: Documento): void {
-    const pdfUrl = `/public/documentos/${doc.nombre}.pdf`;
+    if (!doc.nombre) return;
     this.dialog.open(VisorPdfDialogComponent, {
       width: '85vw',
       maxWidth: '1200px',
       data: {
-        titulo: `${doc.nombre} - ${doc.ref || 'Documento'}`,
-        pdfUrl
+        titulo: `${doc.nombre} - ${doc.ref || 'Documento Oficial'}`,
+        docCite: doc.nombre
       }
     });
   }

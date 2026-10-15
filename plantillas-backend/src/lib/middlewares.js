@@ -82,6 +82,7 @@ module.exports = app => {
     console.log('[MEMBRETE PATH]', process.cwd(), 'public/images/membrete.png');
     app.use('/public/membrete.png', express.static('public/images/membrete.png'));
     app.use('/public/adjuntos', express.static('public/adjuntos'));
+    app.use('/public/documentos', express.static('public/documentos'));
     app.use('/flibs/pdfjs/pdf.worker.js', express.static("librerias_frontend_extra/pdf.js-viewer/pdf.worker.js"));
 
     // verifica si hay errores en el formato json

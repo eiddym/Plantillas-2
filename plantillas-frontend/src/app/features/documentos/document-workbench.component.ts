@@ -933,31 +933,12 @@ export class DocumentWorkbenchComponent implements OnInit {
     const d = this.doc();
     if (!d || !d.nombre) return;
 
-    this.generandoPdf.set(true);
-    this.documentosService.generarPdfDocumento(d.nombre, true).subscribe({
-      next: (blob) => {
-        this.generandoPdf.set(false);
-        const objectUrl = URL.createObjectURL(blob);
-        this.dialog.open(VisorPdfDialogComponent, {
-          width: '85vw',
-          maxWidth: '1200px',
-          data: {
-            titulo: `${d.nombre} - ${this.model['ref'] || d.ref || 'Documento Oficial'}`,
-            pdfUrl: objectUrl
-          }
-        });
-      },
-      error: () => {
-        this.generandoPdf.set(false);
-        // Fallback a ruta estática si ya existe en disco
-        this.dialog.open(VisorPdfDialogComponent, {
-          width: '85vw',
-          maxWidth: '1200px',
-          data: {
-            titulo: `${d.nombre} - ${this.model['ref'] || d.ref || 'Documento'}`,
-            pdfUrl: `/public/documentos/${d.nombre}.pdf`
-          }
-        });
+    this.dialog.open(VisorPdfDialogComponent, {
+      width: '85vw',
+      maxWidth: '1200px',
+      data: {
+        titulo: `${d.nombre} - ${this.model['ref'] || d.ref || 'Documento Oficial'}`,
+        docCite: d.nombre
       }
     });
   }
