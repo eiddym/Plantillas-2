@@ -9,7 +9,7 @@ services:
     command: sh -c "apk add --no-cache iproute2 >/dev/null 2>&1; sh /detectar-ip-host.sh"
     restart: "no"
 
-  # 1. Base de Datos (PostgreSQL 16)
+  # 1. Base de Datos (PostgreSQL 16 optimizada para alta concurrencia)
   db:
     image: postgres:16-alpine
     restart: always
@@ -21,6 +21,17 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-plantillas_db}
       POSTGRES_USER: ${POSTGRES_USER:-plantillas}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    command: >
+      postgres
+      -c max_connections=300
+      -c shared_buffers=512MB
+      -c effective_cache_size=1536MB
+      -c work_mem=16MB
+      -c maintenance_work_mem=128MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
     volumes:
       - pgdata_v16:/var/lib/postgresql/data
     healthcheck:
@@ -32,38 +43,59 @@ services:
     networks:
       - red-plantillas
 
-  # 2. Servidor Backend (Node.js)
+  # 2. Migrador e Inicializador (One-Shot: corre una vez antes de que arranquen las réplicas)
+  migrador:
+    build:
+      context: ./plantillas-backend
+      dockerfile: Dockerfile
+    restart: "no"
+    working_dir: /app
+    command: >
+      sh -c "until node -e \"require('net').connect(5432, 'db').on('connect', () => process.exit(0)).on('error', () => process.exit(1))\"; do
+               echo '[migrador] Esperando a la base de datos Postgres...';
+               sleep 2;
+             done;
+             echo '[migrador] Ejecutando migraciones pendientes...';
+             npx sequelize-cli db:migrate;
+             echo '[migrador] Verificando seeders...';
+             if [ \"\$(echo \"SELECT COUNT(*) FROM usuario;\" | PGPASSWORD=${DB_PASSWORD:-postgres} psql -h db -U ${DB_USUARIO:-plantillas} -d ${DB_NOMBRE:-plantillas_db} -t -A 2>/dev/null)\" = \"0\" ]; then
+               echo '[migrador] Tabla usuario vacía: ejecutando seeders...';
+               npx sequelize-cli db:seed:all || echo '[migrador] Seeders fallaron, continuar de todos modos';
+             else
+               echo '[migrador] Tabla usuario ya tiene datos: saltando seeders';
+             fi;
+             echo '[migrador] Asegurando directorios de almacenamiento en /app/public...';
+             mkdir -p /app/public/documentos /app/public/externos /app/public/aprobacion /app/public/adjuntos 2>/dev/null || true;
+             chown -R node:node /app/public 2>/dev/null || true;
+             echo '[migrador] Inicialización completada con éxito.'"
+    volumes:
+      - ./plantillas-backend:/app
+      - backend_node_modules:/app/node_modules
+      - plantillas-documentos:/app/public
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - red-plantillas
+
+  # 3. Servidor Backend (Node.js 22 LTS - Escalable horizontalmente con --scale backend=N)
   backend:
     build:
       context: ./plantillas-backend
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "${BACKEND_PUERTO:-8000}:8000"
+      - "${BACKEND_PORT_RANGE:-8000-8010}:8000"
     working_dir: /app
     command: >
-      sh -c "until node -e \"require('net').connect(5432, 'db').on('connect', () => process.exit(0)).on('error', () => process.exit(1))\"; do
-               echo 'Esperando a la base de datos Postgres...';
-               sleep 2;
-             done;
-             echo '[backend] Ejecutando migraciones...';
-             npx sequelize-cli db:migrate || true;
-             echo '[backend] Verificando seeders...';
-             if [ \"\$(echo \"SELECT COUNT(*) FROM usuario;\" | PGPASSWORD=${DB_PASSWORD:-postgres} psql -h db -U ${DB_USUARIO:-plantillas} -d ${DB_NOMBRE:-plantillas_db} -t -A 2>/dev/null)\" = \"0\" ]; then
-               echo '[backend] Tabla usuario vacía: ejecutando seeders...';
-               npx sequelize-cli db:seed:all || echo '[backend] Seeders fallaron, continuar de todos modos';
-             else
-               echo '[backend] Tabla usuario ya tiene datos: saltando seeders';
-             fi;
-             if [ -f /shared/url_verificacion.env ] && [ -z \"$$URL_VERIFICACION\" ]; then
+      sh -c "if [ -f /shared/url_verificacion.env ] && [ -z \"$$URL_VERIFICACION\" ]; then
                export $$(cat /shared/url_verificacion.env | xargs);
                echo \"[backend] URL_VERIFICACION tomada del detector: $$URL_VERIFICACION\";
              fi;
-             echo '[backend] Asegurando directorios de almacenamiento en /app/public...';
-             mkdir -p /app/public/documentos /app/public/externos /app/public/aprobacion /app/public/adjuntos 2>/dev/null || true;
-             chown -R node:node /app/public 2>/dev/null || true;
-             echo '[backend] Inicializando API...';
-              node index.js"
+             echo '[backend] Inicializando API REST en Node 22 LTS...';
+             node index.js"
     tty: true
     stdin_open: true
     volumes:
@@ -83,7 +115,7 @@ services:
       DB_USUARIO: ${DB_USUARIO:-plantillas}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       DB_NOMBRE: ${DB_NOMBRE:-plantillas_db}
-      BACKEND_PUERTO: ${BACKEND_PUERTO:-8000}
+      BACKEND_PUERTO: 8000
       JWT_SECRET: ${JWT_SECRET}
       OPENSSL_CONF: ${OPENSSL_CONF:-/dev/null}
       CORREO_HOST: ${CORREO_HOST:-${SMTP_HOST}}
@@ -111,10 +143,12 @@ services:
         condition: service_healthy
       detector-ip:
         condition: service_started
+      migrador:
+        condition: service_completed_successfully
     networks:
       - red-plantillas
 
-  # 3. Servidor Frontend Angular 17 (Nginx)
+  # 4. Servidor Frontend Angular 17 (Nginx Alpine con caché estático directo y balanceo)
   frontend:
     build:
       context: ./plantillas-frontend
@@ -122,6 +156,9 @@ services:
     restart: always
     ports:
       - "${FRONTEND_PUERTO:-80}:80"
+    volumes:
+      - ./plantillas-frontend/docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - plantillas-documentos:/usr/share/nginx/html/public:ro
     depends_on:
       - backend
     networks:
