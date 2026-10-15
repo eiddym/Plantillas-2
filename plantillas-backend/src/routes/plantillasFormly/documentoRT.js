@@ -506,9 +506,14 @@ module.exports = app => {
       modelos.documento.findAll({
         where: {
           estado: { [Op.ne]: 'ELIMINADO' }
-        }
+        },
+        include: [{
+          model: modelos.firma,
+          as: 'firma',
+          required: false
+        }]
       })
-      .then(docList => {
+      .then(async (docList) => {
         let matchedDoc = docList.find(d => 
           d.nombre === rawCite ||
           d.nombre === citeBuscado ||
@@ -526,6 +531,15 @@ module.exports = app => {
 
         const targetFileName = `${util.formatoNombreDoc(matchedDoc.nombre)}.pdf`;
         const targetFilePath = `${dirDocumento}${targetFileName}`;
+
+        // Obtener código oficial de verificación de la tabla firma
+        let codigoDoc = (matchedDoc.firma && matchedDoc.firma.codigo) ? matchedDoc.firma.codigo : '';
+        if (!codigoDoc) {
+          const firmaFound = await modelos.firma.findOne({ where: { fid_documento: matchedDoc.id_documento } });
+          if (firmaFound && firmaFound.codigo) {
+            codigoDoc = firmaFound.codigo;
+          }
+        }
 
         // Si el archivo ya existe y no se pide regenerar forzado, enviarlo directamente
         if (!forceRegen && fs.existsSync(targetFilePath)) {
@@ -546,7 +560,8 @@ module.exports = app => {
           audit_usuario: usuarioPeticion,
           host: dirExternos,
           grupo: matchedDoc.grupo,
-          codigo: matchedDoc.codigo || '',
+          codigo: codigoDoc || '',
+          pdf_codigo: codigoDoc || '',
         };
         if (datos.model_actual && datos.model_actual['cite-0'] && datos.model_actual['cite-0'].fecha) {
           datos.model_actual['cite-0'].fecha = util.formatearFecha(datos.model_actual['cite-0'].fecha);

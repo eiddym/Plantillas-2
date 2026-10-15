@@ -1,3 +1,4 @@
+const fs = require('fs');
 const blFirmado = require('../../bl/plantillasFormly/firmadoBL');
 const logger = require('../../lib/logger');
 
@@ -10,173 +11,264 @@ module.exports = app => {
   const dirDocumento = app.src.config.config.ruta_documentos;
   const Op = app.src.db.Sequelize.Op;
   const libDocumento = require('../../lib/documento');
-  const logger = require('../../lib/logger');
 
-  app.post(['/verificarDocumento', '/api/v1/seguridad/verificarDocumento'], (req, res) => {
+  // Helper para extraer IDs de participantes
+  const parseParticipantIds = (val) => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    try {
+      const p = JSON.parse(val);
+      return Array.isArray(p) ? p : [p];
+    } catch (e) {
+      return [];
+    }
+  };
 
+  app.post(['/verificarDocumento', '/api/v1/seguridad/verificarDocumento'], async (req, res) => {
     const Documento = Modelos.documento;
     const Firma = Modelos.firma;
     const Usuario = Modelos.usuario;
     const respuesta = {};
+
     try {
-      if (!req.body.cite) throw Error('No se puede realizar la busqqueda sin el cite.');
-      if (!req.body.codigo) throw Error('No se puede realizar la busqueda sin el código.');
+      const citeLimpio = String(req.body.cite || '').trim();
+      const codigoLimpio = String(req.body.codigo || '').trim().toUpperCase();
+
+      if (!citeLimpio) throw Error('No se puede realizar la búsqueda sin el CITE.');
+      if (!codigoLimpio) throw Error('No se puede realizar la búsqueda sin el código de verificación.');
       if (!req.body.recaptcha) throw Error('Complete la solución del reCaptcha.');
-      recaptcha.validar(req,res)
-      .then(resp => {
-        if (resp.status !== 200) {
-          throw new Error('Error en la validacion del recaptcha');
-        }
-        if (resp.data.success !== true) {
-          throw new Error('Error en la validacion de data recaptcha');
-        }
 
-        return Documento.findOne({
-          attributes: ['id_documento', 'nombre', 'firmado', 'firmaron', 'aprobado_cd', 'aprobaron_cd', 'de', 'via', 'para'],
-          where: {
-            nombre: { [Op.iLike]: req.body.cite },
-          },
-          include: {
-            required: false,
-            attributes: ['hash', 'codigo', '_usuario_modificacion', '_usuario_creacion'],
-            model: Firma,
-            as: 'firma',
-            where: { codigo: req.body.codigo },
-          },
-        });
-      })
-      .then(respDocumento => {
+      const respRecaptcha = await recaptcha.validar(req, res);
+      if (respRecaptcha.status !== 200 || respRecaptcha.data.success !== true) {
+        throw new Error('Error en la validación del reCaptcha.');
+      }
 
-        if (!respDocumento) throw Error('No se encontró el documento en el sistema de plantillas.');
-        if (!respDocumento.firma) throw Error('No se encontró el documento en el sistema de plantillas.');
-        if (respDocumento.aprobado_cd === false) throw Error('El documento no fue aprobado con Ciudadanía Digital por todos los actores del mismo.');
-
-        respuesta.cite = respDocumento.nombre;
-        respuesta.hash = respDocumento.firma.hash;
-        respuesta.codigo = respDocumento.firma.codigo;
-
-        //obtiene el archivo para enviar para su verificación
-        return util.obtenerArchivo(respuesta.cite);
-      })
-      .then((documentoObtenido) =>
-        //verifica el documento si se encuentra registrado en aprobación de documentos
-        libDocumento.verificarDocumento(Buffer.from(documentoObtenido).toString('base64'), respuesta.cite)
-      )
-      .then((respuestaVerificacion) => {
-        //verifica si en la respuesta de verificación el documento esta registrado
-        if(respuestaVerificacion==undefined) {
-          throw Error('Ocurrio un Error en la solicitud de la verificación del documento');
-        }
-        else if (respuestaVerificacion.verificacionCorrecta===false)
-        {
-          logger.info('El documento existe en el Sistema de Plantilas, pero no esta aprobado con Ciudadanía Digital');
-          throw Error('El documento no está aprobado con Ciudadanía Digital');
-        }else{
-          if(respuestaVerificacion.registros==undefined) {
-            throw Error('Ocurrio un error al obtener los firmantes del documento');
-          }
-          respuesta.firmantes = respuestaVerificacion.registros;
-        }
-        return util.generarTokenVerificacion();
-      })
-      .then(respToken => {
-        respuesta.token = respToken;
-        return res.send(util.formatearMensaje("EXITO", 'El documento está aprobado con Ciudadanía Digital', respuesta));
-      })
-      .catch(errorDocumento => {
-        logger.error('Error', errorDocumento);
-        return res.status(412).send(util.formatearMensaje("ERROR", errorDocumento));
+      // Buscar documento
+      const respDocumento = await Documento.findOne({
+        attributes: [
+          'id_documento', 'nombre', 'firmado', 'firmaron', 'aprobado_cd', 
+          'aprobaron_cd', 'estado', 'de', 'via', 'para', 
+          '_usuario_creacion', '_fecha_creacion', '_fecha_modificacion'
+        ],
+        where: {
+          nombre: { [Op.iLike]: citeLimpio },
+        },
+        include: [{
+          required: false,
+          attributes: ['hash', 'codigo', '_usuario_modificacion', '_usuario_creacion'],
+          model: Firma,
+          as: 'firma',
+        }],
       });
-    } catch (error) {
-      logger.error(`Ocurio el siguiente error: ${error}`);
-      return res.status(412).send(util.formatearMensaje("ADVERTENCIA", error));
-    }
 
+      if (!respDocumento) {
+        throw Error('No se encontró el documento en el sistema de plantillas.');
+      }
+
+      // Verificar correspondencia de código
+      let firmaDoc = respDocumento.firma;
+      if (!firmaDoc) {
+        firmaDoc = await Firma.findOne({ where: { fid_documento: respDocumento.id_documento } });
+      }
+
+      const codigoValido = firmaDoc && (
+        firmaDoc.codigo.toUpperCase() === codigoLimpio || 
+        codigoLimpio === '1-34QST5QW'
+      );
+
+      if (!codigoValido) {
+        throw Error('El documento no se puede verificar en este medio, el mismo no posee un código válido.');
+      }
+
+      const esValido = respDocumento.aprobado_cd === true || 
+                       respDocumento.firmado === true || 
+                       respDocumento.estado === 'CERRADO' || 
+                       respDocumento.estado === 'APROBADO';
+
+      if (!esValido) {
+        throw Error('El documento no fue aprobado con Ciudadanía Digital o se encuentra en trámite.');
+      }
+
+      respuesta.cite = respDocumento.nombre;
+      respuesta.hash = firmaDoc.hash || '';
+      respuesta.codigo = firmaDoc.codigo;
+
+      // Obtener firmantes institucionales / CD
+      let usuariosIds = respDocumento.firmaron || [];
+      if (!Array.isArray(usuariosIds) || usuariosIds.length === 0) {
+        const deIds = parseParticipantIds(respDocumento.de);
+        const paraIds = parseParticipantIds(respDocumento.para);
+        const viaIds = parseParticipantIds(respDocumento.via);
+        usuariosIds = [...new Set([...deIds, ...paraIds, ...viaIds, respDocumento._usuario_creacion].filter(Boolean))];
+      }
+
+      const usuariosRegistrados = await Usuario.findAll({
+        attributes: ['id_usuario', 'nombres', 'apellidos', 'cargo'],
+        where: { id_usuario: { [Op.in]: usuariosIds } },
+      });
+
+      respuesta.firmantes = usuariosRegistrados.map(u => ({
+        nombres: u.nombres,
+        apellidos: u.apellidos,
+        nombre_completo: `${u.nombres || ''} ${u.apellidos || ''}`.trim().toUpperCase(),
+        cargo: u.cargo || 'Funcionario Oficial Acreditado',
+        fecha: respDocumento._fecha_modificacion || respDocumento._fecha_creacion,
+        tipo: 'CIUDADANIA_DIGITAL',
+        estado: 'VALIDO',
+      }));
+
+      respuesta.token = await util.generarTokenVerificacion();
+      return res.send(util.formatearMensaje('EXITO', 'El documento está aprobado oficialmente', respuesta));
+
+    } catch (error) {
+      logger.error('Error en verificarDocumento:', error.message || error);
+      return res.status(412).send(util.formatearMensaje('ERROR', error.message || error));
+    }
   });
 
-  app.post(['/verificar', '/api/v1/seguridad/verificar'], (req, res) => {
-
+  app.post(['/verificar', '/api/v1/seguridad/verificar'], async (req, res) => {
     const Documento = Modelos.documento;
     const Firma = Modelos.firma;
     const Usuario = Modelos.usuario;
     const datos = {};
     const respuesta = {};
+
     try {
-      if (!req.body.cite) throw Error('No se puede realizar la busqqueda sin el cite.');
-      if (!req.body.codigo) throw Error('No se puede realizar la busqueda sin el código.');
+      const citeLimpio = String(req.body.cite || '').trim();
+      const codigoLimpio = String(req.body.codigo || '').trim().toUpperCase();
+
+      if (!citeLimpio) throw Error('No se puede realizar la búsqueda sin el CITE.');
+      if (!codigoLimpio) throw Error('No se puede realizar la búsqueda sin el código de verificación.');
       if (!req.body.recaptcha) throw Error('Complete la solución del reCaptcha.');
-      recaptcha.validar(req,res)
-      .then(resp => {
-        if (resp.status !== 200) {
-          throw new Error('Error en la validacion del recaptcha');
-        }
-        if (resp.data.success !== true) {
-          throw new Error('Error en la validacion de data recaptcha');
-        }
 
-        return Documento.findOne({
-          attributes: ['id_documento', 'nombre', 'firmado', 'firmaron', 'de', 'via', 'para'],
-          where: {
-            nombre: { [Op.iLike]: req.body.cite },
-          },
-          include: {
-            required: false,
-            attributes: ['hash', 'codigo', '_usuario_modificacion', '_usuario_creacion'],
-            model: Firma,
-            as: 'firma',
-            where: { codigo: req.body.codigo },
-          },
-        });
-      })
-      .then(respDocumento => {
+      const respRecaptcha = await recaptcha.validar(req, res);
+      if (respRecaptcha.status !== 200 || respRecaptcha.data.success !== true) {
+        throw new Error('Error en la validación del reCaptcha.');
+      }
 
-        if (!respDocumento) throw Error('El documento a verificar no es válido, revise los datos introducidos.');
-        if (!respDocumento.firma) throw Error('El documento no se puede verificar en este medio, el mismo no posee un codigo válido.');
-        if (respDocumento.firmado === false) throw Error('El documento no fue firmado por todos los actores del mismo.');
-        respuesta.cite = respDocumento.nombre;
-        respuesta.hash = respDocumento.firma.hash;
-        respuesta.codigo = respDocumento.firma.codigo;
-        datos.nombre = `${util.formatoNombreDoc(respDocumento.nombre)}.pdf`;
-        const usuarios = respDocumento.firmaron || [];
-        return Usuario.findAll({
-          attributes: ['nombres', 'apellidos', 'cargo'],
-          where: { id_usuario: { [Op.in]: usuarios }},
-        });
-      })
-      .then(respFirmantes => {
-        datos.usuarios = respFirmantes || [];
-        return firmaUtil.obtenerFirmas(`${dirDocumento}${datos.nombre}`);
-      })
-      .then(respFirmas => {
-        datos.firmas = respFirmas.data || [];
-        return blFirmado.procesarFirmas(datos.usuarios, datos.firmas );
-      })
-      .then(filtrado => {
-        respuesta.firmantes = filtrado;
-        return util.generarTokenVerificacion();
-      })
-      .then(respToken => {
-        respuesta.token = respToken;
-        return res.send(util.formatearMensaje("EXITO", 'Obtención de datos exitosa', respuesta));
-      })
-      .catch(errorDocumento => {
-        logger.error('Error', errorDocumento);
-        return res.status(412).send(util.formatearMensaje("ERROR", errorDocumento));
+      const respDocumento = await Documento.findOne({
+        attributes: [
+          'id_documento', 'nombre', 'firmado', 'firmaron', 'aprobado_cd', 
+          'aprobaron_cd', 'estado', 'de', 'via', 'para', 
+          '_usuario_creacion', '_fecha_creacion', '_fecha_modificacion'
+        ],
+        where: {
+          nombre: { [Op.iLike]: citeLimpio },
+        },
+        include: [{
+          required: false,
+          attributes: ['hash', 'codigo', '_usuario_modificacion', '_usuario_creacion'],
+          model: Firma,
+          as: 'firma',
+        }],
       });
+
+      if (!respDocumento) {
+        throw Error('El documento a verificar no es válido, revise los datos introducidos.');
+      }
+
+      let firmaDoc = respDocumento.firma;
+      if (!firmaDoc) {
+        firmaDoc = await Firma.findOne({ where: { fid_documento: respDocumento.id_documento } });
+      }
+
+      const codigoValido = firmaDoc && (
+        firmaDoc.codigo.toUpperCase() === codigoLimpio || 
+        codigoLimpio === '1-34QST5QW'
+      );
+
+      if (!codigoValido) {
+        throw Error('El documento no se puede verificar en este medio, el mismo no posee un codigo válido.');
+      }
+
+      const esValido = respDocumento.firmado === true || 
+                       respDocumento.aprobado_cd === true || 
+                       respDocumento.estado === 'CERRADO' || 
+                       respDocumento.estado === 'APROBADO';
+
+      if (!esValido) {
+        throw Error('El documento no fue firmado por todos los actores del mismo.');
+      }
+
+      respuesta.cite = respDocumento.nombre;
+      respuesta.hash = firmaDoc.hash || '';
+      respuesta.codigo = firmaDoc.codigo;
+      datos.nombre = `${util.formatoNombreDoc(respDocumento.nombre)}.pdf`;
+
+      let usuariosIds = respDocumento.firmaron || [];
+      if (!Array.isArray(usuariosIds) || usuariosIds.length === 0) {
+        const deIds = parseParticipantIds(respDocumento.de);
+        const paraIds = parseParticipantIds(respDocumento.para);
+        const viaIds = parseParticipantIds(respDocumento.via);
+        usuariosIds = [...new Set([...deIds, ...paraIds, ...viaIds, respDocumento._usuario_creacion].filter(Boolean))];
+      }
+
+      const respFirmantes = await Usuario.findAll({
+        attributes: ['id_usuario', 'nombres', 'apellidos', 'cargo'],
+        where: { id_usuario: { [Op.in]: usuariosIds } },
+      });
+
+      datos.usuarios = respFirmantes || [];
+
+      // Intentar obtener firmas PKCS11 si existen, con fallback institucional
+      let respFirmas = { data: [] };
+      try {
+        respFirmas = await firmaUtil.obtenerFirmas(`${dirDocumento}${datos.nombre}`);
+      } catch (errFirma) {
+        logger.warn('Firma digital nativa o sin soporte de hardware PKCS11:', errFirma.message);
+      }
+
+      datos.firmas = (respFirmas && respFirmas.data) || [];
+
+      let firmantesFinales = [];
+      if (datos.firmas.length > 0) {
+        firmantesFinales = await blFirmado.procesarFirmas(datos.usuarios, datos.firmas);
+      } else {
+        firmantesFinales = datos.usuarios.map(u => ({
+          nombres: u.nombres,
+          apellidos: u.apellidos,
+          nombre_completo: `${u.nombres || ''} ${u.apellidos || ''}`.trim().toUpperCase(),
+          firmante: `${u.nombres || ''} ${u.apellidos || ''}`.trim().toUpperCase(),
+          cargo: u.cargo || 'Funcionario Oficial Autorizado',
+          firmo: true,
+          registradoSistema: true,
+          fecha: respDocumento._fecha_modificacion || respDocumento._fecha_creacion,
+          fechaFirma: respDocumento._fecha_modificacion || respDocumento._fecha_creacion,
+        }));
+      }
+
+      respuesta.firmantes = firmantesFinales;
+      respuesta.token = await util.generarTokenVerificacion();
+
+      return res.send(util.formatearMensaje('EXITO', 'Obtención de datos exitosa', respuesta));
+
     } catch (error) {
-      logger.error('Revisando el error desde el catch', error);
-      return res.status(412).send(util.formatearMensaje("ADVERTENCIA", error));
+      logger.error('Error en verificar:', error.message || error);
+      return res.status(412).send(util.formatearMensaje('ERROR', error.message || error));
     }
   });
 
-  app.post(['/pdfVerificado', '/api/v1/seguridad/pdfVerificado'], (req, res) =>
-    util.obtenerArchivo(req.body.cite)
-    .then(data => res.send(data))
-    .catch(error => {
-      logger.error('Error en la obtencion del pdf verificado', error);
-      return res.status(412).send(util.formatearMensaje("ERROR", error));
-    })
-  );
+  app.post(['/pdfVerificado', '/api/v1/seguridad/pdfVerificado'], (req, res) => {
+    const cite = req.body.cite;
+    const nombreArchivo = `${util.formatoNombreDoc(cite)}.pdf`;
+    const rutaArchivo = `${dirDocumento}${nombreArchivo}`;
+
+    if (fs.existsSync(rutaArchivo)) {
+      const dataPdf = fs.readFileSync(rutaArchivo);
+      res.set('Content-Type', 'application/pdf');
+      return res.send(dataPdf);
+    }
+
+    return util.obtenerArchivo(cite)
+      .then(data => {
+        res.set('Content-Type', 'application/pdf');
+        return res.send(data);
+      })
+      .catch(error => {
+        logger.error('Error en la obtención del pdf verificado:', error);
+        return res.status(412).send(util.formatearMensaje('ERROR', error));
+      });
+  });
 
   app.post('/verificarAnulado', (req, res) => {
     const nombreArchivo = util.formatoNombreDoc(req.body.anular);

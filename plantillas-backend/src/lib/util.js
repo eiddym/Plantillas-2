@@ -1069,7 +1069,7 @@ const generarDocumento = (pDatos, firma = false) => new Promise((resolve, reject
   };
 
   const citeQr = pDatos.pdf_cite || citeOficial || 'PLANTILLAS-UTEST/NI/00001/2026';
-  const codigoQr = pDatos.pdf_codigo || codigoVerif || '1-34QST5QW';
+  const codigoQr = pDatos.pdf_codigo || codigoVerif || `${(config && config.prefijo) || '1'}-${generarCodigo(8, 'A#')}`;
   const urlVerif =
     `${rutaVerificacion}` +
     `?cite=${encodeURIComponent(citeQr)}` +
@@ -1609,7 +1609,7 @@ const obtenerArchivoAprobacionAdjunto = (nombre_privado) => {
 
 const generarTokenVerificacion = () => {
   const fechaActual = moment().tz('America/La_Paz').format();
-  const fechaExp = moment(fechaActual).add(30, 's').valueOf();
+  const fechaExp = moment(fechaActual).add(300, 's').valueOf();
   const expFinal = fechaExp / 1000;
   return jwt.encode({
     payload: {
