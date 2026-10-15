@@ -339,7 +339,7 @@ module.exports = app => {
     });
 
 
-    app.use('/pdfVerificado', (req, res, next) => {
+    app.use(['/pdfVerificado', '/api/v1/seguridad/pdfVerificado'], (req, res, next) => {
       if (req.method == 'OPTIONS') return next();
       try {
         if(!req.body.token) throw Error('No existe la cabecera necesaria');

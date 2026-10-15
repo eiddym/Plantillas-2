@@ -12,7 +12,7 @@ module.exports = app => {
   const libDocumento = require('../../lib/documento');
   const logger = require('../../lib/logger');
 
-  app.post('/verificarDocumento', (req, res) => {
+  app.post(['/verificarDocumento', '/api/v1/seguridad/verificarDocumento'], (req, res) => {
 
     const Documento = Modelos.documento;
     const Firma = Modelos.firma;
@@ -94,7 +94,7 @@ module.exports = app => {
 
   });
 
-  app.post('/verificar', (req, res) => {
+  app.post(['/verificar', '/api/v1/seguridad/verificar'], (req, res) => {
 
     const Documento = Modelos.documento;
     const Firma = Modelos.firma;
@@ -169,7 +169,7 @@ module.exports = app => {
     }
   });
 
-  app.post('/pdfVerificado', (req, res) =>
+  app.post(['/pdfVerificado', '/api/v1/seguridad/pdfVerificado'], (req, res) =>
     util.obtenerArchivo(req.body.cite)
     .then(data => res.send(data))
     .catch(error => {
