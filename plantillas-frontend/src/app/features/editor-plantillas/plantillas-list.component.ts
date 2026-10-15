@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -167,6 +167,7 @@ export class PlantillasListComponent implements OnInit {
   private readonly documentosService = inject(DocumentosService);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   readonly displayedColumns = ['id', 'nombre', 'abreviacion', 'estado', 'acciones'];
   readonly plantillas = signal<PlantillaFormly[]>([]);
@@ -185,12 +186,19 @@ export class PlantillasListComponent implements OnInit {
     this.plantillasService.getPlantillas(this.pageSize(), this.pageIndex() + 1, this.searchFilter).subscribe({
       next: (res) => {
         this.loading.set(false);
-        const data = res.datos;
-        this.plantillas.set(data.resultado || []);
-        this.total.set(data.total || 0);
+        const raw = res?.datos as any;
+        const items = Array.isArray(raw) ? raw : (raw?.resultado || raw?.rows || []);
+        const totalCount = raw?.total ?? items.length;
+        this.plantillas.set(items);
+        this.total.set(totalCount);
+        this.cdr.markForCheck();
       },
-      error: () => {
+      error: (err) => {
         this.loading.set(false);
+        this.plantillas.set([]);
+        this.total.set(0);
+        this.snackBar.open(err.error?.mensaje || 'Error al obtener la lista de plantillas', 'Cerrar', { duration: 4000 });
+        this.cdr.markForCheck();
       }
     });
   }

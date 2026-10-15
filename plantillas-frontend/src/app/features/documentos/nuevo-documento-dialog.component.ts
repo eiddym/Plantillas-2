@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -285,6 +285,7 @@ export class NuevoDocumentoDialogComponent implements OnInit {
   private readonly dialogRef = inject(MatDialogRef<NuevoDocumentoDialogComponent>);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   readonly loading = signal(true);
   readonly creando = signal(false);
@@ -304,10 +305,12 @@ export class NuevoDocumentoDialogComponent implements OnInit {
         const lista = datosAny?.resultado || datosAny?.rows || (Array.isArray(res.datos) ? res.datos : []);
         // Solo mostrar plantillas activas
         this.plantillas.set(lista.filter((p: any) => p.estado !== 'INACTIVO'));
+        this.cdr.markForCheck();
       },
       error: () => {
         this.loading.set(false);
         this.snackBar.open('Error al cargar las plantillas disponibles', 'Cerrar', { duration: 3000 });
+        this.cdr.markForCheck();
       }
     });
   }
