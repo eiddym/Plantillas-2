@@ -84,12 +84,12 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
             [disabled]="guardando() || !doc()"
           >
             <mat-icon>{{ guardando() ? 'sync' : 'save' }}</mat-icon>
-            <span>{{ guardando() ? 'Guardando...' : 'Guardar Borrador' }}</span>
+            <span>{{ guardando() ? 'Guardando...' : 'Guardar' }}</span>
           </button>
 
           <button mat-stroked-button (click)="verPdf()" class="action-btn-pdf" [disabled]="!doc() || generandoPdf()">
             <mat-icon>picture_as_pdf</mat-icon>
-            <span>{{ generandoPdf() ? 'Generando...' : 'Ver PDF Oficial' }}</span>
+            <span>{{ generandoPdf() ? '...' : 'PDF' }}</span>
           </button>
 
           <button mat-stroked-button (click)="derivarDocumento()" class="action-btn-derivar" [disabled]="!doc()">
@@ -800,6 +800,138 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
           font-size: 0.7rem;
           color: #94a3b8;
         }
+      }
+    }
+
+    /* RESPONSIVE DESIGN PARA MÓVIL Y TABLET */
+    @media (max-width: 960px) {
+      .workbench-grid {
+        grid-template-columns: 1fr;
+        height: auto;
+        overflow-y: visible;
+      }
+
+      .workbench-canvas-column {
+        padding: 1rem 0.5rem;
+        overflow-y: visible;
+      }
+
+      .workbench-inspector-column {
+        border-left: none;
+        border-top: 2px solid #e2e8f0;
+        padding: 1.25rem 1rem;
+        overflow-y: visible;
+      }
+    }
+
+    @media (max-width: 860px) {
+      .workbench-topbar {
+        height: auto;
+        min-height: 56px;
+        padding: 8px 10px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .topbar-left {
+        gap: 8px;
+        flex: 1 1 auto;
+      }
+
+      .doc-cite {
+        font-size: 0.95rem;
+        max-width: 150px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .topbar-center {
+        order: 2;
+      }
+
+      .topbar-actions {
+        order: 3;
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        gap: 6px;
+
+        button {
+          flex: 1 1 auto;
+          padding: 0 6px !important;
+          font-size: 0.78rem !important;
+          min-width: 0 !important;
+          height: 38px !important;
+
+          mat-icon {
+            font-size: 18px !important;
+            width: 18px !important;
+            height: 18px !important;
+            margin-right: 2px !important;
+          }
+        }
+      }
+
+      .mode-btn {
+        padding: 4px 8px;
+        font-size: 0.75rem;
+      }
+
+      .physical-sheet {
+        padding: 1.25rem 0.85rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 8px;
+      }
+
+      .pagina-carta, .pagina-oficio {
+        width: 100% !important;
+        min-height: auto !important;
+      }
+
+      .sheet-membrete {
+        grid-template-columns: 52px 1fr;
+        gap: 8px;
+        padding-bottom: 0.85rem;
+        margin-bottom: 1rem;
+      }
+
+      .membrete-logo-box {
+        width: 50px;
+        height: 50px;
+      }
+
+      .membrete-text {
+        h3 { font-size: 0.8rem; }
+        p { font-size: 0.7rem; }
+        small { font-size: 0.65rem; }
+      }
+
+      .membrete-cite-box {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 10px;
+        text-align: left;
+      }
+
+      .form-row-2 {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+
+      .meta-row {
+        grid-template-columns: 55px 1fr;
+        font-size: 0.88rem;
+      }
+
+      .document-prose {
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
       }
     }
   `]

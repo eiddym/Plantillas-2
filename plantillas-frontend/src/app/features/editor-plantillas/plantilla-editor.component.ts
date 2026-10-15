@@ -321,6 +321,35 @@ interface PaletteItem {
       opacity: 0.3;
       border: 2px dashed #3f51b5;
     }
+
+    @media (max-width: 960px) {
+      .workspace-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .editor-topbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+
+        .topbar-actions {
+          width: 100%;
+          button {
+            flex: 1 1 auto;
+          }
+        }
+      }
+
+      .meta-field, .meta-field-short {
+        width: 100% !important;
+        min-width: 100% !important;
+      }
+
+      .palette-card, .canvas-card, .preview-card {
+        min-height: auto;
+      }
+    }
   `]
 })
 export class PlantillaEditorComponent implements OnInit {

@@ -114,6 +114,18 @@ html, body {
   box-sizing: border-box;
 }
 
+@media (max-width: 860px) {
+  .pagina-carta, .pagina-oficio {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    padding: 1.25rem 0.85rem !important;
+    margin: 8px 0 !important;
+    box-shadow: 0 2px 8px rgba(15, 32, 39, 0.08) !important;
+    border-radius: 8px !important;
+  }
+}
+
 @media print {
   @page {
     size: letter;
@@ -229,3 +241,24 @@ mat-toolbar.mat-primary {
   border: 1px solid #e2e8f0 !important;
   overflow: hidden;
 }
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0;
+  padding: 0;
+}
+
+@media (max-width: 860px) {
+  .mat-mdc-dialog-container .mdc-dialog__surface {
+    max-width: 96vw !important;
+    max-height: 94vh !important;
+    border-radius: 12px !important;
+  }
+
+  .cdk-overlay-pane {
+    max-width: 96vw !important;
+  }
+}
+

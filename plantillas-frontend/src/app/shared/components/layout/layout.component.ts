@@ -1,6 +1,8 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { Subscription } from 'rxjs';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
@@ -30,18 +32,21 @@ import { AuthService } from '../../../core/auth/auth.service';
     <div class="layout-container">
       <!-- Institutional Topbar -->
       <mat-toolbar color="primary" class="main-topbar">
-        <button mat-icon-button (click)="sidenavOpen.set(!sidenavOpen())" matTooltip="Menú principal">
+        <button mat-icon-button (click)="sidenavOpen.set(!sidenavOpen())" matTooltip="Menú principal" class="menu-toggle-btn">
           <mat-icon>menu</mat-icon>
         </button>
 
         <a routerLink="/dashboard" class="brand-link" matTooltip="Ir al inicio">
           <mat-icon class="brand-icon">home</mat-icon>
-          <span class="brand-title">PLANTILLAS Y APROBACIÓN</span>
+          <span class="brand-title">
+            <span class="brand-long">PLANTILLAS Y APROBACIÓN</span>
+            <span class="brand-short">DOCS MARABUNTA</span>
+          </span>
         </a>
 
         <span class="flex-spacer"></span>
 
-        <!-- Dynamic institutional greeting -->
+        <!-- Dynamic institutional greeting (Desktop only) -->
         <div class="user-greeting">
           <span class="greeting-text">{{ greeting() }}, <strong>{{ user()?.first_name || user()?.username }}</strong></span>
           <span class="role-badge" *ngIf="user()?.cargo">{{ user()?.cargo }}</span>
@@ -52,16 +57,17 @@ import { AuthService } from '../../../core/auth/auth.service';
           <div class="avatar-circle">
             {{ userInitial() }}
           </div>
-          <mat-icon>arrow_drop_down</mat-icon>
+          <mat-icon class="user-dropdown-arrow">arrow_drop_down</mat-icon>
         </button>
 
         <mat-menu #userMenu="matMenu" xPosition="before">
           <div class="menu-user-info">
             <strong>{{ user()?.first_name }} {{ user()?.last_name }}</strong>
             <small>{{ user()?.email }}</small>
+            <span class="mobile-role-text" *ngIf="user()?.cargo">{{ user()?.cargo }}</span>
           </div>
           <mat-divider></mat-divider>
-          <button mat-menu-item routerLink="/dashboard">
+          <button mat-menu-item routerLink="/dashboard" (click)="onNavItemClick()">
             <mat-icon>dashboard</mat-icon>
             <span>Panel Principal</span>
           </button>
@@ -74,14 +80,23 @@ import { AuthService } from '../../../core/auth/auth.service';
 
       <!-- Sidenav Container -->
       <mat-sidenav-container class="sidenav-container">
-        <mat-sidenav [opened]="sidenavOpen()" mode="side" class="main-sidenav">
+        <mat-sidenav 
+          [opened]="sidenavOpen()" 
+          [mode]="isMobile() ? 'over' : 'side'" 
+          (closed)="sidenavOpen.set(false)"
+          class="main-sidenav"
+        >
           <div class="sidenav-header">
             <mat-icon>folder_special</mat-icon>
             <span>Módulos del Sistema</span>
+            <span class="flex-spacer"></span>
+            <button *ngIf="isMobile()" mat-icon-button (click)="sidenavOpen.set(false)" class="close-sidenav-btn">
+              <mat-icon>close</mat-icon>
+            </button>
           </div>
 
           <mat-nav-list>
-            <a mat-list-item routerLink="/dashboard" routerLinkActive="active-item">
+            <a mat-list-item routerLink="/dashboard" routerLinkActive="active-item" (click)="onNavItemClick()">
               <mat-icon matListItemIcon>dashboard</mat-icon>
               <span matListItemTitle>Inicio</span>
             </a>
@@ -93,13 +108,13 @@ import { AuthService } from '../../../core/auth/auth.service';
               </div>
 
               <ng-container *ngFor="let sub of item.submenu">
-                <a mat-list-item [routerLink]="'/' + sub.url" routerLinkActive="active-item">
+                <a mat-list-item [routerLink]="'/' + sub.url" routerLinkActive="active-item" (click)="onNavItemClick()">
                   <mat-icon matListItemIcon>{{ sub.icon || 'arrow_right' }}</mat-icon>
                   <span matListItemTitle>{{ sub.label }}</span>
                 </a>
               </ng-container>
 
-              <a mat-list-item *ngIf="!item.submenu || item.submenu.length === 0" [routerLink]="'/' + item.url" routerLinkActive="active-item">
+              <a mat-list-item *ngIf="!item.submenu || item.submenu.length === 0" [routerLink]="'/' + item.url" routerLinkActive="active-item" (click)="onNavItemClick()">
                 <mat-icon matListItemIcon>{{ item.icon || 'arrow_right' }}</mat-icon>
                 <span matListItemTitle>{{ item.label }}</span>
               </a>
@@ -118,6 +133,7 @@ import { AuthService } from '../../../core/auth/auth.service';
       height: 100vh;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
     .main-topbar {
       position: sticky;
@@ -126,8 +142,10 @@ import { AuthService } from '../../../core/auth/auth.service';
       background: linear-gradient(135deg, #0f2027 0%, #15303c 50%, #203a43 100%);
       color: #ffffff;
       box-shadow: 0 3px 12px rgba(15, 32, 39, 0.25);
-      height: 64px;
+      height: 60px;
       padding: 0 16px;
+      display: flex;
+      align-items: center;
     }
     .brand-link {
       display: flex;
@@ -143,6 +161,9 @@ import { AuthService } from '../../../core/auth/auth.service';
     .brand-icon {
       font-size: 24px;
       color: #00e5ff;
+    }
+    .brand-short {
+      display: none;
     }
     .flex-spacer {
       flex: 1 1 auto;
@@ -193,14 +214,21 @@ import { AuthService } from '../../../core/auth/auth.service';
       display: flex;
       flex-direction: column;
     }
+    .mobile-role-text {
+      font-size: 0.75rem;
+      color: #0284c7;
+      font-weight: 600;
+      margin-top: 4px;
+    }
     .sidenav-container {
       flex: 1;
-      height: calc(100vh - 64px);
+      height: calc(100vh - 60px);
     }
     .main-sidenav {
-      width: 270px;
+      width: 280px;
       background: #ffffff;
       border-right: 1px solid #e2e8f0;
+      box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08);
     }
     .sidenav-header {
       display: flex;
@@ -237,14 +265,45 @@ import { AuthService } from '../../../core/auth/auth.service';
       padding: 24px;
       background: #eef1f4;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* RESPONSIVE BREAKPOINTS (Mobile & Tablet) */
+    @media (max-width: 860px) {
+      .main-topbar {
+        padding: 0 10px;
+        height: 56px;
+      }
+      .brand-long {
+        display: none;
+      }
+      .brand-short {
+        display: inline;
+        font-size: 1.05rem;
+      }
+      .user-greeting {
+        display: none;
+      }
+      .user-dropdown-arrow {
+        display: none;
+      }
+      .main-content {
+        padding: 12px 10px;
+      }
+      .sidenav-container {
+        height: calc(100vh - 56px);
+      }
     }
   `]
 })
-export class LayoutComponent {
+export class LayoutComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
+  private readonly breakpointObserver = inject(BreakpointObserver);
+  private bpSub?: Subscription;
 
   readonly user = this.authService.currentUser;
   readonly menus = this.authService.currentMenu;
+  readonly isMobile = signal(false);
   readonly sidenavOpen = signal(true);
 
   readonly userInitial = computed(() => {
@@ -259,6 +318,28 @@ export class LayoutComponent {
     if (hour < 19) return 'Buenas tardes';
     return 'Buenas noches';
   });
+
+  ngOnInit(): void {
+    this.bpSub = this.breakpointObserver.observe(['(max-width: 860px)']).subscribe((state) => {
+      const mobile = state.matches;
+      this.isMobile.set(mobile);
+      if (mobile) {
+        this.sidenavOpen.set(false);
+      } else {
+        this.sidenavOpen.set(true);
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.bpSub?.unsubscribe();
+  }
+
+  onNavItemClick(): void {
+    if (this.isMobile()) {
+      this.sidenavOpen.set(false);
+    }
+  }
 
   logout(): void {
     this.authService.logout();

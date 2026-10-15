@@ -71,84 +71,86 @@ import { NuevoDocumentoDialogComponent } from './nuevo-documento-dialog.componen
           <mat-progress-bar mode="indeterminate"></mat-progress-bar>
         }
 
-        <table mat-table [dataSource]="documentos()" class="w-full">
-          <!-- ID / CITE Column -->
-          <ng-container matColumnDef="nombre">
-            <th mat-header-cell *matHeaderCellDef>CITE / Nombre</th>
-            <td mat-cell *matCellDef="let d">
-              <strong class="doc-cite">{{ d.nombre }}</strong>
-              @if (d.ref) {
-                <small class="doc-meta">{{ d.ref }}</small>
-              }
-            </td>
-          </ng-container>
-
-          <!-- De / Para Column -->
-          <ng-container matColumnDef="participantes">
-            <th mat-header-cell *matHeaderCellDef>De / Para</th>
-            <td mat-cell *matCellDef="let d">
-              <div class="participantes-col">
-                @if (d.de) {
-                  <span><strong>DE:</strong> {{ d.de }}</span>
+        <div class="table-responsive">
+          <table mat-table [dataSource]="documentos()" class="w-full">
+            <!-- ID / CITE Column -->
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>CITE / Nombre</th>
+              <td mat-cell *matCellDef="let d">
+                <strong class="doc-cite">{{ d.nombre }}</strong>
+                @if (d.ref) {
+                  <small class="doc-meta">{{ d.ref }}</small>
                 }
-                @if (d.para) {
-                  <span><strong>PARA:</strong> {{ d.para }}</span>
-                }
-              </div>
-            </td>
-          </ng-container>
+              </td>
+            </ng-container>
 
-          <!-- Clasificación Column -->
-          <ng-container matColumnDef="clasificacion">
-            <th mat-header-cell *matHeaderCellDef>Clasificación</th>
-            <td mat-cell *matCellDef="let d">
-              <span class="badge-tag" [ngClass]="getClasificacionClass(d.clasificacion)">
-                {{ d.clasificacion || 'ORDINARIO' }}
-              </span>
-            </td>
-          </ng-container>
+            <!-- De / Para Column -->
+            <ng-container matColumnDef="participantes">
+              <th mat-header-cell *matHeaderCellDef>De / Para</th>
+              <td mat-cell *matCellDef="let d">
+                <div class="participantes-col">
+                  @if (d.de) {
+                    <span><strong>DE:</strong> {{ d.de }}</span>
+                  }
+                  @if (d.para) {
+                    <span><strong>PARA:</strong> {{ d.para }}</span>
+                  }
+                </div>
+              </td>
+            </ng-container>
 
-          <!-- Estado Column -->
-          <ng-container matColumnDef="estado">
-            <th mat-header-cell *matHeaderCellDef>Estado</th>
-            <td mat-cell *matCellDef="let d">
-              <span class="badge-tag" [ngClass]="getEstadoClass(d.estado)">
-                {{ d.estado }}
-              </span>
-            </td>
-          </ng-container>
+            <!-- Clasificación Column -->
+            <ng-container matColumnDef="clasificacion">
+              <th mat-header-cell *matHeaderCellDef>Clasificación</th>
+              <td mat-cell *matCellDef="let d">
+                <span class="badge-tag" [ngClass]="getClasificacionClass(d.clasificacion)">
+                  {{ d.clasificacion || 'ORDINARIO' }}
+                </span>
+              </td>
+            </ng-container>
 
-          <!-- Fecha Column -->
-          <ng-container matColumnDef="fecha">
-            <th mat-header-cell *matHeaderCellDef>Fecha</th>
-            <td mat-cell *matCellDef="let d">
-              {{ d._fecha_creacion | date:'dd/MM/yyyy HH:mm' }}
-            </td>
-          </ng-container>
+            <!-- Estado Column -->
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let d">
+                <span class="badge-tag" [ngClass]="getEstadoClass(d.estado)">
+                  {{ d.estado }}
+                </span>
+              </td>
+            </ng-container>
 
-          <!-- Acciones Column -->
-          <ng-container matColumnDef="acciones">
-            <th mat-header-cell *matHeaderCellDef class="text-right">Acciones</th>
-            <td mat-cell *matCellDef="let d" class="text-right">
-              <button mat-icon-button (click)="abrirWorkbench(d)" matTooltip="Abrir Hoja de Trabajo">
-                <mat-icon style="color: #0284c7;">description</mat-icon>
-              </button>
-              <button mat-icon-button color="primary" (click)="verPdf(d)" matTooltip="Ver PDF Oficial">
-                <mat-icon>picture_as_pdf</mat-icon>
-              </button>
-            </td>
-          </ng-container>
+            <!-- Fecha Column -->
+            <ng-container matColumnDef="fecha">
+              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+              <td mat-cell *matCellDef="let d">
+                {{ d._fecha_creacion | date:'dd/MM/yyyy HH:mm' }}
+              </td>
+            </ng-container>
 
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+            <!-- Acciones Column -->
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef class="text-right">Acciones</th>
+              <td mat-cell *matCellDef="let d" class="text-right">
+                <button mat-icon-button (click)="abrirWorkbench(d)" matTooltip="Abrir Hoja de Trabajo">
+                  <mat-icon style="color: #0284c7;">description</mat-icon>
+                </button>
+                <button mat-icon-button color="primary" (click)="verPdf(d)" matTooltip="Ver PDF Oficial">
+                  <mat-icon>picture_as_pdf</mat-icon>
+                </button>
+              </td>
+            </ng-container>
 
-          <tr class="mat-row" *matNoDataRow>
-            <td class="mat-cell empty-cell" [attr.colspan]="displayedColumns.length">
-              <mat-icon class="empty-icon">inbox</mat-icon>
-              <p>No se encontraron documentos en esta bandeja.</p>
-            </td>
-          </tr>
-        </table>
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+            <tr class="mat-row" *matNoDataRow>
+              <td class="mat-cell empty-cell" [attr.colspan]="displayedColumns.length">
+                <mat-icon class="empty-icon">inbox</mat-icon>
+                <p>No se encontraron documentos en esta bandeja.</p>
+              </td>
+            </tr>
+          </table>
+        </div>
 
         <mat-paginator
           [length]="total()"
@@ -241,6 +243,43 @@ import { NuevoDocumentoDialogComponent } from './nuevo-documento-dialog.componen
     .badge-derivado { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
     .badge-aprobado { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
     .badge-cerrado { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .table-responsive table {
+      min-width: 660px;
+    }
+
+    @media (max-width: 768px) {
+      .page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        margin-bottom: 16px;
+
+        h1 {
+          font-size: 1.45rem;
+        }
+
+        button {
+          width: 100%;
+          justify-content: center;
+          height: 42px;
+        }
+      }
+
+      .toolbar-filter {
+        padding: 12px;
+      }
+
+      .search-field {
+        width: 100%;
+      }
+    }
   `]
 })
 export class DocumentosListComponent implements OnInit {

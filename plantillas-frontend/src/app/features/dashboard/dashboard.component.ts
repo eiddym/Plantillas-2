@@ -531,6 +531,52 @@ interface DashboardSection {
       text-align: center;
       p { margin: 0; font-size: 0.75rem; color: #94a3b8; font-weight: 500; }
     }
+
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .table-responsive .recent-table {
+      min-width: 580px;
+    }
+
+    @media (max-width: 768px) {
+      .home-welcome-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+        margin-bottom: 18px;
+
+        h1 { font-size: 1.4rem; }
+        .welcome-actions { width: 100%; }
+        .btn-nuevo-doc { width: 100% !important; justify-content: center !important; }
+      }
+
+      .kpi-precision-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .kpi-panel {
+        padding: 14px 18px;
+      }
+
+      .quick-actions-bar {
+        gap: 8px;
+        .actions-label { width: 100%; margin-bottom: 4px; }
+        .quick-action-btn { flex: 1 1 100%; justify-content: center; }
+      }
+
+      .recent-tramites-card {
+        padding: 14px 10px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
   `]
 })
 export class DashboardComponent implements OnInit {

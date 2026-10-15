@@ -32,61 +32,63 @@ import { SeguridadService, UsuarioAdmin } from '../../core/services/seguridad.se
       <mat-card class="table-card">
         <mat-progress-bar *ngIf="loading()" mode="indeterminate"></mat-progress-bar>
 
-        <table mat-table [dataSource]="usuarios()" class="w-full">
-          <!-- Usuario Column -->
-          <ng-container matColumnDef="usuario">
-            <th mat-header-cell *matHeaderCellDef>Usuario</th>
-            <td mat-cell *matCellDef="let u">
-              <div class="user-cell">
-                <mat-icon class="user-avatar-icon">account_circle</mat-icon>
-                <div>
-                  <strong>{{ u.usuario }}</strong>
-                  <small class="user-email">{{ u.email }}</small>
+        <div class="table-responsive">
+          <table mat-table [dataSource]="usuarios()" class="w-full">
+            <!-- Usuario Column -->
+            <ng-container matColumnDef="usuario">
+              <th mat-header-cell *matHeaderCellDef>Usuario</th>
+              <td mat-cell *matCellDef="let u">
+                <div class="user-cell">
+                  <mat-icon class="user-avatar-icon">account_circle</mat-icon>
+                  <div>
+                    <strong>{{ u.usuario }}</strong>
+                    <small class="user-email">{{ u.email }}</small>
+                  </div>
                 </div>
-              </div>
-            </td>
-          </ng-container>
+              </td>
+            </ng-container>
 
-          <!-- Nombre Completo Column -->
-          <ng-container matColumnDef="nombre">
-            <th mat-header-cell *matHeaderCellDef>Nombre Completo</th>
-            <td mat-cell *matCellDef="let u">
-              {{ u.nombres }} {{ u.apellidos }}
-            </td>
-          </ng-container>
+            <!-- Nombre Completo Column -->
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Nombre Completo</th>
+              <td mat-cell *matCellDef="let u">
+                {{ u.nombres }} {{ u.apellidos }}
+              </td>
+            </ng-container>
 
-          <!-- Cargo Column -->
-          <ng-container matColumnDef="cargo">
-            <th mat-header-cell *matHeaderCellDef>Cargo</th>
-            <td mat-cell *matCellDef="let u">{{ u.cargo || 'Sin cargo' }}</td>
-          </ng-container>
+            <!-- Cargo Column -->
+            <ng-container matColumnDef="cargo">
+              <th mat-header-cell *matHeaderCellDef>Cargo</th>
+              <td mat-cell *matCellDef="let u">{{ u.cargo || 'Sin cargo' }}</td>
+            </ng-container>
 
-          <!-- Roles Column -->
-          <ng-container matColumnDef="roles">
-            <th mat-header-cell *matHeaderCellDef>Roles Asignados</th>
-            <td mat-cell *matCellDef="let u">
-              <div class="roles-wrap">
-                <span class="role-tag" *ngFor="let ur of u.usuario_rol">
-                  {{ ur.rol?.nombre }}
+            <!-- Roles Column -->
+            <ng-container matColumnDef="roles">
+              <th mat-header-cell *matHeaderCellDef>Roles Asignados</th>
+              <td mat-cell *matCellDef="let u">
+                <div class="roles-wrap">
+                  <span class="role-tag" *ngFor="let ur of u.usuario_rol">
+                    {{ ur.rol?.nombre }}
+                  </span>
+                  <span *ngIf="!u.usuario_rol || u.usuario_rol.length === 0" class="no-role">Sin rol</span>
+                </div>
+              </td>
+            </ng-container>
+
+            <!-- Estado Column -->
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let u">
+                <span class="badge-tag" [ngClass]="u.estado === 'ACTIVO' ? 'badge-activo' : 'badge-inactivo'">
+                  {{ u.estado }}
                 </span>
-                <span *ngIf="!u.usuario_rol || u.usuario_rol.length === 0" class="no-role">Sin rol</span>
-              </div>
-            </td>
-          </ng-container>
+              </td>
+            </ng-container>
 
-          <!-- Estado Column -->
-          <ng-container matColumnDef="estado">
-            <th mat-header-cell *matHeaderCellDef>Estado</th>
-            <td mat-cell *matCellDef="let u">
-              <span class="badge-tag" [ngClass]="u.estado === 'ACTIVO' ? 'badge-activo' : 'badge-inactivo'">
-                {{ u.estado }}
-              </span>
-            </td>
-          </ng-container>
-
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        </table>
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          </table>
+        </div>
       </mat-card>
     </div>
   `,
@@ -130,6 +132,23 @@ import { SeguridadService, UsuarioAdmin } from '../../core/services/seguridad.se
       font-weight: 600;
     }
     .no-role { color: #b0bec5; font-style: italic; font-size: 0.8rem; }
+
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .table-responsive table {
+      min-width: 580px;
+    }
+
+    @media (max-width: 768px) {
+      .page-header {
+        margin-bottom: 16px;
+        h1 { font-size: 1.45rem; }
+      }
+    }
   `]
 })
 export class UsuariosListComponent implements OnInit {

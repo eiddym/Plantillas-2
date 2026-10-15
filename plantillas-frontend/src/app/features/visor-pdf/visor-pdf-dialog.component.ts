@@ -191,6 +191,25 @@ export interface VisorPdfData {
       background: #ffffff;
       gap: 8px;
     }
+
+    @media (max-width: 768px) {
+      .dialog-header {
+        padding: 10px 14px;
+        .dialog-title {
+          font-size: 1rem;
+        }
+      }
+
+      .dialog-body {
+        min-width: 92vw;
+        height: 68vh;
+      }
+
+      .html-preview-container {
+        padding: 16px 12px;
+        margin: 10px 0;
+      }
+    }
   `]
 })
 export class VisorPdfDialogComponent implements OnInit, OnDestroy {

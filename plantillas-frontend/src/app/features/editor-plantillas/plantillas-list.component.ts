@@ -58,62 +58,64 @@ import { AuthService } from '../../core/auth/auth.service';
 
         <mat-progress-bar *ngIf="loading()" mode="indeterminate"></mat-progress-bar>
 
-        <table mat-table [dataSource]="plantillas()" class="w-full">
-          <!-- ID Column -->
-          <ng-container matColumnDef="id">
-            <th mat-header-cell *matHeaderCellDef>ID</th>
-            <td mat-cell *matCellDef="let p">{{ p.id_plantilla_formly }}</td>
-          </ng-container>
+        <div class="table-responsive">
+          <table mat-table [dataSource]="plantillas()" class="w-full">
+            <!-- ID Column -->
+            <ng-container matColumnDef="id">
+              <th mat-header-cell *matHeaderCellDef>ID</th>
+              <td mat-cell *matCellDef="let p">{{ p.id_plantilla_formly }}</td>
+            </ng-container>
 
-          <!-- Nombre Column -->
-          <ng-container matColumnDef="nombre">
-            <th mat-header-cell *matHeaderCellDef>Nombre de Plantilla</th>
-            <td mat-cell *matCellDef="let p">
-              <strong>{{ p.nombre }}</strong>
-            </td>
-          </ng-container>
+            <!-- Nombre Column -->
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Nombre de Plantilla</th>
+              <td mat-cell *matCellDef="let p">
+                <strong>{{ p.nombre }}</strong>
+              </td>
+            </ng-container>
 
-          <!-- Abreviación Column -->
-          <ng-container matColumnDef="abreviacion">
-            <th mat-header-cell *matHeaderCellDef>Abreviación</th>
-            <td mat-cell *matCellDef="let p">
-              <span class="badge-tag">{{ p.abreviacion }}</span>
-            </td>
-          </ng-container>
+            <!-- Abreviación Column -->
+            <ng-container matColumnDef="abreviacion">
+              <th mat-header-cell *matHeaderCellDef>Abreviación</th>
+              <td mat-cell *matCellDef="let p">
+                <span class="badge-tag">{{ p.abreviacion }}</span>
+              </td>
+            </ng-container>
 
-          <!-- Estado Column -->
-          <ng-container matColumnDef="estado">
-            <th mat-header-cell *matHeaderCellDef>Estado</th>
-            <td mat-cell *matCellDef="let p">
-              <span class="badge-tag" [ngClass]="p.estado === 'ACTIVO' ? 'badge-activo' : 'badge-inactivo'">
-                {{ p.estado }}
-              </span>
-            </td>
-          </ng-container>
+            <!-- Estado Column -->
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let p">
+                <span class="badge-tag" [ngClass]="p.estado === 'ACTIVO' ? 'badge-activo' : 'badge-inactivo'">
+                  {{ p.estado }}
+                </span>
+              </td>
+            </ng-container>
 
-          <!-- Acciones Column -->
-          <ng-container matColumnDef="acciones">
-            <th mat-header-cell *matHeaderCellDef class="text-right">Acciones</th>
-            <td mat-cell *matCellDef="let p" class="text-right">
-              <button mat-icon-button color="accent" (click)="redactarConPlantilla(p)" matTooltip="Redactar documento con esta plantilla">
-                <mat-icon>post_add</mat-icon>
-              </button>
-              <a mat-icon-button color="primary" [routerLink]="['/plantillas', p.id_plantilla_formly, 'editar']" matTooltip="Editar diseño">
-                <mat-icon>edit</mat-icon>
-              </a>
-            </td>
-          </ng-container>
+            <!-- Acciones Column -->
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef class="text-right">Acciones</th>
+              <td mat-cell *matCellDef="let p" class="text-right">
+                <button mat-icon-button color="accent" (click)="redactarConPlantilla(p)" matTooltip="Redactar documento con esta plantilla">
+                  <mat-icon>post_add</mat-icon>
+                </button>
+                <a mat-icon-button color="primary" [routerLink]="['/plantillas', p.id_plantilla_formly, 'editar']" matTooltip="Editar diseño">
+                  <mat-icon>edit</mat-icon>
+                </a>
+              </td>
+            </ng-container>
 
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
 
-          <tr class="mat-row" *matNoDataRow>
-            <td class="mat-cell empty-cell" [attr.colspan]="displayedColumns.length">
-              <mat-icon class="empty-icon">find_in_page</mat-icon>
-              <p>No se encontraron plantillas registradas.</p>
-            </td>
-          </tr>
-        </table>
+            <tr class="mat-row" *matNoDataRow>
+              <td class="mat-cell empty-cell" [attr.colspan]="displayedColumns.length">
+                <mat-icon class="empty-icon">find_in_page</mat-icon>
+                <p>No se encontraron plantillas registradas.</p>
+              </td>
+            </tr>
+          </table>
+        </div>
 
         <mat-paginator
           [length]="total()"
@@ -160,6 +162,43 @@ import { AuthService } from '../../core/auth/auth.service';
       font-size: 48px;
       width: 48px;
       height: 48px;
+    }
+
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .table-responsive table {
+      min-width: 540px;
+    }
+
+    @media (max-width: 768px) {
+      .page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        margin-bottom: 16px;
+
+        h1 {
+          font-size: 1.45rem;
+        }
+
+        button {
+          width: 100%;
+          justify-content: center;
+          height: 42px;
+        }
+      }
+
+      .toolbar-filter {
+        padding: 12px;
+      }
+
+      .search-field {
+        width: 100%;
+      }
     }
   `]
 })

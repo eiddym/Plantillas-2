@@ -278,6 +278,27 @@ import { AuthService } from '../../core/auth/auth.service';
       border-top: 1px solid #e2e8f0;
       background: #ffffff;
     }
+
+    @media (max-width: 640px) {
+      :host {
+        width: 100%;
+        max-width: 100vw;
+      }
+
+      .dialog-header {
+        padding: 1rem;
+      }
+
+      .dialog-content {
+        padding: 0.85rem 0.75rem;
+        max-height: 72vh;
+      }
+
+      .templates-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+      }
+    }
   `]
 })
 export class NuevoDocumentoDialogComponent implements OnInit {
