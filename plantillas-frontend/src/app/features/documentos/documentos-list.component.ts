@@ -165,30 +165,49 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
       justify-content: space-between;
       align-items: center;
       margin-bottom: 24px;
-      h1 { margin: 0; color: #1a237e; font-size: 1.8rem; }
-      .subtitle { margin: 4px 0 0 0; color: #607d8b; }
-      button { display: flex; align-items: center; gap: 6px; }
+      h1 { margin: 0; color: #0f2027; font-size: 1.8rem; font-family: 'Poppins', sans-serif; font-weight: 700; }
+      .subtitle { margin: 4px 0 0 0; color: #64748b; font-family: 'Poppins', sans-serif; }
+      button { display: flex; align-items: center; gap: 6px; background-color: #1e293b; border-radius: 20px; }
     }
     .table-card {
       border-radius: 12px;
       overflow: hidden;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 16px rgba(15, 32, 39, 0.06);
     }
     .toolbar-filter {
       padding: 16px;
+      background: #ffffff;
     }
     .search-field {
-      width: 360px;
+      width: 380px;
       margin-bottom: -1.25em;
     }
     .w-full { width: 100%; }
     .text-right { text-align: right; }
+
+    th.mat-mdc-header-cell {
+      background-color: #0f2027 !important;
+      color: #ffffff !important;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    tr.mat-mdc-row:hover {
+      background-color: #f8fafc !important;
+    }
+
     .doc-cite {
       display: block;
-      color: #1a237e;
+      color: #0f2027;
+      font-weight: 700;
+      font-family: 'Poppins', sans-serif;
     }
     .doc-meta {
       display: block;
-      color: #607d8b;
+      color: #64748b;
       font-size: 0.8rem;
     }
     .participantes-col {
@@ -200,23 +219,24 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
     .empty-cell {
       text-align: center;
       padding: 40px !important;
-      color: #90a4ae;
+      color: #94a3b8;
     }
     .empty-icon {
       font-size: 48px;
       width: 48px;
       height: 48px;
+      color: #cbd5e1;
     }
 
-    .badge-ordinario { background: #e8f5e9; color: #2e7d32; }
-    .badge-reservado { background: #fff3e0; color: #ef6c00; }
-    .badge-confidencial { background: #f3e5f5; color: #7b1fa2; }
-    .badge-secreto { background: #ffebee; color: #c62828; }
+    .badge-ordinario { background: #e0f2fe; color: #0369a1; }
+    .badge-reservado { background: #fef3c7; color: #92400e; }
+    .badge-confidencial { background: #f3e8ff; color: #7e22ce; }
+    .badge-secreto { background: #fee2e2; color: #b91c1c; }
 
-    .badge-nuevo { background: #e3f2fd; color: #1565c0; }
-    .badge-derivado { background: #ede7f6; color: #512da8; }
-    .badge-aprobado { background: #e8f5e9; color: #2e7d32; }
-    .badge-cerrado { background: #eceff1; color: #455a64; }
+    .badge-nuevo { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
+    .badge-derivado { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+    .badge-aprobado { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+    .badge-cerrado { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
   `]
 })
 export class DocumentosListComponent implements OnInit {

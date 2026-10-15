@@ -1,13 +1,11 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
+import { Router, RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
@@ -15,138 +13,363 @@ import { AuthService } from '../../../core/auth/auth.service';
   standalone: true,
   imports: [
     CommonModule,
+    RouterModule,
     ReactiveFormsModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
     MatButtonModule,
     MatIconModule,
-    MatProgressBarModule
+    MatProgressBarModule,
+    MatTooltipModule
   ],
   template: `
-    <div class="login-wrapper">
-      <div class="login-card-container">
-        <mat-card class="login-card">
-          <div class="login-header">
-            <div class="brand-badge">
-              <mat-icon>description</mat-icon>
-            </div>
-            <h2>Plantillas y Aprobación</h2>
-            <p class="subtitle">Sistema de Gestión y Aprobación Documental</p>
+    <div class="login-container">
+      <div class="login-card-horizontal">
+        <!-- Panel Izquierdo: Identidad Oficial Cooperativa Marabunta R.L. -->
+        <div class="panel-izquierdo">
+          <img
+            [src]="logoUrl()"
+            (error)="onLogoError()"
+            alt="Logo Cooperativa Minera Marabunta R.L."
+            class="logo-cooperativa"
+          />
+        </div>
+
+        <!-- Panel Derecho: Formulario DOCS -->
+        <div class="panel-derecho">
+          <div class="cabecera-sistema">
+            Sistema de documentos digitales de la cooperativa minera Marabunta R.L.
           </div>
+          <div class="titulo-docs">DOCS</div>
 
           @if (loading()) {
-            <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+            <mat-progress-bar mode="indeterminate" class="mb-4"></mat-progress-bar>
           }
 
-          <mat-card-content>
-            @if (errorMessage()) {
-              <div class="error-banner">
-                <mat-icon>error_outline</mat-icon>
-                <span>{{ errorMessage() }}</span>
-              </div>
+          @if (errorMessage()) {
+            <div class="error-banner">
+              <mat-icon>error_outline</mat-icon>
+              <span>{{ errorMessage() }}</span>
+            </div>
+          }
+
+          <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+            <!-- Campo Usuario -->
+            <div class="input-group">
+              <mat-icon class="icon-field">person</mat-icon>
+              <input
+                type="text"
+                formControlName="username"
+                class="input-blanco"
+                placeholder="Nombre de usuario"
+                autocomplete="username"
+                required
+              />
+            </div>
+            @if (loginForm.get('username')?.touched && loginForm.get('username')?.hasError('required')) {
+              <div class="field-error">El nombre de usuario es obligatorio</div>
             }
 
-            <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>Usuario o Correo</mat-label>
-                <input matInput formControlName="username" placeholder="Ej. sys_default" autocomplete="username">
-                <mat-icon matPrefix>person</mat-icon>
-                @if (loginForm.get('username')?.hasError('required')) {
-                  <mat-error>El usuario es obligatorio</mat-error>
-                }
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>Contraseña</mat-label>
-                <input matInput [type]="hidePassword() ? 'password' : 'text'" formControlName="password" autocomplete="current-password">
-                <mat-icon matPrefix>lock</mat-icon>
-                <button type="button" mat-icon-button matSuffix (click)="hidePassword.set(!hidePassword())">
-                  <mat-icon>{{ hidePassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
-                </button>
-                @if (loginForm.get('password')?.hasError('required')) {
-                  <mat-error>La contraseña es obligatoria</mat-error>
-                }
-              </mat-form-field>
-
-              <button mat-raised-button color="primary" type="submit" class="submit-btn" [disabled]="loginForm.invalid || loading()">
-                <mat-icon>login</mat-icon>
-                <span>Ingresar al Sistema</span>
+            <!-- Campo Contraseña -->
+            <div class="input-group">
+              <mat-icon class="icon-field">lock</mat-icon>
+              <input
+                [type]="hidePassword() ? 'password' : 'text'"
+                formControlName="password"
+                class="input-blanco"
+                placeholder="Contraseña"
+                autocomplete="current-password"
+                required
+              />
+              <button
+                type="button"
+                class="toggle-password"
+                (click)="hidePassword.set(!hidePassword())"
+                matTooltip="Mostrar u ocultar contraseña"
+              >
+                <mat-icon>{{ hidePassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
               </button>
-            </form>
-          </mat-card-content>
-        </mat-card>
+            </div>
+            @if (loginForm.get('password')?.touched && loginForm.get('password')?.hasError('required')) {
+              <div class="field-error">La contraseña es obligatoria</div>
+            }
+
+            <!-- Botón Login Píldora Oscuro -->
+            <button
+              type="submit"
+              class="login-btn"
+              [disabled]="loginForm.invalid || loading()"
+            >
+              {{ loading() ? 'INICIANDO SESIÓN...' : 'INICIAR SESIÓN' }}
+            </button>
+          </form>
+
+          <!-- Enlace de Verificación Pública con Mano -->
+          <a routerLink="/verificar" class="verificar-enlace">
+            <span>Verifica tu documento aquí</span>
+            <span class="icono-mano">👆🏽</span>
+          </a>
+        </div>
       </div>
     </div>
   `,
   styles: [`
-    .login-wrapper {
+    .login-container {
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-      padding: 1rem;
+      padding: 20px;
+      background: linear-gradient(135deg, rgba(15, 32, 39, 0.92) 0%, rgba(15, 61, 62, 0.88) 100%),
+                  url('/assets/images/bg.jpg') no-repeat center center fixed;
+      background-size: cover;
+      font-family: 'Poppins', Roboto, sans-serif;
     }
-    .login-card-container {
+
+    .login-card-horizontal {
+      display: flex;
       width: 100%;
-      max-width: 440px;
+      max-width: 920px;
+      min-height: 500px;
+      background-color: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+      overflow: hidden;
+      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .login-card {
-      border-radius: 16px;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
-      padding: 1.5rem 1rem;
-      background: #ffffff;
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(15px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
     }
-    .login-header {
-      text-align: center;
-      margin-bottom: 1.5rem;
-    }
-    .brand-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #3f51b5, #2196f3);
-      color: #fff;
-      margin-bottom: 0.75rem;
-      mat-icon { font-size: 32px; width: 32px; height: 32px; }
-    }
-    .login-header h2 {
-      margin: 0;
-      color: #1a237e;
-      font-weight: 700;
-      font-size: 1.5rem;
-    }
-    .subtitle {
-      color: #607d8b;
-      font-size: 0.9rem;
-      margin-top: 0.25rem;
-    }
-    .w-full { width: 100%; margin-bottom: 0.5rem; }
-    .submit-btn {
-      width: 100%;
-      height: 48px;
-      font-size: 1rem;
-      border-radius: 8px;
-      margin-top: 0.5rem;
+
+    /* --- PANEL IZQUIERDO (LOGO OFICIAL Y FONDO PETRÓLEO) --- */
+    .panel-izquierdo {
+      flex: 1;
+      background: linear-gradient(145deg, #0f2027 0%, #15303c 50%, #0f3d3e 100%);
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      padding: 40px;
+      position: relative;
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
     }
+
+    .logo-cooperativa {
+      width: 100%;
+      max-width: 320px;
+      height: auto;
+      filter: drop-shadow(0px 10px 24px rgba(0, 0, 0, 0.35));
+      z-index: 2;
+      transition: transform 0.3s ease;
+      &:hover {
+        transform: scale(1.02);
+      }
+    }
+
+    /* --- PANEL DERECHO (FORMULARIO DOCS) --- */
+    .panel-derecho {
+      flex: 1.1;
+      padding: 45px 55px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background-color: #ffffff;
+    }
+
+    .cabecera-sistema {
+      text-align: center;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #0f172a;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      letter-spacing: 0.6px;
+      line-height: 1.4;
+    }
+
+    .titulo-docs {
+      text-align: center;
+      font-size: 42px;
+      font-weight: 900;
+      color: #0f172a;
+      margin-bottom: 30px;
+      letter-spacing: 1.5px;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .input-group {
+      position: relative;
+      width: 100%;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-blanco {
+      width: 100%;
+      height: 50px;
+      background-color: #ffffff;
+      border: 1.5px solid #0f172a;
+      border-radius: 4px;
+      padding: 0 45px;
+      font-size: 15px;
+      font-family: 'Poppins', sans-serif;
+      color: #0f172a;
+      box-sizing: border-box;
+      transition: all 0.25s ease;
+
+      &::placeholder {
+        color: #64748b;
+        font-weight: 400;
+      }
+
+      &:focus {
+        outline: none;
+        border-color: #0284c7;
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+      }
+    }
+
+    .icon-field {
+      position: absolute;
+      left: 12px;
+      color: #0f172a;
+      font-size: 22px;
+      width: 22px;
+      height: 22px;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 12px;
+      background: transparent;
+      border: none;
+      color: #0284c7;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      mat-icon {
+        font-size: 22px;
+        width: 22px;
+        height: 22px;
+      }
+    }
+
+    .field-error {
+      color: #dc2626;
+      font-size: 12px;
+      margin-top: -10px;
+      margin-left: 4px;
+      font-weight: 500;
+    }
+
+    /* --- BOTÓN LOGIN PÍLDORA AZUL OSCURO --- */
+    .login-btn {
+      width: 100%;
+      padding: 14px;
+      margin-top: 10px;
+      background-color: #1e293b;
+      color: #ffffff;
+      border: none;
+      border-radius: 25px;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 12px rgba(30, 41, 59, 0.25);
+
+      &:hover:not(:disabled) {
+        background-color: #0f172a;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.35);
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+
+    /* --- ENLACE VERIFICAR DOCUMENTOS --- */
+    .verificar-enlace {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 24px;
+      cursor: pointer;
+      color: #0284c7;
+      font-weight: 600;
+      font-size: 14.5px;
+      text-decoration: none;
+      transition: color 0.2s ease;
+
+      &:hover {
+        color: #0369a1;
+        text-decoration: underline;
+      }
+
+      .icono-mano {
+        font-size: 20px;
+        margin-left: 8px;
+        transition: transform 0.2s ease;
+      }
+
+      &:hover .icono-mano {
+        transform: translateY(-2px);
+      }
+    }
+
     .error-banner {
       display: flex;
       align-items: center;
       gap: 8px;
       padding: 10px 14px;
-      background: #ffebee;
-      color: #c62828;
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
       border-radius: 8px;
       margin-bottom: 1rem;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
+      font-weight: 500;
+    }
+
+    .mb-4 {
+      margin-bottom: 1rem;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .login-card-horizontal {
+        flex-direction: column;
+        max-width: 440px;
+      }
+      .panel-izquierdo {
+        padding: 35px 20px;
+        border-right: none;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      .panel-derecho {
+        padding: 35px 25px;
+      }
+      .logo-cooperativa {
+        max-width: 220px;
+      }
+      .titulo-docs {
+        font-size: 34px;
+      }
     }
   `]
 })
@@ -154,6 +377,10 @@ export class LoginComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+
+  // Logo institucional de la cooperativa: carga local primero y fallback a URL remota de alta resolución
+  readonly logoUrl = signal<string>('/assets/images/logo_cooperativa.png');
+  private fallbackTried = false;
 
   readonly loginForm: FormGroup = this.fb.group({
     username: ['', [Validators.required]],
@@ -163,6 +390,16 @@ export class LoginComponent {
   readonly hidePassword = signal(true);
   readonly loading = signal(false);
   readonly errorMessage = signal<string | null>(null);
+
+  onLogoError(): void {
+    if (!this.fallbackTried) {
+      this.fallbackTried = true;
+      // Cargar desde URL remota oficial si el asset local fallara
+      this.logoUrl.set('https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=375,fit=crop/1EdidoQhwln867gG/disea--o-sin-tatulo-VuRHqfOszoZxhEbq.png');
+    } else {
+      this.logoUrl.set('/assets/images/logo.png');
+    }
+  }
 
   onSubmit(): void {
     if (this.loginForm.invalid) return;

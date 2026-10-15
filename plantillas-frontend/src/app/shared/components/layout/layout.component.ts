@@ -123,24 +123,26 @@ import { AuthService } from '../../../core/auth/auth.service';
       position: sticky;
       top: 0;
       z-index: 1000;
-      background: linear-gradient(90deg, #1a237e 0%, #283593 100%);
+      background: linear-gradient(135deg, #0f2027 0%, #15303c 50%, #203a43 100%);
       color: #ffffff;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 3px 12px rgba(15, 32, 39, 0.25);
       height: 64px;
       padding: 0 16px;
     }
     .brand-link {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       color: #ffffff;
       text-decoration: none;
       margin-left: 8px;
       font-weight: 700;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.6px;
+      font-family: 'Poppins', sans-serif;
     }
     .brand-icon {
       font-size: 24px;
+      color: #00e5ff;
     }
     .flex-spacer {
       flex: 1 1 auto;
@@ -149,33 +151,39 @@ import { AuthService } from '../../../core/auth/auth.service';
       display: flex;
       flex-direction: column;
       align-items: flex-end;
-      margin-right: 12px;
-      line-height: 1.2;
+      margin-right: 14px;
+      line-height: 1.25;
     }
     .greeting-text {
       font-size: 0.85rem;
-      opacity: 0.95;
+      font-weight: 500;
+      color: #ffffff;
     }
     .role-badge {
       font-size: 0.7rem;
-      background: rgba(255, 255, 255, 0.2);
-      padding: 2px 6px;
-      border-radius: 8px;
+      background: rgba(0, 229, 255, 0.15);
+      color: #00e5ff;
+      border: 1px solid rgba(0, 229, 255, 0.3);
+      padding: 2px 8px;
+      border-radius: 10px;
       text-transform: uppercase;
-      font-weight: 600;
-      margin-top: 2px;
+      font-weight: 700;
+      margin-top: 3px;
+      letter-spacing: 0.5px;
     }
     .avatar-circle {
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      background: #ffb300;
-      color: #1a237e;
+      background: #4fd1c5;
+      color: #0b3a35;
+      border: 2px solid rgba(255, 255, 255, 0.4);
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 700;
-      font-size: 1rem;
+      font-size: 0.95rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
     }
     .user-btn {
       padding: 0 4px;
@@ -190,36 +198,44 @@ import { AuthService } from '../../../core/auth/auth.service';
       height: calc(100vh - 64px);
     }
     .main-sidenav {
-      width: 260px;
+      width: 270px;
       background: #ffffff;
-      border-right: 1px solid #e0e0e0;
+      border-right: 1px solid #e2e8f0;
     }
     .sidenav-header {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 16px;
-      font-weight: 600;
-      color: #5c6bc0;
-      border-bottom: 1px solid #f0f0f0;
+      gap: 10px;
+      padding: 16px 20px;
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: #0f2027;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      mat-icon {
+        color: #0284c7;
+      }
     }
     .menu-section-label {
-      padding: 12px 16px 4px 16px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      color: #9e9e9e;
+      padding: 14px 20px 6px 20px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #94a3b8;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.8px;
     }
     .active-item {
-      background: rgba(63, 81, 181, 0.12) !important;
-      color: #1a237e !important;
-      font-weight: 600;
-      border-left: 4px solid #1a237e;
+      background: #f0fdf4 !important;
+      color: #0f2027 !important;
+      font-weight: 700;
+      border-left: 4px solid #00b8d4;
+      mat-icon {
+        color: #00b8d4 !important;
+      }
     }
     .main-content {
       padding: 24px;
-      background: #f4f6f9;
+      background: #eef1f4;
       overflow-y: auto;
     }
   `]

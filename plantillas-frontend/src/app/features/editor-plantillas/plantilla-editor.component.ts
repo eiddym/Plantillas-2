@@ -11,6 +11,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSelectModule } from '@angular/material/select';
 import { FormlyFieldConfig, FormlyModule } from '@ngx-formly/core';
 import { PlantillaFormly, PlantillasService } from '../../core/services/plantillas.service';
 
@@ -34,6 +35,7 @@ interface PaletteItem {
     MatIconModule,
     MatInputModule,
     MatFormFieldModule,
+    MatSelectModule,
     MatTabsModule,
     MatSnackBarModule,
     MatTooltipModule,
@@ -81,6 +83,14 @@ interface PaletteItem {
             @if (metaForm.get('abreviacion')?.hasError('required')) {
               <mat-error>Requerido</mat-error>
             }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="meta-field-short">
+            <mat-label>Formato de Hoja</mat-label>
+            <mat-select formControlName="tipoHoja">
+              <mat-option value="Letter">Carta (21.6 x 27.9 cm)</mat-option>
+              <mat-option value="Oficio">Oficio (21.6 x 33.0 cm)</mat-option>
+            </mat-select>
           </mat-form-field>
         </form>
       </mat-card>
@@ -150,22 +160,24 @@ interface PaletteItem {
         <mat-card class="preview-card">
           <mat-card-header>
             <mat-icon mat-card-avatar color="primary">visibility</mat-icon>
-            <mat-card-title>Vista Previa en Vivo</mat-card-title>
-            <mat-card-subtitle>Renderizado nativo &#64;ngx-formly</mat-card-subtitle>
+            <mat-card-title>Vista Previa (Hoja {{ metaForm.get('tipoHoja')?.value === 'Oficio' ? 'Oficio' : 'Carta' }})</mat-card-title>
+            <mat-card-subtitle>Diagramación oficial para impresión y firma</mat-card-subtitle>
           </mat-card-header>
 
           <div class="preview-content">
-            @defer (on idle) {
-              <form [formGroup]="previewForm">
-                <formly-form
-                  [form]="previewForm"
-                  [fields]="canvasFields"
-                  [model]="previewModel">
-                </formly-form>
-              </form>
-            } @placeholder {
-              <div class="preview-placeholder">Generando vista previa dinámica...</div>
-            }
+            <div [ngClass]="metaForm.get('tipoHoja')?.value === 'Oficio' ? 'pagina-oficio' : 'pagina-carta'">
+              @defer (on idle) {
+                <form [formGroup]="previewForm">
+                  <formly-form
+                    [form]="previewForm"
+                    [fields]="canvasFields"
+                    [model]="previewModel">
+                  </formly-form>
+                </form>
+              } @placeholder {
+                <div class="preview-placeholder">Generando vista previa dinámica...</div>
+              }
+            </div>
           </div>
         </mat-card>
       </div>
@@ -324,7 +336,8 @@ export class PlantillaEditorComponent implements OnInit {
 
   readonly metaForm: FormGroup = this.fb.group({
     nombre: ['', [Validators.required]],
-    abreviacion: ['', [Validators.required]]
+    abreviacion: ['', [Validators.required]],
+    tipoHoja: ['Letter', [Validators.required]]
   });
 
   readonly previewForm = new FormGroup({});
@@ -395,15 +408,18 @@ export class PlantillaEditorComponent implements OnInit {
     this.plantillasService.getPlantilla(id).subscribe({
       next: (res) => {
         const p = res.datos;
-        this.metaForm.patchValue({
-          nombre: p.nombre,
-          abreviacion: p.abreviacion
-        });
         try {
           this.canvasFields = JSON.parse(p.plantilla || '[]');
         } catch {
           this.canvasFields = [];
         }
+
+        const th = (this.canvasFields.length > 0 && this.canvasFields[0]?.templateOptions?.['tipoHoja']) || 'Letter';
+        this.metaForm.patchValue({
+          nombre: p.nombre,
+          abreviacion: p.abreviacion,
+          tipoHoja: th
+        });
       },
       error: () => {
         this.snackBar.open('Error al cargar la plantilla', 'Cerrar', { duration: 3000 });
@@ -435,6 +451,15 @@ export class PlantillaEditorComponent implements OnInit {
     if (this.metaForm.invalid) return;
 
     this.saving.set(true);
+    
+    // Guardar el tipo de hoja institucional (Letter / Oficio) en el primer elemento de la plantilla
+    if (this.canvasFields.length > 0) {
+      if (!this.canvasFields[0].templateOptions) {
+        this.canvasFields[0].templateOptions = {};
+      }
+      this.canvasFields[0].templateOptions['tipoHoja'] = this.metaForm.value.tipoHoja || 'Letter';
+    }
+
     const payload: PlantillaFormly = {
       nombre: this.metaForm.value.nombre,
       abreviacion: this.metaForm.value.abreviacion,
