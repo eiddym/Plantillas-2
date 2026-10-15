@@ -6,6 +6,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { NuevoDocumentoDialogComponent } from '../documentos/nuevo-documento-dialog.component';
 import { AuthService } from '../../core/auth/auth.service';
 import { Documento, DocumentosService } from '../../core/services/documentos.service';
 
@@ -45,7 +47,7 @@ interface DashboardSection {
           <p class="subtitle">{{ user()?.cargo || 'Funcionario Oficial' }} &bull; Cooperativa Minera Marabunta R.L.</p>
         </div>
         <div class="welcome-actions">
-          <button mat-raised-button class="btn-nuevo-doc" routerLink="/plantillas">
+          <button mat-raised-button class="btn-nuevo-doc" (click)="abrirNuevoDocumento()">
             <mat-icon>add_circle_outline</mat-icon>
             <span>Redactar Documento</span>
           </button>
@@ -85,7 +87,7 @@ interface DashboardSection {
       <!-- Acciones Rápidas -->
       <section class="quick-actions-bar">
         <span class="actions-label">Acciones rápidas:</span>
-        <button mat-stroked-button routerLink="/plantillas" class="quick-action-btn">
+        <button mat-stroked-button (click)="abrirNuevoDocumento()" class="quick-action-btn">
           <mat-icon>add</mat-icon>
           <span>Nuevo Documento</span>
         </button>
@@ -535,6 +537,7 @@ export class DashboardComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly documentosService = inject(DocumentosService);
   private readonly router = inject(Router);
+  private readonly dialog = inject(MatDialog);
 
   readonly user = this.authService.currentUser;
   private readonly menus = this.authService.currentMenu;
@@ -675,5 +678,13 @@ export class DashboardComponent implements OnInit {
     if (doc.id_documento) {
       this.router.navigate(['/documentos', doc.id_documento]);
     }
+  }
+
+  abrirNuevoDocumento(): void {
+    this.dialog.open(NuevoDocumentoDialogComponent, {
+      width: '760px',
+      maxWidth: '95vw',
+      disableClose: false
+    });
   }
 }

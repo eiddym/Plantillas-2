@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
@@ -11,7 +11,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { PlantillaFormly, PlantillasService } from '../../core/services/plantillas.service';
+import { DocumentosService } from '../../core/services/documentos.service';
 
 @Component({
   selector: 'app-plantillas-list',
@@ -28,7 +30,8 @@ import { PlantillaFormly, PlantillasService } from '../../core/services/plantill
     MatFormFieldModule,
     MatProgressBarModule,
     MatChipsModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatSnackBarModule
   ],
   template: `
     <div class="page-container">
@@ -91,6 +94,9 @@ import { PlantillaFormly, PlantillasService } from '../../core/services/plantill
           <ng-container matColumnDef="acciones">
             <th mat-header-cell *matHeaderCellDef class="text-right">Acciones</th>
             <td mat-cell *matCellDef="let p" class="text-right">
+              <button mat-icon-button color="accent" (click)="redactarConPlantilla(p)" matTooltip="Redactar documento con esta plantilla">
+                <mat-icon>post_add</mat-icon>
+              </button>
               <a mat-icon-button color="primary" [routerLink]="['/plantillas', p.id_plantilla_formly, 'editar']" matTooltip="Editar diseño">
                 <mat-icon>edit</mat-icon>
               </a>
@@ -158,6 +164,9 @@ import { PlantillaFormly, PlantillasService } from '../../core/services/plantill
 })
 export class PlantillasListComponent implements OnInit {
   private readonly plantillasService = inject(PlantillasService);
+  private readonly documentosService = inject(DocumentosService);
+  private readonly router = inject(Router);
+  private readonly snackBar = inject(MatSnackBar);
 
   readonly displayedColumns = ['id', 'nombre', 'abreviacion', 'estado', 'acciones'];
   readonly plantillas = signal<PlantillaFormly[]>([]);
@@ -197,5 +206,28 @@ export class PlantillasListComponent implements OnInit {
     this.searchFilter = input.value.trim();
     this.pageIndex.set(0);
     this.cargarPlantillas();
+  }
+
+  redactarConPlantilla(p: PlantillaFormly): void {
+    const payload = {
+      nombre: 'BORRADOR',
+      plantilla: p.plantilla,
+      plantilla_valor: JSON.stringify({ inputSelect: 'Reservado' }),
+      sw: { enviado: false, enviar: false },
+      fid_plantilla: p.id_plantilla_formly
+    };
+
+    this.documentosService.crearDocumento(payload).subscribe({
+      next: (res) => {
+        const doc = res.datos;
+        this.snackBar.open('Borrador creado exitosamente', 'Cerrar', { duration: 3000 });
+        if (doc?.id_documento) {
+          this.router.navigate(['/documentos', doc.id_documento]);
+        }
+      },
+      error: (err) => {
+        this.snackBar.open(err.error?.mensaje || 'Error al instanciar el documento', 'Cerrar', { duration: 3000 });
+      }
+    });
   }
 }

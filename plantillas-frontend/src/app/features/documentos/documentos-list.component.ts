@@ -15,6 +15,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { Documento, DocumentosService } from '../../core/services/documentos.service';
 import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component';
+import { NuevoDocumentoDialogComponent } from './nuevo-documento-dialog.component';
 
 @Component({
   selector: 'app-documentos-list',
@@ -42,7 +43,7 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
           <h1>Bandeja Documental</h1>
           <p class="subtitle">Gestión, aprobación y monitoreo del flujo de documentos</p>
         </div>
-        <button mat-raised-button color="primary" routerLink="/plantillas">
+        <button mat-raised-button color="primary" (click)="abrirNuevoDocumento()">
           <mat-icon>post_add</mat-icon>
           <span>Nuevo Documento</span>
         </button>
@@ -324,6 +325,19 @@ export class DocumentosListComponent implements OnInit {
       case 'SECRETO': return 'badge-secreto';
       default: return 'badge-ordinario';
     }
+  }
+
+  abrirNuevoDocumento(): void {
+    const dialogRef = this.dialog.open(NuevoDocumentoDialogComponent, {
+      width: '760px',
+      maxWidth: '95vw',
+      disableClose: false
+    });
+    dialogRef.afterClosed().subscribe((nuevoDoc) => {
+      if (nuevoDoc) {
+        this.cargarDocumentos();
+      }
+    });
   }
 
   getEstadoClass(estado: string): string {

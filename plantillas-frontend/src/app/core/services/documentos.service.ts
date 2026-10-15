@@ -17,6 +17,9 @@ export interface Documento {
   clasificacion_mae?: boolean;
   contenido?: any;
   plantilla?: any;
+  plantilla_valor?: string;
+  fid_plantilla?: number;
+  sw?: any;
   firmaron?: any[];
   firmante_actual?: number;
   _usuario_creacion?: number;
@@ -65,5 +68,9 @@ export class DocumentosService {
 
   obtenerVistaPreviaHtml(idDocumento: number): Observable<ApiResponse<{ html: string; nombre: string }>> {
     return this.http.get<ApiResponse<{ html: string; nombre: string }>>(`${this.baseUrl}/documento/${idDocumento}/preview`);
+  }
+
+  generarPdfDocumento(cite: string, force = false): Observable<Blob> {
+    return this.http.post(`${this.baseUrl}/documentoPDF`, { cite, force }, { responseType: 'blob' });
   }
 }
