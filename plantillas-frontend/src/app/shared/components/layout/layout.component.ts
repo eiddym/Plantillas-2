@@ -90,7 +90,7 @@ import { AuthService } from '../../../core/auth/auth.service';
             <span class="notification-indicator"></span>
           </button>
 
-          <!-- Menú de opciones (Tres puntos verticales / Perfil) -->
+          <!-- Menú de opciones de usuario (Imagen 1 Prod: Mi cuenta / Perfil, Cambio de usuario, Salir) -->
           <button 
             mat-icon-button 
             [matMenuTriggerFor]="optionsMenu" 
@@ -100,28 +100,18 @@ import { AuthService } from '../../../core/auth/auth.service';
             <mat-icon>more_vert</mat-icon>
           </button>
 
-          <mat-menu #optionsMenu="matMenu" xPosition="before" class="custom-user-menu">
-            <div class="menu-user-header">
-              <div class="menu-avatar">{{ userInitial() }}</div>
-              <div class="menu-user-details">
-                <strong>{{ user()?.first_name || user()?.username }} {{ user()?.last_name || '' }}</strong>
-                <small>{{ user()?.email || 'docs@marabuntarl.com' }}</small>
-                <span class="menu-user-role" *ngIf="user()?.cargo">{{ user()?.cargo }}</span>
-              </div>
-            </div>
-            <mat-divider></mat-divider>
-            <button mat-menu-item routerLink="/dashboard" (click)="onNavItemClick()">
-              <mat-icon>dashboard</mat-icon>
-              <span>Panel Principal (Home)</span>
+          <mat-menu #optionsMenu="matMenu" xPosition="before" class="navbar-user-options-menu">
+            <button mat-menu-item routerLink="/profile" class="user-menu-item">
+              <mat-icon class="user-menu-icon">account_circle</mat-icon>
+              <span class="user-menu-text">Mi cuenta / Perfil</span>
             </button>
-            <button mat-menu-item routerLink="/documentos" (click)="onNavItemClick()">
-              <mat-icon>description</mat-icon>
-              <span>Mis Documentos</span>
+            <button mat-menu-item (click)="cambiarUsuario()" class="user-menu-item">
+              <mat-icon class="user-menu-icon">sync</mat-icon>
+              <span class="user-menu-text">Cambio de usuario</span>
             </button>
-            <mat-divider></mat-divider>
-            <button mat-menu-item (click)="logout()" class="logout-item">
-              <mat-icon color="warn">logout</mat-icon>
-              <span class="text-warn">Cerrar Sesión</span>
+            <button mat-menu-item (click)="logout()" class="user-menu-item">
+              <mat-icon class="user-menu-icon">power_settings_new</mat-icon>
+              <span class="user-menu-text">Salir</span>
             </button>
           </mat-menu>
         </div>
@@ -347,52 +337,39 @@ import { AuthService } from '../../../core/auth/auth.service';
       border: 1.5px solid #0f2027;
     }
 
-    /* CUSTOM USER MENU DROPDOWN */
-    .menu-user-header {
-      padding: 14px 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: #f8fafc;
+    /* NAVBAR USER OPTIONS MENU (Imagen 1 Prod Antiguo) */
+    .navbar-user-options-menu {
+      min-width: 210px !important;
+      padding: 4px 0 !important;
+      border-radius: 4px !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
     }
 
-    .menu-avatar {
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      background: #0f2027;
-      color: #2dd4bf;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 1rem;
-    }
+    .user-menu-item {
+      height: 42px !important;
+      display: flex !important;
+      align-items: center !important;
+      padding: 0 16px !important;
+      transition: background 0.15s ease !important;
 
-    .menu-user-details {
-      display: flex;
-      flex-direction: column;
-      strong {
-        font-size: 0.88rem;
-        color: #0f172a;
-      }
-      small {
-        font-size: 0.75rem;
-        color: #64748b;
+      &:hover {
+        background-color: #f1f5f9 !important;
       }
     }
 
-    .menu-user-role {
-      font-size: 0.7rem;
-      color: #0284c7;
-      font-weight: 700;
-      text-transform: uppercase;
-      margin-top: 2px;
+    .user-menu-icon {
+      font-size: 20px !important;
+      width: 20px !important;
+      height: 20px !important;
+      margin-right: 12px !important;
+      color: #334155 !important;
     }
 
-    .text-warn {
-      color: #dc2626 !important;
-      font-weight: 600;
+    .user-menu-text {
+      font-size: 13.5px !important;
+      font-weight: 500 !important;
+      color: #1e293b !important;
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
     }
 
     /* SIDENAV CONTAINER */
@@ -669,6 +646,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   // Título de la sección activa para el breadcrumb de páginas internas
   readonly currentSectionTitle = computed(() => {
     const url = this.currentUrl().split('?')[0].split('#')[0];
+    if (url.startsWith('/profile') || url.startsWith('/cuenta')) return 'Profile';
     if (url.startsWith('/documentos')) return 'Documentos';
     if (url.startsWith('/plantillas')) return 'Plantillas';
     if (url.startsWith('/aprobacion')) return 'Documentos Pendientes';
@@ -820,6 +798,10 @@ export class LayoutComponent implements OnInit, OnDestroy {
       document.exitFullscreen().catch(() => {});
       this.isFullScreen.set(false);
     }
+  }
+
+  cambiarUsuario(): void {
+    this.authService.logout();
   }
 
   logout(): void {

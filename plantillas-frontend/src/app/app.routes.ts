@@ -112,6 +112,17 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'profile',
+        loadComponent: () =>
+          import('./features/profile/profile.component').then(
+            (m) => m.ProfileComponent
+          )
+      },
+      {
+        path: 'cuenta',
+        redirectTo: 'profile'
+      },
+      {
         path: 'menu',
         redirectTo: 'dashboard'
       },
