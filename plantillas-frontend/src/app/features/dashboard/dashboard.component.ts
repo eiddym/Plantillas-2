@@ -99,7 +99,11 @@ interface DashboardSection {
         </button>
         <button mat-stroked-button routerLink="/catalogos" class="quick-action-btn">
           <mat-icon>folder_open</mat-icon>
-          <span>Catálogos Institucionales</span>
+          <span>Catálogos</span>
+        </button>
+        <button mat-stroked-button routerLink="/ventanilla-unica" class="quick-action-btn highlight-vu-btn">
+          <mat-icon>inbox</mat-icon>
+          <span>Ventanilla Única</span>
         </button>
       </section>
 
@@ -361,6 +365,13 @@ interface DashboardSection {
       height: 36px !important;
       mat-icon { font-size: 18px; width: 18px; height: 18px; }
       &:hover { background: #ffffff !important; border-color: #0284c7 !important; color: #0284c7 !important; }
+
+      &.highlight-vu-btn {
+        border-color: #00b4db !important;
+        color: #0083b0 !important;
+        background: #f0fdf4 !important;
+        &:hover { background: #e0f2fe !important; border-color: #0284c7 !important; }
+      }
     }
 
     /* TRÁMITES RECIENTES EN CURSO */
@@ -691,6 +702,10 @@ export class DashboardComponent implements OnInit {
     'aprobar_documento': { icon: 'fingerprint', color: 'indigo', desc: 'Aprobación con CD', countSignal: () => 0 },
     'monitoreo': { icon: 'speed', color: 'blue', desc: 'Monitoreo de flujos', countSignal: () => 1 },
     'archivo': { icon: 'archive', color: 'orange', desc: 'Archivo digital emitido', countSignal: () => 0 },
+    'archivo/general': { icon: 'public', color: 'teal', desc: 'Fondo normativo y resoluciones', countSignal: () => 0 },
+    'archivo/unidad': { icon: 'domain', color: 'blue', desc: 'Fondo documental de la unidad', countSignal: () => 0 },
+    'archivo/institucional': { icon: 'manage_search', color: 'orange', desc: 'Buscador maestro de expedientes', countSignal: () => 0 },
+    'ventanilla-unica': { icon: 'inbox', color: 'indigo', desc: 'Radicación de correspondencia externa', countSignal: () => 0 },
     'catalogos': { icon: 'folder', color: 'teal', desc: 'Tablas de datos y catálogos', countSignal: () => 0 },
     'compartidos': { icon: 'share', color: 'teal', desc: 'Catálogos compartidos', countSignal: () => 0 }
   };

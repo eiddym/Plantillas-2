@@ -102,11 +102,25 @@ import { AuthService } from '../../../core/auth/auth.service';
             </button>
           </form>
 
-          <!-- Enlace de Verificación Pública con Mano -->
-          <a routerLink="/verificar" class="verificar-enlace">
-            <span>Verifica tu documento aquí</span>
-            <span class="icono-mano">👆🏽</span>
-          </a>
+          <!-- Enlaces Públicos Destacados -->
+          <div class="enlaces-publicos">
+            <a routerLink="/ventanilla-virtual" class="ventanilla-virtual-btn">
+              <div class="vu-icon-wrap">
+                <mat-icon>inbox</mat-icon>
+              </div>
+              <div class="vu-text">
+                <strong class="vu-title">Ventanilla Única Virtual</strong>
+                <span class="vu-subtitle">Radicar notas externas o consultar trámite</span>
+              </div>
+              <mat-icon class="vu-arrow">arrow_forward</mat-icon>
+            </a>
+
+            <!-- Enlace de Verificación Pública con Mano -->
+            <a routerLink="/verificar" class="verificar-enlace">
+              <span>Verifica tu documento aquí</span>
+              <span class="icono-mano">👆🏽</span>
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -303,16 +317,88 @@ import { AuthService } from '../../../core/auth/auth.service';
       }
     }
 
+    /* --- ENLACES PÚBLICOS --- */
+    .enlaces-publicos {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .ventanilla-virtual-btn {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%);
+      border: 1px solid #bae6fd;
+      text-decoration: none;
+      color: #0f2027;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 18px rgba(0, 180, 219, 0.15);
+        border-color: #00b4db;
+      }
+    }
+
+    .vu-icon-wrap {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: #0083b0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      mat-icon {
+        color: #fff;
+        font-size: 22px;
+        width: 22px;
+        height: 22px;
+      }
+    }
+
+    .vu-text {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .vu-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #0f2027;
+    }
+
+    .vu-subtitle {
+      font-size: 11.5px;
+      color: #64748b;
+    }
+
+    .vu-arrow {
+      color: #0083b0;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      transition: transform 0.2s ease;
+    }
+
+    .ventanilla-virtual-btn:hover .vu-arrow {
+      transform: translateX(4px);
+    }
+
     /* --- ENLACE VERIFICAR DOCUMENTOS --- */
     .verificar-enlace {
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-top: 24px;
+      margin-top: 4px;
       cursor: pointer;
       color: #0284c7;
       font-weight: 600;
-      font-size: 14.5px;
+      font-size: 14px;
       text-decoration: none;
       transition: color 0.2s ease;
 
@@ -322,8 +408,8 @@ import { AuthService } from '../../../core/auth/auth.service';
       }
 
       .icono-mano {
-        font-size: 20px;
-        margin-left: 8px;
+        font-size: 18px;
+        margin-left: 6px;
         transition: transform 0.2s ease;
       }
 
