@@ -20,6 +20,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatRadioModule } from '@angular/material/radio';
 import { AuthService } from '../../core/auth/auth.service';
 import { SeguridadService, Unidad } from '../../core/services/seguridad.service';
+import { nombreRealValidator, correoEstrictoValidator } from './ventanilla-validators';
 
 export interface JefeUnidad {
   id_usuario: number;
@@ -353,12 +354,38 @@ export interface DocumentoVentanilla {
                   <mat-label>Nombre Completo del Remitente *</mat-label>
                   <input matInput formControlName="nombreCompleto" placeholder="Ej: Juan Quispe Apaza">
                   <mat-icon matSuffix>person</mat-icon>
+                  <mat-hint>Solo nombres reales (sin Lic., Ing., Dr., etc.)</mat-hint>
+                  @if (generarHRForm.get('nombreCompleto')?.invalid && (generarHRForm.get('nombreCompleto')?.touched || generarHRForm.get('nombreCompleto')?.dirty)) {
+                    <mat-error>
+                      @if (generarHRForm.get('nombreCompleto')?.errors?.['tituloNoPermitido']) {
+                        {{ generarHRForm.get('nombreCompleto')?.errors?.['mensaje'] }}
+                      } @else if (generarHRForm.get('nombreCompleto')?.errors?.['caracteresInvalidos']) {
+                        {{ generarHRForm.get('nombreCompleto')?.errors?.['mensaje'] }}
+                      } @else if (generarHRForm.get('nombreCompleto')?.errors?.['nombreIncompleto']) {
+                        {{ generarHRForm.get('nombreCompleto')?.errors?.['mensaje'] }}
+                      } @else if (generarHRForm.get('nombreCompleto')?.errors?.['required']) {
+                        El nombre es requerido.
+                      }
+                    </mat-error>
+                  }
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
                   <mat-label>Correo Electrónico (Notificación Automática)</mat-label>
                   <input matInput type="email" formControlName="email" placeholder="correo@ejemplo.com">
                   <mat-icon matSuffix>email</mat-icon>
+                  <mat-hint>No use correos temporales ni ficticios (123&#64;123.com)</mat-hint>
+                  @if (generarHRForm.get('email')?.invalid && (generarHRForm.get('email')?.touched || generarHRForm.get('email')?.dirty)) {
+                    <mat-error>
+                      @if (generarHRForm.get('email')?.errors?.['correoTemporal']) {
+                        {{ generarHRForm.get('email')?.errors?.['mensaje'] }}
+                      } @else if (generarHRForm.get('email')?.errors?.['correoFalso']) {
+                        {{ generarHRForm.get('email')?.errors?.['mensaje'] }}
+                      } @else if (generarHRForm.get('email')?.errors?.['correoInvalido']) {
+                        {{ generarHRForm.get('email')?.errors?.['mensaje'] }}
+                      }
+                    </mat-error>
+                  }
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
@@ -489,8 +516,23 @@ export interface DocumentoVentanilla {
             <form [formGroup]="editarForm" (ngSubmit)="guardarEdicion()" class="modal-body-form">
               <div class="form-grid-modal">
                 <mat-form-field appearance="outline">
-                  <mat-label>Nombre Completo del Remitente</mat-label>
+                  <mat-label>Nombre Completo del Remitente *</mat-label>
                   <input matInput formControlName="remitente">
+                  <mat-icon matSuffix>person</mat-icon>
+                  <mat-hint>Solo nombres reales (sin Lic., Ing., Dr., etc.)</mat-hint>
+                  @if (editarForm.get('remitente')?.invalid && (editarForm.get('remitente')?.touched || editarForm.get('remitente')?.dirty)) {
+                    <mat-error>
+                      @if (editarForm.get('remitente')?.errors?.['tituloNoPermitido']) {
+                        {{ editarForm.get('remitente')?.errors?.['mensaje'] }}
+                      } @else if (editarForm.get('remitente')?.errors?.['caracteresInvalidos']) {
+                        {{ editarForm.get('remitente')?.errors?.['mensaje'] }}
+                      } @else if (editarForm.get('remitente')?.errors?.['nombreIncompleto']) {
+                        {{ editarForm.get('remitente')?.errors?.['mensaje'] }}
+                      } @else if (editarForm.get('remitente')?.errors?.['required']) {
+                        El nombre es requerido.
+                      }
+                    </mat-error>
+                  }
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
@@ -1316,8 +1358,8 @@ export class VentanillaUnicaComponent implements OnInit, OnDestroy {
   // Formularios
   readonly generarHRForm = new FormGroup({
     ci: new FormControl(''),
-    nombreCompleto: new FormControl('', [Validators.required]),
-    email: new FormControl('', [Validators.email]),
+    nombreCompleto: new FormControl('', [Validators.required, nombreRealValidator()]),
+    email: new FormControl('', [correoEstrictoValidator()]),
     telefono: new FormControl(''),
     entidad: new FormControl(''),
     tipoTramite: new FormControl('NOTA_OFICIAL', [Validators.required]),
@@ -1327,7 +1369,7 @@ export class VentanillaUnicaComponent implements OnInit, OnDestroy {
   });
 
   readonly editarForm = new FormGroup({
-    remitente: new FormControl('', [Validators.required]),
+    remitente: new FormControl('', [Validators.required, nombreRealValidator()]),
     ci: new FormControl(''),
     entidad: new FormControl(''),
     citeExterno: new FormControl(''),

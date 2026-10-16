@@ -12,6 +12,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { nombreRealValidator, correoEstrictoValidator } from './ventanilla-validators';
 
 @Component({
   selector: 'app-ventanilla-virtual',
@@ -106,9 +107,23 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
                   </div>
 
                   <mat-form-field appearance="outline">
-                    <mat-label>Nombres y Apellidos Completos</mat-label>
-                    <input matInput formControlName="nombreCompleto" placeholder="Ej: Lic. Elena Rocabado">
+                    <mat-label>Nombres y Apellidos Reales *</mat-label>
+                    <input matInput formControlName="nombreCompleto" placeholder="Ej: Elena Rocabado Céspedes">
                     <mat-icon matSuffix>person</mat-icon>
+                    <mat-hint>Solo nombres y apellidos reales (sin Lic., Ing., Dr., etc.)</mat-hint>
+                    @if (solicitudForm.get('nombreCompleto')?.invalid && (solicitudForm.get('nombreCompleto')?.touched || solicitudForm.get('nombreCompleto')?.dirty)) {
+                      <mat-error>
+                        @if (solicitudForm.get('nombreCompleto')?.errors?.['tituloNoPermitido']) {
+                          {{ solicitudForm.get('nombreCompleto')?.errors?.['mensaje'] }}
+                        } @else if (solicitudForm.get('nombreCompleto')?.errors?.['caracteresInvalidos']) {
+                          {{ solicitudForm.get('nombreCompleto')?.errors?.['mensaje'] }}
+                        } @else if (solicitudForm.get('nombreCompleto')?.errors?.['nombreIncompleto']) {
+                          {{ solicitudForm.get('nombreCompleto')?.errors?.['mensaje'] }}
+                        } @else if (solicitudForm.get('nombreCompleto')?.errors?.['required']) {
+                          El nombre y apellido es obligatorio.
+                        }
+                      </mat-error>
+                    }
                   </mat-form-field>
 
                   <mat-form-field appearance="outline">
@@ -124,9 +139,23 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
                   </mat-form-field>
 
                   <mat-form-field appearance="outline">
-                    <mat-label>Correo Electrónico (Notificaciones)</mat-label>
-                    <input matInput type="email" formControlName="email" placeholder="usuario@correo.com">
+                    <mat-label>Correo Electrónico (Para envío de Hoja de Ruta) *</mat-label>
+                    <input matInput type="email" formControlName="email" placeholder="usuario@empresa.com">
                     <mat-icon matSuffix>email</mat-icon>
+                    <mat-hint>No use correos temporales ni ficticios (ej: 123&#64;123.com)</mat-hint>
+                    @if (solicitudForm.get('email')?.invalid && (solicitudForm.get('email')?.touched || solicitudForm.get('email')?.dirty)) {
+                      <mat-error>
+                        @if (solicitudForm.get('email')?.errors?.['correoTemporal']) {
+                          {{ solicitudForm.get('email')?.errors?.['mensaje'] }}
+                        } @else if (solicitudForm.get('email')?.errors?.['correoFalso']) {
+                          {{ solicitudForm.get('email')?.errors?.['mensaje'] }}
+                        } @else if (solicitudForm.get('email')?.errors?.['correoInvalido']) {
+                          {{ solicitudForm.get('email')?.errors?.['mensaje'] }}
+                        } @else if (solicitudForm.get('email')?.errors?.['required']) {
+                          El correo es obligatorio para enviarle su Hoja de Ruta.
+                        }
+                      </mat-error>
+                    }
                   </mat-form-field>
 
                   <mat-form-field appearance="outline" class="col-span-full">
@@ -1020,8 +1049,8 @@ export class VentanillaVirtualComponent {
 
   readonly solicitudForm = new FormGroup({
     ci: new FormControl('', [Validators.required]),
-    nombreCompleto: new FormControl('', [Validators.required]),
-    email: new FormControl('', [Validators.required, Validators.email]),
+    nombreCompleto: new FormControl('', [Validators.required, nombreRealValidator()]),
+    email: new FormControl('', [Validators.required, correoEstrictoValidator()]),
     telefono: new FormControl('', [Validators.required]),
     entidad: new FormControl(''),
     tipoTramite: new FormControl('NOTA_OFICIAL', [Validators.required]),

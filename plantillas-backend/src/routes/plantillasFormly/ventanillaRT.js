@@ -85,6 +85,117 @@ module.exports = app => {
   }
 
   /**
+   * Dominios de correos temporales / desechables conocidos
+   */
+  const DOMINIOS_TEMPORALES = new Set([
+    'mailinator.com', 'yopmail.com', 'yopmail.net', 'yopmail.fr', 'cool.fr.nf', 'jetable.fr.nf',
+    'tempmail.com', 'temp-mail.org', 'tempmailo.com', '10minutemail.com', '10minutemail.net',
+    'guerrillamail.com', 'guerrillamailblock.com', 'sharklasers.com', 'grr.la', 'guerrillamail.info',
+    'dispostable.com', 'trashmail.com', 'trashmail.net', 'trashmail.me', 'maildrop.cc',
+    'fakeinbox.com', 'mohmal.com', 'burnermail.io', 'emailondeck.com', 'getairmail.com',
+    'throwawaymail.com', 'mytemp.email', 'generator.email', 'crazymailing.com', 'inboxkitten.com',
+    'nada.ltd', 'getnada.com', 'abv.bg', 'dropmail.me', 'fakemailgenerator.com',
+    'tempinbox.com', 'crazymail.com', 'mailcatch.com', 'trash-mail.com', 'trashmail.at'
+  ]);
+
+  /**
+   * Validador de Nombres Reales:
+   * - Prohibe títulos o abreviaciones por delante (Lic., Ing., Dr., Arq., etc.)
+   * - Solo caracteres alfabéticos, tildes y espacios
+   * - Mínimo dos palabras (nombres y apellidos)
+   */
+  function validarNombreReal(nombre) {
+    if (!nombre || typeof nombre !== 'string') {
+      return { valido: false, mensaje: "El nombre y apellido del remitente es obligatorio." };
+    }
+    const limpio = nombre.trim();
+    if (limpio.length < 3) {
+      return { valido: false, mensaje: "El nombre ingresado es demasiado corto." };
+    }
+
+    // 1. Detectar títulos o abreviaturas al inicio
+    const TITULOS_REGEX = /^(lic|licda|licdo|ing|inga|dr|dra|doc|abg|abog|abogado|abogada|arq|prof|profa|msc|mgr|mgtr|master|magister|phd|ph\.d|sr|sra|srta|don|doña|tec|téc|tecnico|tecnica|técnico|técnica|gral|cnel|tte|cap)(\.|\s|$)/i;
+    if (TITULOS_REGEX.test(limpio)) {
+      return {
+        valido: false,
+        mensaje: "En Ventanilla Única solo se admiten nombres y apellidos reales. No incluya títulos ni abreviaciones por delante (como Lic., Ing., Dr., etc.)."
+      };
+    }
+
+    // 2. Solo letras, tildes, espacios, guión o apóstrofe
+    const SOLO_LETRAS_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'-]+$/;
+    if (!SOLO_LETRAS_REGEX.test(limpio)) {
+      return {
+        valido: false,
+        mensaje: "El nombre solo debe contener letras del alfabeto y espacios (sin números ni caracteres especiales)."
+      };
+    }
+
+    // 3. Mínimo dos palabras reales
+    const palabras = limpio.split(/\s+/).filter(p => p.length >= 2);
+    if (palabras.length < 2) {
+      return {
+        valido: false,
+        mensaje: "Debe ingresar nombres y apellidos completos (al menos dos palabras)."
+      };
+    }
+
+    return { valido: true, nombreLimpio: limpio };
+  }
+
+  /**
+   * Validador Estricto de Correo Electrónico:
+   * - Formato estándar y verificable
+   * - Rechaza correos numéricos falsos como 123@123.com
+   * - Rechaza correos temporales / desechables
+   */
+  function validarCorreoEstricto(email) {
+    if (!email || typeof email !== 'string') {
+      return { valido: false, mensaje: "El correo electrónico es obligatorio para el envío de su Hoja de Ruta." };
+    }
+    const correoLimpio = email.trim().toLowerCase();
+
+    // 1. Formato básico
+    const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!EMAIL_REGEX.test(correoLimpio)) {
+      return { valido: false, mensaje: "El formato del correo electrónico es inválido." };
+    }
+
+    const partes = correoLimpio.split('@');
+    const usuario = partes[0];
+    const dominioCompleto = partes[1];
+    const partesDominio = dominioCompleto.split('.');
+    const dominioBase = partesDominio[0];
+
+    // 2. Rechazar dominios temporales
+    if (DOMINIOS_TEMPORALES.has(dominioCompleto)) {
+      return {
+        valido: false,
+        mensaje: `No se permiten correos electrónicos temporales o desechables (@${dominioCompleto}). Ingrese un correo personal o corporativo permanente.`
+      };
+    }
+
+    // 3. Rechazar dominios puramente numéricos o secuencias falsas (ej: 123@123.com)
+    if (/^[0-9]+$/.test(dominioBase)) {
+      return {
+        valido: false,
+        mensaje: "El dominio del correo no puede ser puramente numérico (ej: 123.com). Ingrese un correo real y verificable."
+      };
+    }
+
+    // 4. Rechazar patrones ficticios repetidos
+    const USUARIOS_FALSOS = new Set(['123', '1234', '12345', '111', '000', 'test', 'prueba', 'fake', 'ejemplo', 'asd', 'asdf', 'qwerty']);
+    if (USUARIOS_FALSOS.has(usuario) && (USUARIOS_FALSOS.has(dominioBase) || usuario === dominioBase)) {
+      return {
+        valido: false,
+        mensaje: "El correo ingresado no corresponde a una cuenta real. Ingrese una dirección verificable para recibir su Hoja de Ruta."
+      };
+    }
+
+    return { valido: true, emailLimpio: correoLimpio };
+  }
+
+  /**
    * Envia correo de notificación formal al solicitante externo.
    */
   async function enviarCorreoRadicacion(destinatario, datos) {
@@ -155,9 +266,21 @@ module.exports = app => {
         archivo_adjunto
       } = req.body;
 
-      const nombreSolicitante = nombreCompleto || remitente;
+      const nombreSolicitante = (nombreCompleto || remitente || '').trim();
       if (!nombreSolicitante || !referencia) {
         return res.status(400).send(util.formatearMensaje("ERROR", "El nombre del remitente y la referencia son obligatorios."));
+      }
+
+      // Validar que sea nombre real sin títulos ni abreviaciones
+      const resNombre = validarNombreReal(nombreSolicitante);
+      if (!resNombre.valido) {
+        return res.status(400).send(util.formatearMensaje("ERROR", resNombre.mensaje));
+      }
+
+      // Validar correo estrictamente
+      const resCorreo = validarCorreoEstricto(email);
+      if (!resCorreo.valido) {
+        return res.status(400).send(util.formatearMensaje("ERROR", resCorreo.mensaje));
       }
 
       const anioActual = new Date().getFullYear();
@@ -337,9 +460,23 @@ module.exports = app => {
         prioridad
       } = req.body;
 
-      const nombreSolicitante = nombreCompleto || remitente;
+      const nombreSolicitante = (nombreCompleto || remitente || '').trim();
       if (!nombreSolicitante || !referencia) {
         return res.status(400).send(util.formatearMensaje("ERROR", "El remitente y la referencia son obligatorios."));
+      }
+
+      // Validar nombre real
+      const resNombre = validarNombreReal(nombreSolicitante);
+      if (!resNombre.valido) {
+        return res.status(400).send(util.formatearMensaje("ERROR", resNombre.mensaje));
+      }
+
+      // Si se ingresó correo, validar estrictamente
+      if (email && email.trim() !== '') {
+        const resCorreo = validarCorreoEstricto(email);
+        if (!resCorreo.valido) {
+          return res.status(400).send(util.formatearMensaje("ERROR", resCorreo.mensaje));
+        }
       }
 
       const anioActual = new Date().getFullYear();
@@ -439,6 +576,20 @@ module.exports = app => {
       const doc = await Documento.findByPk(idDoc);
       if (!doc) {
         return res.status(404).send(util.formatearMensaje("ERROR", "Documento no encontrado."));
+      }
+
+      if (remitente && remitente.trim() !== '') {
+        const resNombre = validarNombreReal(remitente);
+        if (!resNombre.valido) {
+          return res.status(400).send(util.formatearMensaje("ERROR", resNombre.mensaje));
+        }
+      }
+
+      if (email && email.trim() !== '') {
+        const resCorreo = validarCorreoEstricto(email);
+        if (!resCorreo.valido) {
+          return res.status(400).send(util.formatearMensaje("ERROR", resCorreo.mensaje));
+        }
       }
 
       const datosRemitenteAct = {
