@@ -16,6 +16,7 @@ export interface Unidad {
   nombre: string;
   descripcion?: string;
   sigla?: string;
+  abreviacion?: string;
   estado: string;
 }
 
@@ -30,9 +31,17 @@ export interface UsuarioAdmin {
   estado: string;
   tipo_autenticacion?: string;
   fid_unidad?: number;
+  es_mae?: boolean;
+  contrasena?: string;
+  unidad?: {
+    id_unidad: number;
+    nombre: string;
+    abreviacion?: string;
+  };
   usuario_rol?: Array<{
-    id_usuario_rol: number;
-    rol: { id_rol: number; nombre: string };
+    id_usuario_rol?: number;
+    fid_rol?: number;
+    rol?: { id_rol: number; nombre: string };
   }>;
 }
 
@@ -58,6 +67,18 @@ export class SeguridadService {
 
   getUsuarios(): Observable<ApiResponse<UsuarioAdmin[]>> {
     return this.http.get<ApiResponse<UsuarioAdmin[]>>(`${this.baseUrl}/usuario`);
+  }
+
+  crearUsuario(usuario: any): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/usuario`, usuario);
+  }
+
+  actualizarUsuario(id: number, usuario: any): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.baseUrl}/usuario/${id}`, usuario);
+  }
+
+  eliminarUsuario(id: number): Observable<ApiResponse<any>> {
+    return this.http.delete<ApiResponse<any>>(`${this.baseUrl}/usuario/${id}`);
   }
 
   getRoles(limit = 20, page = 1): Observable<ApiResponse<PaginatedResult<Rol>>> {

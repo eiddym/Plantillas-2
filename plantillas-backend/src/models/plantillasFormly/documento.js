@@ -165,6 +165,27 @@ module.exports = (sequelize, DataType) => {
             allowNull: true,
             xlabel: 'Categoría Institucional',
         },
+        codigo_hoja_ruta: {
+            type: DataType.STRING(100),
+            allowNull: true,
+            xlabel: 'Código de Hoja de Ruta',
+        },
+        origen_radicacion: {
+            type: DataType.STRING(50),
+            allowNull: true,
+            xlabel: 'Origen de Radicación',
+        },
+        datos_remitente: {
+            type: DataType.JSONB,
+            allowNull: true,
+            defaultValue: {},
+            xlabel: 'Datos del Remitente Externo',
+        },
+        archivo_adjunto: {
+            type: DataType.TEXT,
+            allowNull: true,
+            xlabel: 'Ruta de Archivo Adjunto',
+        },
         _usuario_creacion: {
             type: DataType.INTEGER,
             allowNull: false,

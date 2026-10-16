@@ -632,7 +632,9 @@ export class LayoutComponent implements OnInit, OnDestroy {
     'ADMINISTRACIÓN': true,
     'DOCUMENTOS': true,
     'CATALOGOS': true,
-    'ARCHIVO': true
+    'ARCHIVO': true,
+    'VENTANILLA ÚNICA': true,
+    'VENTANILLA': true
   });
 
   // Determinar si estamos en el Home/Dashboard
@@ -665,6 +667,9 @@ export class LayoutComponent implements OnInit, OnDestroy {
     if (url.startsWith('/contactos')) return 'Contactos';
     if (url.startsWith('/impresion')) return 'Imprimir Documentos';
     if (url.startsWith('/monitoreo')) return 'Monitoreo';
+    if (url.startsWith('/ventanilla/externa')) return 'Ventanilla Externa';
+    if (url.startsWith('/ventanilla/interna')) return 'Ventanilla Interna';
+    if (url.startsWith('/ventanilla')) return 'Ventanilla Única';
     return 'Sección';
   });
 
@@ -676,7 +681,9 @@ export class LayoutComponent implements OnInit, OnDestroy {
       'ADMINISTRACIÓN': 'settings',
       'DOCUMENTOS': 'folder',
       'CATALOGOS': 'folder_shared',
-      'ARCHIVO': 'archive'
+      'ARCHIVO': 'archive',
+      'VENTANILLA ÚNICA': 'inbox',
+      'VENTANILLA': 'inbox'
     };
 
     const subIconMap: Record<string, string> = {
@@ -692,9 +699,15 @@ export class LayoutComponent implements OnInit, OnDestroy {
       'aprobar_documento': 'fingerprint',
       'impresion': 'print',
       'archivo': 'archive',
+      'archivo/general': 'public',
+      'archivo/unidad': 'domain',
+      'archivo/institucional': 'verified',
       'monitoreo': 'speed',
       'catalogos': 'folder',
-      'compartidos': 'share'
+      'compartidos': 'share',
+      'ventanilla/externa': 'cloud_download',
+      'ventanilla/interna': 'edit_document',
+      'ventanilla-unica': 'inbox'
     };
 
     return rawMenus.map((padre) => {

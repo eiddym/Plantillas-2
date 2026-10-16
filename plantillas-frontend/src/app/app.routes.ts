@@ -103,11 +103,21 @@ export const routes: Routes = [
           )
       },
       {
-        path: 'ventanilla-unica',
+        path: 'ventanilla',
+        redirectTo: 'ventanilla/externa',
+        pathMatch: 'full'
+      },
+      {
+        path: 'ventanilla/:tipo',
         loadComponent: () =>
           import('./features/ventanilla/ventanilla-unica.component').then(
             (m) => m.VentanillaUnicaComponent
           )
+      },
+      {
+        path: 'ventanilla-unica',
+        redirectTo: 'ventanilla/externa',
+        pathMatch: 'full'
       },
       {
         path: 'impresion',

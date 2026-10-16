@@ -1,7 +1,8 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -99,16 +100,10 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
                 </div>
 
                 <form [formGroup]="solicitudForm" (ngSubmit)="enviarSolicitud()" class="public-form-grid">
-                  <div class="form-section-title">
+                  <div class="form-section-title col-span-full">
                     <mat-icon>badge</mat-icon>
                     <span>1. Datos del Solicitante o Remitente</span>
                   </div>
-
-                  <mat-form-field appearance="outline">
-                    <mat-label>Cédula de Identidad (CI) o NIT</mat-label>
-                    <input matInput formControlName="ci" placeholder="Ej: 6842109 LP">
-                    <mat-icon matSuffix>pin</mat-icon>
-                  </mat-form-field>
 
                   <mat-form-field appearance="outline">
                     <mat-label>Nombres y Apellidos Completos</mat-label>
@@ -117,15 +112,21 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
                   </mat-form-field>
 
                   <mat-form-field appearance="outline">
-                    <mat-label>Correo Electrónico (Notificaciones)</mat-label>
-                    <input matInput type="email" formControlName="email" placeholder="usuario@correo.com">
-                    <mat-icon matSuffix>email</mat-icon>
+                    <mat-label>Cédula de Identidad (CI) o NIT</mat-label>
+                    <input matInput formControlName="ci" placeholder="Ej: 6842109 LP">
+                    <mat-icon matSuffix>badge</mat-icon>
                   </mat-form-field>
 
                   <mat-form-field appearance="outline">
                     <mat-label>Teléfono o Celular</mat-label>
                     <input matInput formControlName="telefono" placeholder="Ej: 71548900">
                     <mat-icon matSuffix>phone</mat-icon>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Correo Electrónico (Notificaciones)</mat-label>
+                    <input matInput type="email" formControlName="email" placeholder="usuario@correo.com">
+                    <mat-icon matSuffix>email</mat-icon>
                   </mat-form-field>
 
                   <mat-form-field appearance="outline" class="col-span-full">
@@ -200,23 +201,42 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
               <div class="receipt-card fade-in">
                 <div class="receipt-success-badge">
                   <mat-icon>check_circle</mat-icon>
-                  <span>¡Trámite Radicado Exitosamente!</span>
+                  <span>¡Trámite Radicado Exitosamente con Validez Oficial!</span>
+                </div>
+
+                <!-- Notificación por Correo Electrónico -->
+                <div class="email-alert-box">
+                  <mat-icon>mark_email_read</mat-icon>
+                  <div>
+                    <strong>Notificación enviada a su correo:</strong>
+                    <p>Hemos enviado una confirmación formal con su código de Hoja de Ruta al correo <strong>{{ comprobanteGenerado()?.email }}</strong>.</p>
+                  </div>
                 </div>
 
                 <div class="receipt-body">
-                  <div class="qr-placeholder">
-                    <mat-icon>qr_code_2</mat-icon>
-                    <span>Código Seguro de Verificación</span>
+                  <div class="qr-verification-box">
+                    <div class="qr-img-wrapper">
+                      <img 
+                        [src]="'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + getUrlSeguimiento(comprobanteGenerado()?.hojaRuta)" 
+                        alt="Código QR de Verificación de Hoja de Ruta"
+                        class="qr-code-img"
+                      />
+                    </div>
+                    <div class="qr-info-content">
+                      <span class="qr-tag"><mat-icon>verified</mat-icon> Código Verificación</span>
+                      <strong class="qr-hr-code">{{ comprobanteGenerado()?.hojaRuta }}</strong>
+                      <span class="qr-lbl-url">URL de Consulta Oficial:</span>
+                      <a [href]="getUrlSeguimiento(comprobanteGenerado()?.hojaRuta)" target="_blank" class="qr-url-link">
+                        <mat-icon>link</mat-icon>
+                        <span>docs.marabuntarl.com/ventanilla-virtual?codigo={{ comprobanteGenerado()?.hojaRuta }}</span>
+                      </a>
+                    </div>
                   </div>
 
                   <div class="receipt-details">
                     <div class="r-row">
                       <span class="r-lbl">Código de Hoja de Ruta (HR):</span>
                       <strong class="r-val r-code">{{ comprobanteGenerado()?.hojaRuta }}</strong>
-                    </div>
-                    <div class="r-row">
-                      <span class="r-lbl">Código de Seguimiento Web:</span>
-                      <strong class="r-val">{{ comprobanteGenerado()?.codigoSeguimiento }}</strong>
                     </div>
                     <div class="r-row">
                       <span class="r-lbl">Fecha y Hora de Radicación:</span>
@@ -227,8 +247,12 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
                       <span class="r-val">{{ comprobanteGenerado()?.solicitante }}</span>
                     </div>
                     <div class="r-row">
-                      <span class="r-lbl">Asunto:</span>
+                      <span class="r-lbl">Asunto / Referencia:</span>
                       <span class="r-val">{{ comprobanteGenerado()?.referencia }}</span>
+                    </div>
+                    <div class="r-row">
+                      <span class="r-lbl">Estado Actual:</span>
+                      <span class="r-val status-pill">REGISTRADO / EN BANDEJA DE CORRESPONDENCIA</span>
                     </div>
                   </div>
                 </div>
@@ -252,12 +276,12 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
             <div class="tab-body fade-in">
               <div class="search-tracking-box">
                 <mat-form-field appearance="outline" class="tracking-input">
-                  <mat-label>Número de Hoja de Ruta o Código de Seguimiento</mat-label>
-                  <input matInput [formControl]="codigoTrackingCtrl" placeholder="Ej: HR-2026-00412 o TRK-8921">
+                  <mat-label>Número de Hoja de Ruta o CITE</mat-label>
+                  <input matInput [formControl]="codigoTrackingCtrl" (keyup.enter)="buscarTramite()" placeholder="Ej: HR-2026-00004">
                   <mat-icon matSuffix>search</mat-icon>
                 </mat-form-field>
-                <button mat-flat-button class="btn-track" (click)="buscarTramite()">
-                  <span>Consultar Estado</span>
+                <button mat-flat-button class="btn-track" [disabled]="buscando()" (click)="buscarTramite()">
+                  <span>{{ buscando() ? 'Buscando...' : 'Consultar Estado' }}</span>
                 </button>
               </div>
 
@@ -265,28 +289,51 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
                 <div class="tracking-result-card fade-in">
                   <div class="tr-header">
                     <mat-icon>verified</mat-icon>
-                    <div>
-                      <h3>Trámite: {{ resultadoTracking()?.hojaRuta }}</h3>
-                      <p>{{ resultadoTracking()?.asunto }}</p>
+                    <div class="tr-header-info">
+                      <h3>Hoja de Ruta: {{ resultadoTracking()?.hoja_ruta }}</h3>
+                      <p class="tr-ref"><strong>Asunto:</strong> {{ resultadoTracking()?.referencia }}</p>
+                      <p class="tr-sub"><strong>Remitente:</strong> {{ resultadoTracking()?.remitente }}</p>
                     </div>
-                    <span class="status-badge-active">{{ resultadoTracking()?.estado }}</span>
+                    <div class="tr-badges">
+                      <span class="status-badge-active">{{ resultadoTracking()?.estado }}</span>
+                      @if (resultadoTracking()?.cite_oficial && resultadoTracking()?.cite_oficial !== 'PENDIENTE DE APROBACIÓN (EN TRÁMITE)') {
+                        <span class="cite-badge-official">
+                          <mat-icon>verified</mat-icon>
+                          CITE Oficial: {{ resultadoTracking()?.cite_oficial }}
+                        </span>
+                      }
+                    </div>
                   </div>
 
+                  <div class="tr-details-grid">
+                    <div class="tr-item">
+                      <span class="tr-lbl">Destino / Unidad Actual:</span>
+                      <strong>{{ resultadoTracking()?.unidad_actual }}</strong>
+                    </div>
+                    <div class="tr-item">
+                      <span class="tr-lbl">Fecha Ingreso:</span>
+                      <span>{{ resultadoTracking()?.fecha_ingreso | date:'dd/MM/yyyy HH:mm' }}</span>
+                    </div>
+                    <div class="tr-item">
+                      <span class="tr-lbl">CITE Oficial Asignado:</span>
+                      <strong class="cite-text">{{ resultadoTracking()?.cite_oficial }}</strong>
+                    </div>
+                  </div>
+
+                  <h4 class="tl-title"><mat-icon>timeline</mat-icon> Trazabilidad y Flujo Documental</h4>
                   <div class="tr-timeline">
-                    <div class="tl-item done">
-                      <div class="tl-dot"><mat-icon>check</mat-icon></div>
-                      <div class="tl-info">
-                        <strong>Radicación y Recepción Virtual</strong>
-                        <span>{{ resultadoTracking()?.fechaIngreso }} - Ventanilla Única Central</span>
+                    @for (paso of resultadoTracking()?.historial; track paso.id_historial_flujo) {
+                      <div class="tl-item done">
+                        <div class="tl-dot"><mat-icon>check</mat-icon></div>
+                        <div class="tl-info">
+                          <div class="tl-header-row">
+                            <strong>{{ paso.accion }}</strong>
+                            <span class="tl-date">{{ paso._fecha_creacion | date:'dd/MM/yyyy HH:mm' }}</span>
+                          </div>
+                          <span class="tl-obs">{{ paso.observacion }}</span>
+                        </div>
                       </div>
-                    </div>
-                    <div class="tl-item current">
-                      <div class="tl-dot"><mat-icon>sync</mat-icon></div>
-                      <div class="tl-info">
-                        <strong>En Revisión por Unidad de Destino</strong>
-                        <span>{{ resultadoTracking()?.unidadActual }}</span>
-                      </div>
-                    </div>
+                    }
                   </div>
                 </div>
               }
@@ -590,25 +637,92 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
       border-radius: 14px;
       padding: 24px;
       width: 100%;
-      max-width: 640px;
+      max-width: 820px;
       display: flex;
-      gap: 24px;
+      gap: 28px;
+      align-items: stretch;
     }
 
-    .qr-placeholder {
-      width: 130px;
+    .qr-verification-box {
+      width: 250px;
+      min-width: 250px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
       text-align: center;
-      gap: 6px;
       background: #fff;
-      border: 1px solid #e2e8f0;
+      border: 2px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+      gap: 10px;
+    }
+
+    .qr-img-wrapper {
+      width: 190px;
+      height: 190px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
       border-radius: 10px;
-      padding: 12px;
-      mat-icon { font-size: 64px; width: 64px; height: 64px; color: #0f2027; }
-      span { font-size: 10px; color: #64748b; }
+      border: 1px solid #cbd5e1;
+      padding: 6px;
+    }
+
+    .qr-code-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .qr-info-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      width: 100%;
+    }
+
+    .qr-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #0083b0;
+      text-transform: uppercase;
+      mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    }
+
+    .qr-hr-code {
+      font-size: 18px;
+      font-weight: 800;
+      color: #0f2027;
+      font-family: monospace;
+      letter-spacing: 0.5px;
+    }
+
+    .qr-lbl-url {
+      font-size: 10.5px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+
+    .qr-url-link {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10.5px;
+      color: #0284c7;
+      text-decoration: none;
+      word-break: break-all;
+      line-height: 1.3;
+      padding: 4px 6px;
+      background: #f0f9ff;
+      border-radius: 6px;
+      margin-top: 2px;
+      mat-icon { font-size: 13px; width: 13px; height: 13px; flex-shrink: 0; }
     }
 
     .receipt-details {
@@ -722,10 +836,142 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
       mat-icon { color: #0284c7; }
     }
 
+    .email-alert-box {
+      margin-top: 14px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      border-left: 5px solid #10b981;
+      padding: 14px 18px;
+      border-radius: 8px;
+      color: #065f46;
+      mat-icon {
+        font-size: 28px;
+        width: 28px;
+        height: 28px;
+        color: #10b981;
+      }
+      p {
+        margin: 2px 0 0;
+        font-size: 13px;
+        color: #047857;
+      }
+    }
+
+    .status-pill {
+      display: inline-block;
+      padding: 4px 12px;
+      background: #e0f2fe;
+      color: #0369a1;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .tr-header-info {
+      flex: 1;
+      h3 { margin: 0; font-size: 18px; color: #0f172a; font-weight: 700; }
+      .tr-ref { margin: 4px 0 2px; font-size: 14px; color: #334155; }
+      .tr-sub { margin: 0; font-size: 12.5px; color: #64748b; }
+    }
+
+    .tr-badges {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: flex-end;
+    }
+
+    .cite-badge-official {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      mat-icon { font-size: 15px; width: 15px; height: 15px; }
+    }
+
+    .tr-details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px;
+      margin: 18px 0;
+    }
+
+    .tr-item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      .tr-lbl { font-size: 11.5px; text-transform: uppercase; color: #64748b; font-weight: 600; }
+      strong { font-size: 13.5px; color: #1e293b; }
+      span { font-size: 13px; color: #334155; }
+      .cite-text { color: #0284c7; font-family: monospace; }
+    }
+
+    .tl-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 20px 0 12px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      mat-icon { color: #0284c7; }
+    }
+
+    .tl-item {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .tl-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      .tl-date { font-size: 11.5px; color: #94a3b8; }
+    }
+
+    .tl-obs {
+      font-size: 12.5px;
+      color: #475569;
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+
+    .tl-dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    }
+
+    .tl-item.done .tl-dot {
+      background: #dcfce7;
+      mat-icon { color: #16a34a; }
+    }
+
     .tl-info {
       display: flex;
       flex-direction: column;
       gap: 2px;
+      flex: 1;
       strong { font-size: 13.5px; color: #1e293b; }
       span { font-size: 12px; color: #64748b; }
     }
@@ -758,11 +1004,17 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
   `]
 })
 export class VentanillaVirtualComponent {
+  private readonly http = inject(HttpClient);
+  private readonly snackBar = inject(MatSnackBar);
+
   readonly tabActiva = signal<'radicar' | 'consultar'>('radicar');
   readonly enviando = signal<boolean>(false);
+  readonly buscando = signal<boolean>(false);
   readonly archivoNombre = signal<string | null>(null);
   readonly comprobanteGenerado = signal<any | null>(null);
   readonly resultadoTracking = signal<any | null>(null);
+
+  archivoAdjuntoBase64: string | null = null;
 
   readonly codigoTrackingCtrl = new FormControl('');
 
@@ -781,6 +1033,11 @@ export class VentanillaVirtualComponent {
     const file = event.target.files[0];
     if (file) {
       this.archivoNombre.set(file.name);
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.archivoAdjuntoBase64 = reader.result as string;
+      };
+      reader.readAsDataURL(file);
     }
   }
 
@@ -789,31 +1046,69 @@ export class VentanillaVirtualComponent {
 
     this.enviando.set(true);
     const v = this.solicitudForm.value;
-    const randomCode = Math.floor(1000 + Math.random() * 9000);
 
-    setTimeout(() => {
-      this.enviando.set(false);
-      this.comprobanteGenerado.set({
-        hojaRuta: `HR-EXT-2026-00${randomCode}`,
-        codigoSeguimiento: `TRK-${randomCode}`,
-        fecha: new Date().toLocaleString('es-BO'),
-        solicitante: v.nombreCompleto,
-        referencia: v.referencia
-      });
-    }, 1000);
+    const payload = {
+      ci: v.ci,
+      nombreCompleto: v.nombreCompleto,
+      email: v.email,
+      telefono: v.telefono,
+      entidad: v.entidad,
+      tipoTramite: v.tipoTramite,
+      citeExterno: v.citeExterno,
+      referencia: v.referencia,
+      archivo_adjunto: this.archivoAdjuntoBase64
+    };
+
+    this.http.post<any>('/api/v1/ventanilla/radicar', payload).subscribe({
+      next: (res) => {
+        this.enviando.set(false);
+        const d = res.datos || {};
+        this.comprobanteGenerado.set({
+          hojaRuta: d.codigo_hoja_ruta,
+          fecha: d.fecha ? new Date(d.fecha).toLocaleString('es-BO') : new Date().toLocaleString('es-BO'),
+          solicitante: d.remitente,
+          referencia: d.referencia,
+          email: v.email,
+          email_notificado: d.email_notificado
+        });
+
+        this.snackBar.open(`¡Trámite radicado exitosamente! Hoja de Ruta: ${d.codigo_hoja_ruta}`, 'Aceptar', {
+          duration: 6000
+        });
+      },
+      error: (err) => {
+        this.enviando.set(false);
+        const msg = err.error?.mensaje || 'Error al radicar el documento. Por favor verifique los datos.';
+        this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+      }
+    });
   }
 
   buscarTramite(): void {
     const cod = (this.codigoTrackingCtrl.value || '').trim();
-    if (!cod) return;
+    if (!cod) {
+      this.snackBar.open('Ingrese un código de Hoja de Ruta o CITE.', 'Cerrar', { duration: 3000 });
+      return;
+    }
 
-    this.resultadoTracking.set({
-      hojaRuta: cod.toUpperCase(),
-      asunto: 'Solicitud Oficial Remitida por Canal Virtual',
-      estado: 'EN CURSO - UNIDAD TECNOLÓGICA',
-      fechaIngreso: '15/10/2026 14:15',
-      unidadActual: 'Unidad de Tecnologías de la Información y Comunicación'
+    this.buscando.set(true);
+    this.http.get<any>(`/api/v1/ventanilla/consultar/${encodeURIComponent(cod)}`).subscribe({
+      next: (res) => {
+        this.buscando.set(false);
+        this.resultadoTracking.set(res.datos || null);
+      },
+      error: (err) => {
+        this.buscando.set(false);
+        this.resultadoTracking.set(null);
+        const msg = err.error?.mensaje || 'No se encontró ningún trámite con ese código.';
+        this.snackBar.open(msg, 'Entendido', { duration: 4000 });
+      }
     });
+  }
+
+  getUrlSeguimiento(codigo: string | undefined): string {
+    const cod = encodeURIComponent(codigo || '');
+    return `https://docs.marabuntarl.com/ventanilla-virtual?codigo=${cod}`;
   }
 
   imprimirComprobante(): void {
@@ -824,5 +1119,6 @@ export class VentanillaVirtualComponent {
     this.comprobanteGenerado.set(null);
     this.solicitudForm.reset({ tipoTramite: 'NOTA_OFICIAL' });
     this.archivoNombre.set(null);
+    this.archivoAdjuntoBase64 = null;
   }
 }
