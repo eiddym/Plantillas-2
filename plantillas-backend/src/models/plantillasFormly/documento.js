@@ -150,6 +150,21 @@ module.exports = (sequelize, DataType) => {
             defaultValue: 'Reservado',
             xlabel: 'Clasificación del Documento',
         },
+        es_institucional: {
+            type: DataType.BOOLEAN,
+            defaultValue: false,
+            xlabel: 'Archivo Institucional',
+        },
+        versiones: {
+            type: DataType.JSONB,
+            defaultValue: [],
+            xlabel: 'Histórico de Versiones',
+        },
+        categoria_institucional: {
+            type: DataType.STRING,
+            allowNull: true,
+            xlabel: 'Categoría Institucional',
+        },
         _usuario_creacion: {
             type: DataType.INTEGER,
             allowNull: false,

@@ -13,6 +13,8 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { HttpClient } from '@angular/common/http';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Documento, DocumentosService } from '../../core/services/documentos.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component';
@@ -35,7 +37,8 @@ import { NuevoDocumentoDialogComponent } from './nuevo-documento-dialog.componen
     MatChipsModule,
     MatTooltipModule,
     MatTabsModule,
-    MatDialogModule
+    MatDialogModule,
+    MatSnackBarModule
   ],
   template: `
     <div class="page-container">
@@ -196,6 +199,15 @@ import { NuevoDocumentoDialogComponent } from './nuevo-documento-dialog.componen
                   </button>
                   <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento">
                     <mat-icon>visibility</mat-icon>
+                  </button>
+                  <button 
+                    *ngIf="puedePromover() && d.estado === 'CERRADO'" 
+                    mat-icon-button 
+                    (click)="promoverAInstitucional(d)" 
+                    matTooltip="Promover a Archivo Institucional Oficial"
+                    style="color: #f59e0b"
+                  >
+                    <mat-icon>verified</mat-icon>
                   </button>
                 </ng-container>
               </td>
@@ -496,6 +508,8 @@ export class DocumentosListComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
+  private readonly http = inject(HttpClient);
+  private readonly snackBar = inject(MatSnackBar);
 
   readonly user = this.authService.currentUser;
   readonly displayedColumns = ['nombre', 'participantes', 'clasificacion', 'estado', 'fecha', 'acciones'];
@@ -504,6 +518,32 @@ export class DocumentosListComponent implements OnInit {
   readonly pageSize = signal(10);
   readonly pageIndex = signal(0);
   readonly loading = signal(false);
+
+  puedePromover(): boolean {
+    return this.authService.hasRole('JEFE') || 
+           this.authService.hasRole('MAE') || 
+           this.authService.hasRole('ADMIN') || 
+           this.authService.isMae();
+  }
+
+  promoverAInstitucional(d: Documento): void {
+    if (!confirm(`¿Desea promover el documento ${d.nombre} a Archivo Institucional Oficial? Pasará a formar parte del fondo documental corporativo.`)) {
+      return;
+    }
+
+    this.http.post<any>(`/api/v1/archivo/promover/${d.id_documento}`, {
+      categoria: (d as any).nombre_plantilla || 'Documento Oficial Concluido'
+    }).subscribe({
+      next: (res) => {
+        if (res.tipoMensaje === 'EXITO') {
+          this.snackBar.open(`¡Documento ${d.nombre} promovido a Archivo Institucional con éxito!`, 'Aceptar', { duration: 4000 });
+        }
+      },
+      error: (err) => {
+        this.snackBar.open(err.error?.mensaje || 'Error al promover documento a institucional', 'Cerrar', { duration: 3500 });
+      }
+    });
+  }
 
   private currentEstado = '';
   private searchFilter = '';

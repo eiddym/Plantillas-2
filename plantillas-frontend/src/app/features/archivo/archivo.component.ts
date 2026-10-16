@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
-import { FormsModule, ReactiveFormsModule, FormControl, FormGroup } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
@@ -16,24 +16,53 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { AuthService } from '../../core/auth/auth.service';
-import { DocumentosService, Documento } from '../../core/services/documentos.service';
 
-export interface ExpedienteItem {
+export interface VersionArchivo {
+  version: number;
+  nombre_archivo: string;
+  ruta: string;
+  fecha: string;
+  usuario: string;
+  observacion: string;
+}
+
+export interface DocumentoArchivo {
   id_documento: number;
   nombre: string;
-  nombre_plantilla?: string;
+  nombre_plantilla: string;
+  categoria_institucional?: string;
+  referencia?: string;
   estado: string;
-  fecha?: string;
+  es_institucional?: boolean;
+  versiones?: VersionArchivo[];
   _fecha_creacion?: string;
+  fecha?: string;
   usuario_creacion?: {
+    id_usuario: number;
     nombres: string;
     apellidos: string;
     cargo?: string;
+    fid_unidad?: number;
+    unidad?: {
+      id_unidad: number;
+      nombre: string;
+      abreviacion: string;
+    };
   };
-  padre?: any;
-  hijos?: any[];
   plantilla_valor?: string;
+}
+
+export interface UnidadArchivo {
+  id_unidad: number;
+  nombre: string;
+  abreviacion: string;
+  fid_unidad_padre?: number;
+  total_documentos: number;
+  documentos: DocumentoArchivo[];
+  agrupado_por_tipo: Record<string, DocumentoArchivo[]>;
+  sub_unidades?: UnidadArchivo[];
 }
 
 @Component({
@@ -56,150 +85,458 @@ export interface ExpedienteItem {
     MatTooltipModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
-    MatDialogModule
+    MatDialogModule,
+    MatExpansionModule
   ],
   template: `
-    <div class="archivo-page-container">
-      <!-- Header Superior con Estética Tecnológica -->
-      <header class="archivo-header">
-        <div class="header-left">
-          <div class="header-icon-box">
+    <div class="archivo-container">
+      <!-- Topbar del Módulo -->
+      <header class="archivo-topbar">
+        <div class="topbar-left">
+          <div class="topbar-icon">
             <mat-icon>inventory_2</mat-icon>
           </div>
           <div>
-            <h1 class="header-title">Módulo Central de Archivo</h1>
-            <p class="header-desc">Custodia, consulta histórica y expediente único institucional</p>
+            <h1 class="topbar-title">Fondo Documental & Archivo Central</h1>
+            <p class="topbar-sub">Custodia digital clasificada, trazabilidad histórica y versionado institucional</p>
           </div>
         </div>
 
-        <div class="header-actions">
-          <div class="stats-pill">
-            <mat-icon>folder_special</mat-icon>
-            <span>Total Custodiados: <strong>{{ totalDocs() }}</strong></span>
-          </div>
+        <div class="topbar-right">
+          @if (nivelActivo() === 'institucional' && esAdminOMae()) {
+            <button mat-flat-button class="btn-cargar-institucional" (click)="abrirModalCarga()">
+              <mat-icon>upload_file</mat-icon>
+              <span>Cargar Documento Institucional</span>
+            </button>
+          }
         </div>
       </header>
 
-      <!-- Selector de Nivel de Archivo (Pestañas Sincronizadas) -->
-      <div class="tabs-nav-bar">
+      <!-- Selector de Nivel de Archivo -->
+      <nav class="nivel-tabs-bar">
         <button 
-          class="tab-btn" 
+          class="nivel-btn" 
           [class.active]="nivelActivo() === 'general'" 
           (click)="cambiarNivel('general')"
         >
           <mat-icon>public</mat-icon>
           <span>Archivo General</span>
-          <span class="tab-badge">Institucional</span>
+          <span class="badge-count">{{ totalDocsGeneral() }}</span>
         </button>
 
         <button 
-          class="tab-btn" 
+          class="nivel-btn" 
           [class.active]="nivelActivo() === 'unidad'" 
           (click)="cambiarNivel('unidad')"
         >
           <mat-icon>domain</mat-icon>
           <span>Archivo de Unidad</span>
-          <span class="tab-badge">Área Operativa</span>
+          <span class="badge-count">{{ totalDocsUnidad() }}</span>
         </button>
 
         <button 
-          class="tab-btn" 
+          class="nivel-btn" 
           [class.active]="nivelActivo() === 'institucional'" 
           (click)="cambiarNivel('institucional')"
         >
-          <mat-icon>manage_search</mat-icon>
-          <span>Buscador Maestro</span>
-          <span class="tab-badge">Multicriterio</span>
+          <mat-icon>verified</mat-icon>
+          <span>Archivo Institucional</span>
+          <span class="badge-count badge-gold">{{ docsInstitucionales().length }}</span>
         </button>
-      </div>
+      </nav>
 
-      <!-- VISTA 1: ARCHIVO GENERAL (Circulares, Reglamentos, Resoluciones) -->
+      <!-- VISTA 1: ARCHIVO GENERAL (Agrupado por Unidades y Tipos Dinámicos) -->
       @if (nivelActivo() === 'general') {
-        <section class="archivo-section fade-in">
-          <div class="section-banner general-banner">
-            <div class="banner-content">
-              <h2>Archivo General & Normativo</h2>
-              <p>Documentación oficial de aplicación general, circulares, directrices y reglamentos aprobados.</p>
+        <section class="section-container fade-in">
+          <!-- Filtros Dinámicos de Tipos (Solo los existentes en documentos reales) -->
+          @if (tiposDisponiblesGeneral().length > 0) {
+            <div class="dynamic-types-bar">
+              <span class="filter-caption">Tipos de Documento:</span>
+              <button 
+                class="type-pill" 
+                [class.active]="tipoFiltroGeneral() === 'TODOS'"
+                (click)="filtrarTipoGeneral('TODOS')"
+              >
+                Todos los Tipos ({{ totalDocsGeneral() }})
+              </button>
+              @for (tipo of tiposDisponiblesGeneral(); track tipo) {
+                <button 
+                  class="type-pill" 
+                  [class.active]="tipoFiltroGeneral() === tipo"
+                  (click)="filtrarTipoGeneral(tipo)"
+                >
+                  {{ tipo }} ({{ contarDocsPorTipo(tipo) }})
+                </button>
+              }
             </div>
-            <div class="banner-filter">
-              <mat-form-field appearance="outline" class="search-field dark-field">
-                <mat-label>Filtrar por CITE o Asunto</mat-label>
-                <input matInput [formControl]="filtroGeneralCtrl" placeholder="Ej: CIR-2026, Reglamento...">
-                <mat-icon matSuffix>search</mat-icon>
-              </mat-form-field>
-            </div>
+          }
+
+          <!-- Buscador Rápido -->
+          <div class="search-box-bar">
+            <mat-form-field appearance="outline" class="search-input">
+              <mat-label>Buscar por CITE, asunto o funcionario emisor...</mat-label>
+              <input matInput [formControl]="filtroGeneralCtrl" placeholder="Ej. NOTA-001/2026, Informe...">
+              <mat-icon matSuffix>search</mat-icon>
+            </mat-form-field>
           </div>
 
-          <!-- Tipos Rápidos -->
-          <div class="quick-types">
-            <button 
-              class="type-chip" 
-              [class.chip-active]="tipoSeleccionado() === 'TODOS'"
-              (click)="filtrarPorTipo('TODOS')"
-            >
-              Todos los Tipos
-            </button>
-            <button 
-              class="type-chip" 
-              [class.chip-active]="tipoSeleccionado() === 'CIRCULAR'"
-              (click)="filtrarPorTipo('CIRCULAR')"
-            >
-              Circulares
-            </button>
-            <button 
-              class="type-chip" 
-              [class.chip-active]="tipoSeleccionado() === 'RESOLUCION'"
-              (click)="filtrarPorTipo('RESOLUCION')"
-            >
-              Resoluciones
-            </button>
-            <button 
-              class="type-chip" 
-              [class.chip-active]="tipoSeleccionado() === 'INFORME'"
-              (click)="filtrarPorTipo('INFORME')"
-            >
-              Informes
-            </button>
-            <button 
-              class="type-chip" 
-              [class.chip-active]="tipoSeleccionado() === 'CONVENIO'"
-              (click)="filtrarPorTipo('CONVENIO')"
-            >
-              Convenios
-            </button>
-          </div>
+          <!-- Documentos Globales Iniciales -->
+          <div class="content-card">
+            <div class="card-top-title">
+              <mat-icon>description</mat-icon>
+              <h3>Documentos Custodiados Globalmente ({{ docsGeneralesFiltrados().length }})</h3>
+            </div>
 
-          <!-- Tabla de Resultados -->
-          <div class="table-card">
             @if (cargando()) {
-              <div class="loading-state">
-                <mat-spinner diameter="44"></mat-spinner>
-                <p>Cargando fondo documental general...</p>
+              <div class="state-loading">
+                <mat-spinner diameter="40"></mat-spinner>
+                <p>Consultando archivo general y fondo de unidades...</p>
               </div>
-            } @else if (documentosFiltrados().length === 0) {
-              <div class="empty-state">
+            } @else if (docsGeneralesFiltrados().length === 0) {
+              <div class="state-empty">
                 <mat-icon>folder_open</mat-icon>
-                <h3>No se encontraron documentos custodiados</h3>
-                <p>No existen registros que coincidan con los criterios seleccionados.</p>
+                <p>No se encontraron documentos cerrados para este criterio.</p>
               </div>
             } @else {
-              <table mat-table [dataSource]="documentosFiltrados()" class="modern-table">
+              <table mat-table [dataSource]="docsGeneralesFiltrados()" class="archivo-table">
                 <!-- CITE -->
                 <ng-container matColumnDef="cite">
                   <th mat-header-cell *matHeaderCellDef>CITE Oficial</th>
                   <td mat-cell *matCellDef="let d">
-                    <div class="cite-cell">
-                      <mat-icon class="cite-icon">description</mat-icon>
-                      <span class="cite-text">{{ d.nombre || 'Sin CITE' }}</span>
+                    <span class="cite-text">{{ d.nombre }}</span>
+                  </td>
+                </ng-container>
+
+                <!-- Tipo Dinámico -->
+                <ng-container matColumnDef="tipo">
+                  <th mat-header-cell *matHeaderCellDef>Tipo</th>
+                  <td mat-cell *matCellDef="let d">
+                    <span class="tipo-tag">{{ d.nombre_plantilla || 'Documento Oficial' }}</span>
+                  </td>
+                </ng-container>
+
+                <!-- Asunto -->
+                <ng-container matColumnDef="ref">
+                  <th mat-header-cell *matHeaderCellDef>Referencia / Asunto</th>
+                  <td mat-cell *matCellDef="let d">
+                    <span class="ref-text" [matTooltip]="obtenerReferencia(d)">{{ obtenerReferencia(d) }}</span>
+                  </td>
+                </ng-container>
+
+                <!-- Unidad Emisora -->
+                <ng-container matColumnDef="unidad">
+                  <th mat-header-cell *matHeaderCellDef>Unidad Emisora</th>
+                  <td mat-cell *matCellDef="let d">
+                    <span class="unit-tag">{{ d.usuario_creacion?.unidad?.nombre || 'Unidad Central' }}</span>
+                  </td>
+                </ng-container>
+
+                <!-- Fecha -->
+                <ng-container matColumnDef="fecha">
+                  <th mat-header-cell *matHeaderCellDef>Fecha</th>
+                  <td mat-cell *matCellDef="let d">
+                    <span class="date-text">{{ formatearFecha(d._fecha_creacion || d.fecha) }}</span>
+                  </td>
+                </ng-container>
+
+                <!-- Acciones -->
+                <ng-container matColumnDef="acciones">
+                  <th mat-header-cell *matHeaderCellDef>Acciones</th>
+                  <td mat-cell *matCellDef="let d">
+                    <div class="action-btn-row">
+                      <button mat-icon-button (click)="verDetalle(d)" matTooltip="Ver Trazabilidad y Versiones" class="btn-action">
+                        <mat-icon>visibility</mat-icon>
+                      </button>
+                      <button mat-icon-button (click)="descargarPdf(d)" matTooltip="Descargar Copia Digital" class="btn-action pdf">
+                        <mat-icon>picture_as_pdf</mat-icon>
+                      </button>
+                      @if (puedePromover() && !d.es_institucional) {
+                        <button 
+                          mat-icon-button 
+                          (click)="promoverAInstitucional(d)" 
+                          matTooltip="Promover a Archivo Institucional"
+                          class="btn-action promote"
+                        >
+                          <mat-icon>verified</mat-icon>
+                        </button>
+                      }
                     </div>
                   </td>
                 </ng-container>
 
-                <!-- Tipo -->
-                <ng-container matColumnDef="tipo">
-                  <th mat-header-cell *matHeaderCellDef>Tipo / Plantilla</th>
+                <tr mat-header-row *matHeaderRowDef="columnasGenerales"></tr>
+                <tr mat-row *matRowDef="let row; columns: columnasGenerales;" class="data-row"></tr>
+              </table>
+            }
+          </div>
+
+          <!-- Estructura Dinámica por Unidades Institucionales -->
+          <div class="unidades-hierarchy-card">
+            <div class="card-top-title">
+              <mat-icon>corporate_fare</mat-icon>
+              <h3>Unidades y Direcciones de la Institución ({{ unidadesGeneral().length }})</h3>
+            </div>
+            <p class="section-desc">Estructura dinámica de unidades creadas. Se reflejan en tiempo real aunque no contengan archivos:</p>
+
+            <mat-accordion multi class="unidades-accordion">
+              @for (u of unidadesGeneral(); track u.id_unidad) {
+                <mat-expansion-panel class="unidad-panel">
+                  <mat-expansion-panel-header>
+                    <mat-panel-title class="panel-title-custom">
+                      <mat-icon class="unit-icon">account_balance</mat-icon>
+                      <span class="u-name">{{ u.nombre }} ({{ u.abreviacion }})</span>
+                    </mat-panel-title>
+                    <mat-panel-description class="panel-desc-custom">
+                      <span class="u-count-badge" [class.has-docs]="u.total_documentos > 0">
+                        {{ u.total_documentos }} archivo(s)
+                      </span>
+                    </mat-panel-description>
+                  </mat-expansion-panel-header>
+
+                  <div class="unidad-expanded-content">
+                    @if (u.total_documentos === 0) {
+                      <div class="unit-empty-state">
+                        <mat-icon>info</mat-icon>
+                        <span>Esta unidad está registrada y activa en el sistema pero aún no ha producido documentos cerrados.</span>
+                      </div>
+                    } @else {
+                      <div class="tipos-unidad-grid">
+                        @for (tipoKey of obtenerClaves(u.agrupado_por_tipo); track tipoKey) {
+                          <div class="tipo-sub-card">
+                            <div class="tipo-header">
+                              <mat-icon>folder</mat-icon>
+                              <strong>{{ tipoKey }} ({{ u.agrupado_por_tipo[tipoKey].length }})</strong>
+                            </div>
+                            <div class="docs-mini-list">
+                              @for (doc of u.agrupado_por_tipo[tipoKey]; track doc.id_documento) {
+                                <div class="doc-mini-row">
+                                  <div class="doc-mini-info">
+                                    <strong class="mini-cite">{{ doc.nombre }}</strong>
+                                    <span class="mini-ref">{{ obtenerReferencia(doc) }}</span>
+                                  </div>
+                                  <div class="mini-actions">
+                                    <button mat-icon-button (click)="verDetalle(doc)" class="btn-action-mini">
+                                      <mat-icon>visibility</mat-icon>
+                                    </button>
+                                    <button mat-icon-button (click)="descargarPdf(doc)" class="btn-action-mini pdf">
+                                      <mat-icon>picture_as_pdf</mat-icon>
+                                    </button>
+                                  </div>
+                                </div>
+                              }
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                </mat-expansion-panel>
+              }
+            </mat-accordion>
+          </div>
+        </section>
+      }
+
+      <!-- VISTA 2: ARCHIVO DE UNIDAD (Unidad del Usuario y Sub-unidades Dependientes) -->
+      @if (nivelActivo() === 'unidad') {
+        <section class="section-container fade-in">
+          <div class="banner-unidad-actual">
+            <div class="banner-unidad-info">
+              <span class="badge-area">Área Asignada</span>
+              <h2>{{ dataUnidadActual()?.unidad?.nombre || 'Mi Unidad Operativa' }}</h2>
+              <p>Acervo documental producido por funcionarios de esta unidad y sub-unidades jerárquicas dependientes.</p>
+            </div>
+            <div class="banner-unidad-stat">
+              <span class="stat-number">{{ dataUnidadActual()?.total_documentos || 0 }}</span>
+              <span class="stat-label">Documentos Concluidos</span>
+            </div>
+          </div>
+
+          <!-- Tipos Dinámicos de la Unidad -->
+          @if (dataUnidadActual()?.tipos_disponibles && dataUnidadActual()!.tipos_disponibles.length > 0) {
+            <div class="dynamic-types-bar">
+              <span class="filter-caption">Tipos producidos en la unidad:</span>
+              <button 
+                class="type-pill" 
+                [class.active]="tipoFiltroUnidad() === 'TODOS'"
+                (click)="tipoFiltroUnidad.set('TODOS')"
+              >
+                Todos los Tipos
+              </button>
+              @for (t of dataUnidadActual()!.tipos_disponibles; track t) {
+                <button 
+                  class="type-pill" 
+                  [class.active]="tipoFiltroUnidad() === t"
+                  (click)="tipoFiltroUnidad.set(t)"
+                >
+                  {{ t }}
+                </button>
+              }
+            </div>
+          }
+
+          <!-- Documentos Propios de la Unidad Principal -->
+          <div class="content-card">
+            <div class="card-top-title">
+              <mat-icon>folder_special</mat-icon>
+              <h3>Documentos Propios de la Unidad</h3>
+            </div>
+
+            @if (docsUnidadFiltrados().length === 0) {
+              <div class="state-empty">
+                <mat-icon>description</mat-icon>
+                <p>No hay documentos cerrados en esta unidad bajo el tipo seleccionado.</p>
+              </div>
+            } @else {
+              <table mat-table [dataSource]="docsUnidadFiltrados()" class="archivo-table">
+                <ng-container matColumnDef="cite">
+                  <th mat-header-cell *matHeaderCellDef>CITE</th>
                   <td mat-cell *matCellDef="let d">
-                    <span class="tipo-badge">{{ d.nombre_plantilla || 'Oficial' }}</span>
+                    <span class="cite-text">{{ d.nombre }}</span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="tipo">
+                  <th mat-header-cell *matHeaderCellDef>Tipo</th>
+                  <td mat-cell *matCellDef="let d">
+                    <span class="tipo-tag">{{ d.nombre_plantilla }}</span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="ref">
+                  <th mat-header-cell *matHeaderCellDef>Referencia</th>
+                  <td mat-cell *matCellDef="let d">
+                    <span class="ref-text" [matTooltip]="obtenerReferencia(d)">{{ obtenerReferencia(d) }}</span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="autor">
+                  <th mat-header-cell *matHeaderCellDef>Generado por</th>
+                  <td mat-cell *matCellDef="let d">
+                    {{ d.usuario_creacion?.nombres }} {{ d.usuario_creacion?.apellidos }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="acciones">
+                  <th mat-header-cell *matHeaderCellDef>Acciones</th>
+                  <td mat-cell *matCellDef="let d">
+                    <div class="action-btn-row">
+                      <button mat-icon-button (click)="verDetalle(d)" matTooltip="Ver Trazabilidad" class="btn-action">
+                        <mat-icon>visibility</mat-icon>
+                      </button>
+                      <button mat-icon-button (click)="descargarPdf(d)" matTooltip="Descargar Copia Digital" class="btn-action pdf">
+                        <mat-icon>picture_as_pdf</mat-icon>
+                      </button>
+                      @if (puedePromover() && !d.es_institucional) {
+                        <button 
+                          mat-icon-button 
+                          (click)="promoverAInstitucional(d)" 
+                          matTooltip="Promover a Archivo Institucional"
+                          class="btn-action promote"
+                        >
+                          <mat-icon>verified</mat-icon>
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="['cite', 'tipo', 'ref', 'autor', 'acciones']"></tr>
+                <tr mat-row *matRowDef="let row; columns: ['cite', 'tipo', 'ref', 'autor', 'acciones'];" class="data-row"></tr>
+              </table>
+            }
+          </div>
+
+          <!-- Sub-Unidades Jerárquicas Dependientes -->
+          @if (dataUnidadActual()?.sub_unidades && dataUnidadActual()!.sub_unidades!.length > 0) {
+            <div class="sub-unidades-box">
+              <div class="card-top-title">
+                <mat-icon>alt_route</mat-icon>
+                <h3>Sub-Unidades Jerárquicas Dependientes ({{ dataUnidadActual()!.sub_unidades!.length }})</h3>
+              </div>
+
+              @for (sub of dataUnidadActual()!.sub_unidades!; track sub.id_unidad) {
+                <div class="sub-unidad-card">
+                  <div class="sub-header">
+                    <mat-icon>domain_add</mat-icon>
+                    <strong>{{ sub.nombre }} ({{ sub.abreviacion }})</strong>
+                    <span class="sub-badge">{{ sub.total_documentos }} doc(s)</span>
+                  </div>
+
+                  @if (sub.total_documentos === 0) {
+                    <p class="sub-empty">Sub-unidad operativa sin documentos cerrados actualmente.</p>
+                  } @else {
+                    <div class="sub-docs-grid">
+                      @for (tKey of obtenerClaves(sub.agrupado_por_tipo); track tKey) {
+                        <div class="sub-tipo-item">
+                          <h5>{{ tKey }} ({{ sub.agrupado_por_tipo[tKey].length }})</h5>
+                          @for (sDoc of sub.agrupado_por_tipo[tKey]; track sDoc.id_documento) {
+                            <div class="sub-doc-row">
+                              <span>{{ sDoc.nombre }} - {{ obtenerReferencia(sDoc) }}</span>
+                              <button mat-icon-button (click)="descargarPdf(sDoc)" class="btn-action-mini pdf">
+                                <mat-icon>download</mat-icon>
+                              </button>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </section>
+      }
+
+      <!-- VISTA 3: ARCHIVO INSTITUCIONAL (Exclusivamente Documentos Institucionales) -->
+      @if (nivelActivo() === 'institucional') {
+        <section class="section-container fade-in">
+          <div class="banner-institucional">
+            <div class="banner-inst-content">
+              <span class="badge-gold-header">Fondo de Custodia Mayor</span>
+              <h2>Archivo Institucional Oficial</h2>
+              <p>Documentos de alcance corporativo promovidos por Jefaturas/MAE o cargados por Administración.</p>
+            </div>
+            @if (esAdminOMae()) {
+              <button mat-flat-button class="btn-upload-inst" (click)="abrirModalCarga()">
+                <mat-icon>cloud_upload</mat-icon>
+                <span>Cargar Documento Oficial</span>
+              </button>
+            }
+          </div>
+
+          <div class="content-card">
+            <div class="card-top-title">
+              <mat-icon>verified</mat-icon>
+              <h3>Documentos Oficiales Institucionales ({{ docsInstitucionales().length }})</h3>
+            </div>
+
+            @if (cargando()) {
+              <div class="state-loading">
+                <mat-spinner diameter="40"></mat-spinner>
+                <p>Cargando fondo documental institucional...</p>
+              </div>
+            } @else if (docsInstitucionales().length === 0) {
+              <div class="state-empty">
+                <mat-icon>verified_user</mat-icon>
+                <p>Aún no se han promovido ni cargado documentos institucionales oficiales.</p>
+              </div>
+            } @else {
+              <table mat-table [dataSource]="docsInstitucionales()" class="archivo-table">
+                <!-- CITE -->
+                <ng-container matColumnDef="cite">
+                  <th mat-header-cell *matHeaderCellDef>CITE</th>
+                  <td mat-cell *matCellDef="let d">
+                    <span class="cite-text">{{ d.nombre }}</span>
+                  </td>
+                </ng-container>
+
+                <!-- Categoría -->
+                <ng-container matColumnDef="categoria">
+                  <th mat-header-cell *matHeaderCellDef>Categoría</th>
+                  <td mat-cell *matCellDef="let d">
+                    <span class="cat-pill">{{ d.categoria_institucional || d.nombre_plantilla }}</span>
                   </td>
                 </ng-container>
 
@@ -207,20 +544,18 @@ export interface ExpedienteItem {
                 <ng-container matColumnDef="ref">
                   <th mat-header-cell *matHeaderCellDef>Referencia / Asunto</th>
                   <td mat-cell *matCellDef="let d">
-                    <div class="ref-cell" [matTooltip]="obtenerReferencia(d)">
-                      {{ obtenerReferencia(d) }}
-                    </div>
+                    <span class="ref-text" [matTooltip]="obtenerReferencia(d)">{{ obtenerReferencia(d) }}</span>
                   </td>
                 </ng-container>
 
-                <!-- Emisor -->
-                <ng-container matColumnDef="emisor">
-                  <th mat-header-cell *matHeaderCellDef>Autor / Emisor</th>
+                <!-- Versión Actual -->
+                <ng-container matColumnDef="version">
+                  <th mat-header-cell *matHeaderCellDef>Versión Actual</th>
                   <td mat-cell *matCellDef="let d">
-                    <div class="author-cell">
-                      <span class="author-name">{{ d.usuario_creacion?.nombres }} {{ d.usuario_creacion?.apellidos }}</span>
-                      <span class="author-unit">{{ d.usuario_creacion?.unidad?.nombre || 'Institución' }}</span>
-                    </div>
+                    <span class="version-badge" (click)="verVersiones(d)">
+                      v{{ obtenerVersionActual(d) }}
+                      <mat-icon class="icon-v">history</mat-icon>
+                    </span>
                   </td>
                 </ng-container>
 
@@ -236,357 +571,199 @@ export interface ExpedienteItem {
                 <ng-container matColumnDef="acciones">
                   <th mat-header-cell *matHeaderCellDef>Acciones</th>
                   <td mat-cell *matCellDef="let d">
-                    <div class="action-buttons">
-                      <button 
-                        mat-icon-button 
-                        class="btn-action preview-btn" 
-                        (click)="verExpediente(d)"
-                        matTooltip="Ver Expediente / Trazabilidad"
-                      >
-                        <mat-icon>visibility</mat-icon>
-                      </button>
-                      <button 
-                        mat-icon-button 
-                        class="btn-action pdf-btn" 
-                        (click)="descargarPdf(d)"
-                        matTooltip="Descargar Copia Digital"
-                      >
+                    <div class="action-btn-row">
+                      <button mat-icon-button (click)="descargarPdf(d)" matTooltip="Descargar Documento" class="btn-action pdf">
                         <mat-icon>picture_as_pdf</mat-icon>
                       </button>
+                      <button mat-icon-button (click)="verVersiones(d)" matTooltip="Historial de Versiones" class="btn-action">
+                        <mat-icon>history</mat-icon>
+                      </button>
+                      @if (puedeVersionar()) {
+                        <button mat-icon-button (click)="abrirModalVersionar(d)" matTooltip="Subir Nueva Versión (v{{ obtenerVersionActual(d) + 1 }})" class="btn-action version">
+                          <mat-icon>upgrade</mat-icon>
+                        </button>
+                      }
                     </div>
                   </td>
                 </ng-container>
 
-                <tr mat-header-row *matHeaderRowDef="columnasGenerales"></tr>
-                <tr mat-row *matRowDef="let row; columns: columnasGenerales;" class="table-row"></tr>
+                <tr mat-header-row *matHeaderRowDef="columnasInstitucionales"></tr>
+                <tr mat-row *matRowDef="let row; columns: columnasInstitucionales;" class="data-row"></tr>
               </table>
             }
           </div>
         </section>
       }
 
-      <!-- VISTA 2: ARCHIVO DE UNIDAD (Área Operativa del Usuario) -->
-      @if (nivelActivo() === 'unidad') {
-        <section class="archivo-section fade-in">
-          <div class="section-banner unidad-banner">
-            <div class="banner-content">
-              <h2>Archivo de Unidad: {{ nombreUnidadUsuario() }}</h2>
-              <p>Acervo documental producido y recibido en esta jefatura o departamento.</p>
-            </div>
-            <div class="unit-stat-boxes">
-              <div class="u-stat">
-                <span class="u-val">{{ totalUnidadDocs() }}</span>
-                <span class="u-lbl">Custodiados</span>
-              </div>
-              <div class="u-stat">
-                <span class="u-val">{{ totalFirmados() }}</span>
-                <span class="u-lbl">Concluidos / Cerrados</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="filter-toolbar">
-            <mat-form-field appearance="outline" class="search-field-compact">
-              <mat-label>Buscar en la Unidad</mat-label>
-              <input matInput [formControl]="filtroUnidadCtrl" placeholder="CITE, funcionario o asunto...">
-              <mat-icon matSuffix>search</mat-icon>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="select-field">
-              <mat-label>Agrupar por</mat-label>
-              <mat-select [formControl]="agrupadorUnidadCtrl">
-                <mat-option value="todos">Todos los Documentos</mat-option>
-                <mat-option value="emitidos">Solo Emitidos por la Unidad</mat-option>
-                <mat-option value="recibidos">Solo Recibidos</mat-option>
-              </mat-select>
-            </mat-form-field>
-          </div>
-
-          <div class="table-card">
-            @if (cargando()) {
-              <div class="loading-state">
-                <mat-spinner diameter="44"></mat-spinner>
-                <p>Cargando archivo de la unidad...</p>
-              </div>
-            } @else {
-              <table mat-table [dataSource]="documentosUnidadFiltrados()" class="modern-table">
-                <!-- CITE -->
-                <ng-container matColumnDef="cite">
-                  <th mat-header-cell *matHeaderCellDef>CITE</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span class="cite-badge">{{ d.nombre }}</span>
-                  </td>
-                </ng-container>
-
-                <!-- Tipo -->
-                <ng-container matColumnDef="tipo">
-                  <th mat-header-cell *matHeaderCellDef>Tipo</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span>{{ d.nombre_plantilla || 'Documento' }}</span>
-                  </td>
-                </ng-container>
-
-                <!-- Referencia -->
-                <ng-container matColumnDef="ref">
-                  <th mat-header-cell *matHeaderCellDef>Referencia</th>
-                  <td mat-cell *matCellDef="let d">
-                    <div class="ref-cell">{{ obtenerReferencia(d) }}</div>
-                  </td>
-                </ng-container>
-
-                <!-- Responsable -->
-                <ng-container matColumnDef="responsable">
-                  <th mat-header-cell *matHeaderCellDef>Generado por</th>
-                  <td mat-cell *matCellDef="let d">
-                    {{ d.usuario_creacion?.nombres }} {{ d.usuario_creacion?.apellidos }}
-                  </td>
-                </ng-container>
-
-                <!-- Estado -->
-                <ng-container matColumnDef="estado">
-                  <th mat-header-cell *matHeaderCellDef>Estado</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span class="status-pill" [class.status-cerrado]="d.estado === 'CERRADO'">
-                      {{ d.estado }}
-                    </span>
-                  </td>
-                </ng-container>
-
-                <!-- Acciones -->
-                <ng-container matColumnDef="acciones">
-                  <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                  <td mat-cell *matCellDef="let d">
-                    <div class="action-buttons">
-                      <button mat-icon-button class="btn-action preview-btn" (click)="verExpediente(d)">
-                        <mat-icon>folder_open</mat-icon>
-                      </button>
-                      <button mat-icon-button class="btn-action pdf-btn" (click)="descargarPdf(d)">
-                        <mat-icon>download</mat-icon>
-                      </button>
-                    </div>
-                  </td>
-                </ng-container>
-
-                <tr mat-header-row *matHeaderRowDef="columnasUnidad"></tr>
-                <tr mat-row *matRowDef="let row; columns: columnasUnidad;" class="table-row"></tr>
-              </table>
-            }
-          </div>
-        </section>
-      }
-
-      <!-- VISTA 3: ARCHIVO INSTITUCIONAL (Buscador Maestro Multicriterio) -->
-      @if (nivelActivo() === 'institucional') {
-        <section class="archivo-section fade-in">
-          <!-- Formulario Maestro Multicriterio -->
-          <div class="search-master-card">
-            <div class="search-master-header">
-              <mat-icon>tune</mat-icon>
-              <h3>Buscador Maestro Institucional</h3>
-            </div>
-            
-            <form [formGroup]="buscadorForm" (ngSubmit)="ejecutarBusquedaMaestra()" class="search-form-grid">
-              <mat-form-field appearance="outline">
-                <mat-label>CITE o Código de Documento</mat-label>
-                <input matInput formControlName="cite" placeholder="Ej: MIN-DES-001/2026">
-                <mat-icon matSuffix>tag</mat-icon>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Palabra Clave / Referencia</mat-label>
-                <input matInput formControlName="referencia" placeholder="Asunto o término de búsqueda">
-                <mat-icon matSuffix>search</mat-icon>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Funcionario / Remitente</mat-label>
-                <input matInput formControlName="funcionario" placeholder="Nombre o apellido">
-                <mat-icon matSuffix>person</mat-icon>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Tipo de Documento</mat-label>
-                <mat-select formControlName="tipo">
-                  <mat-option value="">Todos los Tipos</mat-option>
-                  <mat-option value="CARTA">Carta</mat-option>
-                  <mat-option value="INFORME">Informe</mat-option>
-                  <mat-option value="MEMORANDUM">Memorándum</mat-option>
-                  <mat-option value="CIRCULAR">Circular</mat-option>
-                  <mat-option value="RESOLUCION">Resolución</mat-option>
-                </mat-select>
-              </mat-form-field>
-
-              <div class="form-actions-full">
-                <button type="submit" mat-flat-button class="btn-search-master" [disabled]="cargando()">
-                  <mat-icon>manage_search</mat-icon>
-                  <span>Buscar en Todo el Acervo</span>
-                </button>
-                <button type="button" mat-stroked-button (click)="limpiarBusqueda()" class="btn-clear-master">
-                  <mat-icon>refresh</mat-icon>
-                  <span>Limpiar</span>
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <!-- Resultados del Buscador Maestro -->
-          <div class="table-card">
-            <div class="results-header">
-              <h3>Resultados Encontrados ({{ resultadosMaestros().length }})</h3>
-            </div>
-
-            @if (cargando()) {
-              <div class="loading-state">
-                <mat-spinner diameter="44"></mat-spinner>
-                <p>Consultando base de datos histórica...</p>
-              </div>
-            } @else if (resultadosMaestros().length === 0) {
-              <div class="empty-state">
-                <mat-icon>search_off</mat-icon>
-                <h3>No hay coincidencias</h3>
-                <p>Intente con un CITE parcial o ajuste los filtros de búsqueda.</p>
-              </div>
-            } @else {
-              <table mat-table [dataSource]="resultadosMaestros()" class="modern-table">
-                <!-- CITE -->
-                <ng-container matColumnDef="cite">
-                  <th mat-header-cell *matHeaderCellDef>CITE</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span class="cite-text-strong">{{ d.nombre }}</span>
-                  </td>
-                </ng-container>
-
-                <!-- Tipo -->
-                <ng-container matColumnDef="tipo">
-                  <th mat-header-cell *matHeaderCellDef>Tipo</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span class="tipo-tag">{{ d.nombre_plantilla || 'Oficial' }}</span>
-                  </td>
-                </ng-container>
-
-                <!-- Referencia -->
-                <ng-container matColumnDef="ref">
-                  <th mat-header-cell *matHeaderCellDef>Referencia</th>
-                  <td mat-cell *matCellDef="let d">
-                    <div class="ref-cell">{{ obtenerReferencia(d) }}</div>
-                  </td>
-                </ng-container>
-
-                <!-- Emisor -->
-                <ng-container matColumnDef="emisor">
-                  <th mat-header-cell *matHeaderCellDef>Autor</th>
-                  <td mat-cell *matCellDef="let d">
-                    {{ d.usuario_creacion?.nombres }} {{ d.usuario_creacion?.apellidos }}
-                  </td>
-                </ng-container>
-
-                <!-- Fecha -->
-                <ng-container matColumnDef="fecha">
-                  <th mat-header-cell *matHeaderCellDef>Fecha</th>
-                  <td mat-cell *matCellDef="let d">
-                    {{ formatearFecha(d._fecha_creacion || d.fecha) }}
-                  </td>
-                </ng-container>
-
-                <!-- Acciones -->
-                <ng-container matColumnDef="acciones">
-                  <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                  <td mat-cell *matCellDef="let d">
-                    <div class="action-buttons">
-                      <button mat-icon-button class="btn-action preview-btn" (click)="verExpediente(d)">
-                        <mat-icon>account_tree</mat-icon>
-                      </button>
-                      <button mat-icon-button class="btn-action pdf-btn" (click)="descargarPdf(d)">
-                        <mat-icon>download</mat-icon>
-                      </button>
-                    </div>
-                  </td>
-                </ng-container>
-
-                <tr mat-header-row *matHeaderRowDef="columnasMaestras"></tr>
-                <tr mat-row *matRowDef="let row; columns: columnasMaestras;" class="table-row"></tr>
-              </table>
-            }
-          </div>
-        </section>
-      }
-
-      <!-- MODAL EXPEDIENTE / TRAZABILIDAD (Overlay Flotante) -->
-      @if (expedienteSeleccionado()) {
-        <div class="modal-backdrop" (click)="cerrarExpediente()">
-          <div class="expediente-modal" (click)="$event.stopPropagation()">
+      <!-- MODAL: CARGAR DOCUMENTO INSTITUCIONAL (ADMIN / MAE) -->
+      @if (mostrarModalCarga()) {
+        <div class="modal-overlay" (click)="cerrarModalCarga()">
+          <div class="modal-card" (click)="$event.stopPropagation()">
             <div class="modal-header">
-              <div class="modal-title-box">
-                <mat-icon>account_tree</mat-icon>
+              <div class="modal-header-title">
+                <mat-icon>upload_file</mat-icon>
                 <div>
-                  <h3>Expediente del Trámite: {{ expedienteSeleccionado()?.nombre }}</h3>
-                  <p>{{ obtenerReferencia(expedienteSeleccionado()) }}</p>
+                  <h3>Cargar Documento en Archivo Institucional</h3>
+                  <p>Exclusivo para Administración y Dirección Máxima Ejecutiva</p>
                 </div>
               </div>
-              <button mat-icon-button (click)="cerrarExpediente()" class="close-modal-btn">
+              <button mat-icon-button (click)="cerrarModalCarga()" class="btn-close">
                 <mat-icon>close</mat-icon>
               </button>
             </div>
 
-            <div class="modal-body">
-              <div class="expediente-summary-grid">
-                <div class="sum-card">
-                  <span class="sum-lbl">Estado Legal</span>
-                  <span class="sum-val status-val">{{ expedienteSeleccionado()?.estado }}</span>
-                </div>
-                <div class="sum-card">
-                  <span class="sum-lbl">Fecha Creación</span>
-                  <span class="sum-val">{{ formatearFecha(expedienteSeleccionado()?._fecha_creacion) }}</span>
-                </div>
-                <div class="sum-card">
-                  <span class="sum-lbl">Autor / Funcionario</span>
-                  <span class="sum-val">{{ expedienteSeleccionado()?.usuario_creacion?.nombres }} {{ expedienteSeleccionado()?.usuario_creacion?.apellidos }}</span>
-                </div>
-                <div class="sum-card">
-                  <span class="sum-lbl">Unidad Responsable</span>
-                  <span class="sum-val">{{ expedienteSeleccionado()?.usuario_creacion?.unidad?.nombre || 'Central' }}</span>
-                </div>
+            <form [formGroup]="cargaForm" (ngSubmit)="guardarDocumentoInstitucional()" class="modal-form">
+              <mat-form-field appearance="outline">
+                <mat-label>CITE o Código Institucional</mat-label>
+                <input matInput formControlName="cite" placeholder="Ej. MARABUNTA-RES-001/2026" required>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Categoría Institucional</mat-label>
+                <mat-select formControlName="categoria">
+                  <mat-option value="Resolución de Directorio">Resolución de Directorio</mat-option>
+                  <mat-option value="Reglamento Interno">Reglamento Interno</mat-option>
+                  <mat-option value="Convenio Interinstitucional">Convenio Interinstitucional</mat-option>
+                  <mat-option value="Circular Normativa">Circular Normativa</mat-option>
+                  <mat-option value="Estatuto Orgánico">Estatuto Orgánico</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="col-span-full">
+                <mat-label>Referencia o Asunto</mat-label>
+                <input matInput formControlName="referencia" placeholder="Objeto y alcance del documento" required>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="col-span-full">
+                <mat-label>Observación / Justificación</mat-label>
+                <textarea matInput formControlName="observacion" rows="2" placeholder="Detalle de digitalización o motivo de carga"></textarea>
+              </mat-form-field>
+
+              <div class="file-drop-area col-span-full">
+                <mat-icon>attach_file</mat-icon>
+                <span>Archivo Escaneado o Copia Digital (PDF)</span>
+                <input type="file" (change)="onArchivoSeleccionado($event)" accept="application/pdf" style="display: none" #fileCarga>
+                <button type="button" mat-stroked-button (click)="fileCarga.click()">
+                  {{ nombreArchivoCarga() || 'Seleccionar Archivo PDF' }}
+                </button>
               </div>
 
-              <!-- Línea de Tiempo del Trámite -->
-              <div class="timeline-container">
-                <h4>Cadena de Custodia & Trazabilidad</h4>
-                <div class="timeline-step">
-                  <div class="step-point step-done">
-                    <mat-icon>edit_note</mat-icon>
-                  </div>
-                  <div class="step-content">
-                    <h5>Creación y Redacción Inicial</h5>
-                    <p>Documento generado en el sistema de plantillas por el autor.</p>
-                  </div>
-                </div>
-                <div class="timeline-step">
-                  <div class="step-point step-done">
-                    <mat-icon>check_circle</mat-icon>
-                  </div>
-                  <div class="step-content">
-                    <h5>Aprobación por Jefatura & Asignación de CITE</h5>
-                    <p>Revisado favorablemente y asignado con numeración correlativa oficial.</p>
-                  </div>
-                </div>
-                <div class="timeline-step">
-                  <div class="step-point step-active">
-                    <mat-icon>verified</mat-icon>
-                  </div>
-                  <div class="step-content">
-                    <h5>Custodia en Fondo Documental</h5>
-                    <p>Almacenado bajo firma digital y disponible para consulta institucional.</p>
-                  </div>
+              <div class="modal-actions col-span-full">
+                <button type="button" mat-button (click)="cerrarModalCarga()">Cancelar</button>
+                <button type="submit" mat-flat-button class="btn-primary-action" [disabled]="cargaForm.invalid || guardando()">
+                  <mat-icon>save</mat-icon>
+                  <span>{{ guardando() ? 'Guardando...' : 'Cargar en Archivo Institucional' }}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
+
+      <!-- MODAL: VERSIONAR ARCHIVO DIGITAL (v1 -> v2...) -->
+      @if (docAVersionar()) {
+        <div class="modal-overlay" (click)="cerrarModalVersionar()">
+          <div class="modal-card" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <div class="modal-header-title">
+                <mat-icon>upgrade</mat-icon>
+                <div>
+                  <h3>Versionar Archivo: {{ docAVersionar()?.nombre }}</h3>
+                  <p>Incorporar una nueva versión digital sin eliminar las versiones previas</p>
                 </div>
               </div>
+              <button mat-icon-button (click)="cerrarModalVersionar()" class="btn-close">
+                <mat-icon>close</mat-icon>
+              </button>
             </div>
 
-            <div class="modal-footer">
-              <button mat-stroked-button (click)="cerrarExpediente()">Cerrar</button>
-              <button mat-flat-button class="btn-download-exp" (click)="descargarPdf(expedienteSeleccionado())">
-                <mat-icon>picture_as_pdf</mat-icon>
-                <span>Descargar Documento Oficial</span>
+            <form [formGroup]="versionForm" (ngSubmit)="guardarNuevaVersion()" class="modal-form">
+              <div class="version-banner-info col-span-full">
+                <strong>Versión a generar: v{{ obtenerVersionActual(docAVersionar()!) + 1 }}</strong>
+                <span>Se preservará v{{ obtenerVersionActual(docAVersionar()!) }} en la cadena de trazabilidad.</span>
+              </div>
+
+              <mat-form-field appearance="outline" class="col-span-full">
+                <mat-label>Motivo o Descripción de la Nueva Versión</mat-label>
+                <input matInput formControlName="observacion" placeholder="Ej. Escaneo de alta resolución con escáner institucional de mesa" required>
+              </mat-form-field>
+
+              <div class="file-drop-area col-span-full">
+                <mat-icon>cloud_upload</mat-icon>
+                <span>Cargar nuevo archivo PDF versionado</span>
+                <input type="file" (change)="onArchivoVersionSeleccionado($event)" accept="application/pdf" style="display: none" #fileVersion>
+                <button type="button" mat-stroked-button (click)="fileVersion.click()">
+                  {{ nombreArchivoVersion() || 'Seleccionar Nuevo Escaneo PDF' }}
+                </button>
+              </div>
+
+              <div class="modal-actions col-span-full">
+                <button type="button" mat-button (click)="cerrarModalVersionar()">Cancelar</button>
+                <button type="submit" mat-flat-button class="btn-primary-action" [disabled]="versionForm.invalid || guardando()">
+                  <mat-icon>done_all</mat-icon>
+                  <span>{{ guardando() ? 'Versionando...' : 'Guardar Versión v' + (obtenerVersionActual(docAVersionar()!) + 1) }}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
+
+      <!-- MODAL: HISTORIAL DE VERSIONES Y TRAZABILIDAD -->
+      @if (docVersionesVer()) {
+        <div class="modal-overlay" (click)="cerrarVersiones()">
+          <div class="modal-card" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <div class="modal-header-title">
+                <mat-icon>history</mat-icon>
+                <div>
+                  <h3>Historial de Versiones: {{ docVersionesVer()?.nombre }}</h3>
+                  <p>{{ obtenerReferencia(docVersionesVer()) }}</p>
+                </div>
+              </div>
+              <button mat-icon-button (click)="cerrarVersiones()" class="btn-close">
+                <mat-icon>close</mat-icon>
               </button>
+            </div>
+
+            <div class="modal-body-versions">
+              @if (!docVersionesVer()?.versiones || docVersionesVer()!.versiones!.length === 0) {
+                <div class="single-version-card">
+                  <div class="v-num">v1</div>
+                  <div class="v-details">
+                    <strong>Versión Original Concluida</strong>
+                    <span>Documento cerrado y archivado en formato digital oficial.</span>
+                  </div>
+                  <button mat-flat-button class="btn-dl-v" (click)="descargarPdf(docVersionesVer())">
+                    <mat-icon>download</mat-icon>
+                    <span>Descargar</span>
+                  </button>
+                </div>
+              } @else {
+                <div class="versions-timeline">
+                  @for (ver of docVersionesVer()!.versiones!; track ver.version) {
+                    <div class="version-timeline-item">
+                      <div class="v-circle">v{{ ver.version }}</div>
+                      <div class="v-info">
+                        <div class="v-title-row">
+                          <strong>Versión {{ ver.version }} - {{ ver.nombre_archivo }}</strong>
+                          <span class="v-date">{{ formatearFecha(ver.fecha) }}</span>
+                        </div>
+                        <p class="v-obs">{{ ver.observacion }}</p>
+                        <span class="v-user">Registrado por: {{ ver.usuario }}</span>
+                      </div>
+                      <button mat-stroked-button class="btn-dl-v" (click)="descargarPdf(docVersionesVer())">
+                        <mat-icon>download</mat-icon>
+                        <span>Descargar</span>
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="modal-actions-footer">
+              <button mat-button (click)="cerrarVersiones()">Cerrar</button>
             </div>
           </div>
         </div>
@@ -594,16 +771,18 @@ export interface ExpedienteItem {
     </div>
   `,
   styles: [`
-    .archivo-page-container {
+    .archivo-container {
+      max-width: 1400px;
+      margin: 0 auto;
       padding: 24px;
       display: flex;
       flex-direction: column;
-      gap: 24px;
-      max-width: 1400px;
-      margin: 0 auto;
+      gap: 20px;
+      font-family: 'Inter', -apple-system, sans-serif;
     }
 
-    .archivo-header {
+    /* Topbar */
+    .archivo-topbar {
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -614,79 +793,68 @@ export interface ExpedienteItem {
       box-shadow: 0 10px 30px rgba(15, 32, 39, 0.4);
     }
 
-    .header-left {
+    .topbar-left {
       display: flex;
       align-items: center;
-      gap: 20px;
+      gap: 18px;
     }
 
-    .header-icon-box {
-      width: 56px;
-      height: 56px;
+    .topbar-icon {
+      width: 52px;
+      height: 52px;
       border-radius: 14px;
       background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%);
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 8px 20px rgba(0, 180, 219, 0.35);
+      box-shadow: 0 8px 18px rgba(0, 180, 219, 0.35);
+      mat-icon { font-size: 28px; width: 28px; height: 28px; color: #fff; }
     }
 
-    .header-icon-box mat-icon {
-      font-size: 30px;
-      width: 30px;
-      height: 30px;
-      color: #fff;
-    }
-
-    .header-title {
-      font-size: 24px;
-      font-weight: 700;
+    .topbar-title {
       margin: 0;
-      letter-spacing: -0.5px;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
     }
 
-    .header-desc {
-      font-size: 14px;
+    .topbar-sub {
       margin: 4px 0 0;
+      font-size: 13.5px;
       color: rgba(255, 255, 255, 0.7);
     }
 
-    .stats-pill {
+    .btn-cargar-institucional {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+      color: #fff !important;
+      font-weight: 700;
+      height: 44px;
+      padding: 0 20px !important;
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 16px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 20px;
-      font-size: 13.5px;
-      color: #fff;
+      border-radius: 10px;
     }
 
-    .stats-pill mat-icon {
-      color: #00b4db;
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-    }
-
-    .tabs-nav-bar {
+    /* Pestañas de Nivel */
+    .nivel-tabs-bar {
       display: flex;
       gap: 12px;
-      border-bottom: 2px solid rgba(0, 0, 0, 0.06);
+      border-bottom: 2px solid #e2e8f0;
       padding-bottom: 8px;
     }
 
-    .tab-btn {
+    .nivel-btn {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 12px 24px;
+      padding: 12px 22px;
       border-radius: 12px;
       border: 1px solid transparent;
       background: #f8fafc;
       color: #475569;
-      font-weight: 600;
       font-size: 14px;
+      font-weight: 700;
       cursor: pointer;
       transition: all 0.25s ease;
 
@@ -699,292 +867,411 @@ export interface ExpedienteItem {
         background: #0f2027;
         color: #fff;
         border-color: #0f2027;
-        box-shadow: 0 4px 12px rgba(15, 32, 39, 0.2);
-
-        .tab-badge {
-          background: rgba(0, 180, 219, 0.3);
-          color: #38ef7d;
-        }
-
-        mat-icon {
-          color: #00b4db;
-        }
+        box-shadow: 0 4px 15px rgba(15, 32, 39, 0.25);
+        mat-icon { color: #00b4db; }
       }
     }
 
-    .tab-badge {
+    .badge-count {
       font-size: 11px;
       padding: 2px 8px;
       border-radius: 10px;
-      background: #e2e8f0;
-      color: #64748b;
-      font-weight: 700;
-    }
-
-    .archivo-section {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .section-banner {
-      padding: 24px 30px;
-      border-radius: 14px;
-      color: #fff;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .general-banner {
-      background: linear-gradient(135deg, #1f4037 0%, #99f2c8 100%);
-      color: #0d2818;
-      h2 { margin: 0; font-size: 20px; font-weight: 700; }
-      p { margin: 4px 0 0; font-size: 13.5px; opacity: 0.85; }
-    }
-
-    .unidad-banner {
-      background: linear-gradient(135deg, #141e30 0%, #243b55 100%);
-      h2 { margin: 0; font-size: 20px; font-weight: 700; color: #fff; }
-      p { margin: 4px 0 0; font-size: 13.5px; color: rgba(255, 255, 255, 0.7); }
-    }
-
-    .unit-stat-boxes {
-      display: flex;
-      gap: 16px;
-    }
-
-    .u-stat {
-      background: rgba(255, 255, 255, 0.1);
-      padding: 10px 18px;
-      border-radius: 10px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .u-val {
-      font-size: 20px;
+      background: rgba(0, 0, 0, 0.08);
+      color: inherit;
       font-weight: 800;
-      color: #00b4db;
     }
 
-    .u-lbl {
-      font-size: 11px;
-      color: rgba(255, 255, 255, 0.7);
+    .badge-gold {
+      background: rgba(245, 158, 11, 0.3) !important;
+      color: #f59e0b !important;
     }
 
-    .quick-types {
+    /* Filtros Dinámicos de Tipo */
+    .dynamic-types-bar {
       display: flex;
-      gap: 8px;
+      align-items: center;
+      gap: 10px;
       flex-wrap: wrap;
+      background: #fff;
+      padding: 14px 20px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
     }
 
-    .type-chip {
-      padding: 8px 16px;
-      border-radius: 20px;
-      border: 1px solid #e2e8f0;
-      background: #fff;
-      color: #475569;
+    .filter-caption {
       font-size: 13px;
+      font-weight: 700;
+      color: #64748b;
+    }
+
+    .type-pill {
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      color: #334155;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12.5px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s ease;
 
-      &:hover {
-        border-color: #00b4db;
-        color: #00b4db;
-      }
+      &:hover { border-color: #0083b0; color: #0083b0; }
 
-      &.chip-active {
-        background: #00b4db;
+      &.active {
+        background: #0083b0;
+        border-color: #0083b0;
         color: #fff;
-        border-color: #00b4db;
       }
     }
 
-    .filter-toolbar {
-      display: flex;
-      gap: 16px;
-      align-items: center;
+    .search-box-bar {
+      .search-input { width: 100%; margin-bottom: -1.25em; }
     }
 
-    .table-card {
+    /* Content Cards */
+    .content-card {
       background: #fff;
       border-radius: 14px;
       border: 1px solid #e2e8f0;
-      overflow: hidden;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+      padding: 20px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
     }
 
-    .modern-table {
+    .card-top-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      color: #0f2027;
+      h3 { margin: 0; font-size: 17px; font-weight: 800; }
+      mat-icon { color: #00b4db; font-size: 24px; width: 24px; height: 24px; }
+    }
+
+    /* Tabla */
+    .archivo-table {
       width: 100%;
       border-collapse: collapse;
 
       th {
         background: #f8fafc;
         color: #475569;
+        font-size: 12px;
         font-weight: 700;
-        font-size: 12.5px;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        padding: 16px;
+        padding: 14px 16px;
       }
 
       td {
-        padding: 14px 16px;
-        font-size: 13.5px;
-        color: #1e293b;
+        padding: 12px 16px;
+        font-size: 13px;
         border-bottom: 1px solid #f1f5f9;
       }
     }
 
-    .table-row:hover {
-      background: #f8fafc;
-    }
-
-    .cite-cell {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 600;
-      color: #0f172a;
-    }
-
-    .cite-icon {
-      color: #00b4db;
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-    }
-
-    .cite-badge {
-      padding: 4px 10px;
-      border-radius: 6px;
-      background: #f0fdf4;
-      color: #166534;
-      font-weight: 700;
-      font-size: 12.5px;
-    }
-
-    .cite-text-strong {
+    .cite-text {
       font-weight: 700;
       color: #0f2027;
     }
 
-    .tipo-badge {
-      padding: 3px 8px;
-      border-radius: 6px;
+    .tipo-tag {
       background: #f1f5f9;
       color: #475569;
-      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11.5px;
       font-weight: 600;
     }
 
-    .ref-cell {
+    .ref-text {
       max-width: 320px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      display: inline-block;
       color: #334155;
     }
 
-    .author-cell {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .author-name {
-      font-weight: 600;
-      color: #0f172a;
-    }
-
-    .author-unit {
-      font-size: 11.5px;
-      color: #64748b;
-    }
-
-    .status-pill {
-      font-size: 11px;
+    .unit-tag {
+      background: #e0f2fe;
+      color: #0369a1;
       padding: 3px 8px;
-      border-radius: 12px;
-      background: #e2e8f0;
-      color: #475569;
-      font-weight: 700;
-
-      &.status-cerrado {
-        background: #dcfce7;
-        color: #15803d;
-      }
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
     }
 
-    .action-buttons {
+    .date-text { color: #64748b; font-size: 12px; }
+
+    .action-btn-row {
       display: flex;
       gap: 4px;
     }
 
     .btn-action {
-      &.preview-btn { color: #0284c7; }
-      &.pdf-btn { color: #dc2626; }
+      color: #0284c7;
+      &.pdf { color: #dc2626; }
+      &.promote { color: #f59e0b; }
+      &.version { color: #10b981; }
     }
 
-    /* Buscador Maestro */
-    .search-master-card {
+    /* Acordeón de Unidades */
+    .unidades-hierarchy-card {
       background: #fff;
       border-radius: 14px;
-      padding: 24px;
       border: 1px solid #e2e8f0;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+      padding: 24px;
     }
 
-    .search-master-header {
+    .section-desc {
+      font-size: 13.5px;
+      color: #64748b;
+      margin: -6px 0 16px;
+    }
+
+    .unidad-panel {
+      border: 1px solid #e2e8f0 !important;
+      border-radius: 10px !important;
+      margin-bottom: 10px !important;
+      box-shadow: none !important;
+    }
+
+    .panel-title-custom {
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: 20px;
+      font-size: 14.5px;
+      font-weight: 700;
       color: #0f2027;
-      h3 { margin: 0; font-size: 17px; font-weight: 700; }
-      mat-icon { color: #00b4db; }
+      .unit-icon { color: #0083b0; }
     }
 
-    .search-form-grid {
+    .u-count-badge {
+      font-size: 12px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      background: #f1f5f9;
+      color: #64748b;
+      font-weight: 600;
+
+      &.has-docs {
+        background: #dcfce7;
+        color: #15803d;
+        font-weight: 700;
+      }
+    }
+
+    .unit-empty-state {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px;
+      background: #f8fafc;
+      border-radius: 8px;
+      color: #64748b;
+      font-size: 13px;
+      mat-icon { color: #94a3b8; }
+    }
+
+    .tipos-unidad-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 16px;
     }
 
-    .form-actions-full {
-      grid-column: 1 / -1;
+    .tipo-sub-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .tipo-header {
       display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      color: #0f2027;
+      font-size: 13.5px;
+      mat-icon { color: #0083b0; font-size: 20px; width: 20px; height: 20px; }
+    }
+
+    .docs-mini-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .doc-mini-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .doc-mini-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .mini-cite { font-size: 12px; color: #0f2027; }
+    .mini-ref { font-size: 11px; color: #64748b; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Banners */
+    .banner-unidad-actual {
+      background: linear-gradient(135deg, #141e30 0%, #243b55 100%);
+      color: #fff;
+      padding: 24px 30px;
+      border-radius: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      h2 { margin: 6px 0 2px; font-size: 22px; font-weight: 800; }
+      p { margin: 0; font-size: 13.5px; color: rgba(255, 255, 255, 0.7); }
+    }
+
+    .badge-area {
+      font-size: 11px;
+      padding: 2px 8px;
+      background: rgba(0, 180, 219, 0.25);
+      color: #38ef7d;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+
+    .banner-unidad-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 12px 20px;
+      border-radius: 12px;
+    }
+
+    .stat-number { font-size: 24px; font-weight: 800; color: #00b4db; }
+    .stat-label { font-size: 11px; color: rgba(255, 255, 255, 0.7); }
+
+    /* Sub-Unidades Dependientes */
+    .sub-unidades-box {
+      background: #fff;
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .sub-unidad-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px;
+      background: #f8fafc;
+    }
+
+    .sub-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      color: #0f2027;
+      mat-icon { color: #0083b0; }
+    }
+
+    .sub-badge {
+      margin-left: auto;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: #e2e8f0;
+      font-weight: 700;
+    }
+
+    .sub-empty { font-size: 12.5px; color: #94a3b8; margin: 0; }
+
+    .sub-docs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 12px;
-      margin-top: 8px;
     }
 
-    .btn-search-master {
-      background: #0f2027 !important;
-      color: #fff !important;
-      padding: 0 24px !important;
-      height: 44px;
+    .sub-tipo-item {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px;
+      h5 { margin: 0 0 8px; font-size: 12.5px; font-weight: 700; color: #334155; }
+    }
+
+    .sub-doc-row {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 8px;
+      font-size: 12px;
+      color: #475569;
+      border-top: 1px solid #f1f5f9;
+      padding-top: 6px;
     }
 
-    .btn-clear-master {
-      height: 44px;
+    /* Banner Institucional */
+    .banner-institucional {
+      background: linear-gradient(135deg, #0f2027 0%, #203a43 100%);
+      color: #fff;
+      padding: 24px 30px;
+      border-radius: 14px;
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 8px;
+
+      h2 { margin: 6px 0 2px; font-size: 22px; font-weight: 800; }
+      p { margin: 0; font-size: 13.5px; color: rgba(255, 255, 255, 0.7); }
     }
 
-    .results-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid #e2e8f0;
-      h3 { margin: 0; font-size: 15px; font-weight: 700; color: #334155; }
+    .badge-gold-header {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: rgba(245, 158, 11, 0.25);
+      color: #fbbf24;
+      font-weight: 700;
     }
 
-    /* Modal Expediente */
-    .modal-backdrop {
+    .btn-upload-inst {
+      background: #fbbf24 !important;
+      color: #0f2027 !important;
+      font-weight: 700;
+    }
+
+    .cat-pill {
+      background: #fef3c7;
+      color: #92400e;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 700;
+    }
+
+    .version-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 10px;
+      background: #ecfdf5;
+      color: #059669;
+      font-weight: 800;
+      font-size: 12px;
+      cursor: pointer;
+      border: 1px solid #a7f3d0;
+      &:hover { background: #d1fae5; }
+      .icon-v { font-size: 14px; width: 14px; height: 14px; }
+    }
+
+    /* Modales */
+    .modal-overlay {
       position: fixed;
       inset: 0;
       background: rgba(0, 0, 0, 0.6);
@@ -996,20 +1283,17 @@ export interface ExpedienteItem {
       padding: 20px;
     }
 
-    .expediente-modal {
+    .modal-card {
       background: #fff;
       border-radius: 16px;
       width: 100%;
-      max-width: 720px;
-      max-height: 90vh;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+      max-width: 640px;
       overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
     }
 
     .modal-header {
-      background: linear-gradient(135deg, #0f2027 0%, #203a43 100%);
+      background: #0f2027;
       color: #fff;
       padding: 20px 24px;
       display: flex;
@@ -1017,205 +1301,221 @@ export interface ExpedienteItem {
       align-items: center;
     }
 
-    .modal-title-box {
+    .modal-header-title {
       display: flex;
       align-items: center;
-      gap: 14px;
-      mat-icon { font-size: 28px; width: 28px; height: 28px; color: #00b4db; }
-      h3 { margin: 0; font-size: 18px; font-weight: 700; }
-      p { margin: 2px 0 0; font-size: 13px; color: rgba(255, 255, 255, 0.7); }
+      gap: 12px;
+      mat-icon { color: #00b4db; font-size: 28px; width: 28px; height: 28px; }
+      h3 { margin: 0; font-size: 17px; font-weight: 700; }
+      p { margin: 2px 0 0; font-size: 12px; color: rgba(255, 255, 255, 0.65); }
     }
 
-    .close-modal-btn {
-      color: rgba(255, 255, 255, 0.7);
-      &:hover { color: #fff; }
-    }
+    .btn-close { color: rgba(255, 255, 255, 0.7); &:hover { color: #fff; } }
 
-    .modal-body {
+    .modal-form {
       padding: 24px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    }
-
-    .expediente-summary-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-    }
-
-    .sum-card {
-      background: #f8fafc;
-      padding: 12px 16px;
-      border-radius: 8px;
-      border: 1px solid #e2e8f0;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .sum-lbl {
-      font-size: 11px;
-      color: #64748b;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    .sum-val {
-      font-size: 13.5px;
-      font-weight: 700;
-      color: #0f172a;
-    }
-
-    .timeline-container {
-      display: flex;
-      flex-direction: column;
       gap: 16px;
-      h4 { margin: 0 0 8px; font-size: 15px; font-weight: 700; color: #1e293b; }
     }
 
-    .timeline-step {
-      display: flex;
-      gap: 14px;
-      position: relative;
-    }
+    .col-span-full { grid-column: span 2; }
 
-    .step-point {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: #e2e8f0;
+    .file-drop-area {
+      border: 2px dashed #cbd5e1;
+      border-radius: 10px;
+      padding: 20px;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      mat-icon { font-size: 18px; width: 18px; height: 18px; color: #64748b; }
-
-      &.step-done {
-        background: #dcfce7;
-        mat-icon { color: #16a34a; }
-      }
-
-      &.step-active {
-        background: #e0f2fe;
-        mat-icon { color: #0284c7; }
-      }
+      gap: 8px;
+      background: #f8fafc;
+      span { font-size: 13px; color: #64748b; }
+      mat-icon { font-size: 32px; width: 32px; height: 32px; color: #0083b0; }
     }
 
-    .step-content {
+    .version-banner-info {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 12px 16px;
       display: flex;
       flex-direction: column;
       gap: 2px;
-      h5 { margin: 0; font-size: 14px; font-weight: 600; color: #0f172a; }
-      p { margin: 0; font-size: 12.5px; color: #64748b; }
+      strong { color: #166534; font-size: 13.5px; }
+      span { color: #475569; font-size: 12px; }
     }
 
-    .modal-footer {
-      padding: 16px 24px;
-      border-top: 1px solid #e2e8f0;
+    .modal-actions {
       display: flex;
       justify-content: flex-end;
       gap: 12px;
+      margin-top: 8px;
     }
 
-    .btn-download-exp {
-      background: #dc2626 !important;
+    .btn-primary-action {
+      background: #0f2027 !important;
       color: #fff !important;
     }
 
-    .loading-state, .empty-state {
-      padding: 60px 20px;
+    .modal-body-versions {
+      padding: 24px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .versions-timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .version-timeline-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px 16px;
+    }
+
+    .v-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #0083b0;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .v-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .v-title-row {
+      display: flex;
+      justify-content: space-between;
+      strong { font-size: 13px; color: #0f172a; }
+      .v-date { font-size: 11.5px; color: #64748b; }
+    }
+
+    .v-obs { margin: 0; font-size: 12px; color: #475569; }
+    .v-user { font-size: 11px; color: #94a3b8; }
+
+    .btn-dl-v {
+      color: #0284c7;
+    }
+
+    .modal-actions-footer {
+      padding: 14px 24px;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .state-loading, .state-empty {
+      padding: 50px 20px;
+      text-align: center;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 12px;
+      gap: 10px;
       color: #64748b;
-      mat-icon { font-size: 48px; width: 48px; height: 48px; color: #cbd5e1; }
-      h3 { margin: 0; font-size: 16px; color: #334155; }
-      p { margin: 0; font-size: 13.5px; }
+      mat-icon { font-size: 40px; width: 40px; height: 40px; color: #cbd5e1; }
     }
 
-    .fade-in {
-      animation: fadeIn 0.3s ease-in-out;
-    }
-
+    .fade-in { animation: fadeIn 0.25s ease-in-out; }
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
+      from { opacity: 0; transform: translateY(4px); }
       to { opacity: 1; transform: translateY(0); }
     }
   `]
 })
 export class ArchivoComponent implements OnInit {
-  private readonly route = inject(ActivatedRoute);
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
+  private readonly route = inject(ActivatedRoute);
   private readonly snackBar = inject(MatSnackBar);
 
   readonly nivelActivo = signal<'general' | 'unidad' | 'institucional'>('general');
   readonly cargando = signal<boolean>(false);
-  readonly todosDocumentos = signal<any[]>([]);
-  readonly tipoSeleccionado = signal<string>('TODOS');
-  readonly expedienteSeleccionado = signal<any | null>(null);
+  readonly guardando = signal<boolean>(false);
 
+  // Datos de Archivo General
+  readonly unidadesGeneral = signal<UnidadArchivo[]>([]);
+  readonly docsGeneral = signal<DocumentoArchivo[]>([]);
+  readonly tiposDisponiblesGeneral = signal<string[]>([]);
+  readonly tipoFiltroGeneral = signal<string>('TODOS');
   readonly filtroGeneralCtrl = new FormControl('');
-  readonly filtroUnidadCtrl = new FormControl('');
-  readonly agrupadorUnidadCtrl = new FormControl('todos');
 
-  readonly buscadorForm = new FormGroup({
-    cite: new FormControl(''),
-    referencia: new FormControl(''),
-    funcionario: new FormControl(''),
-    tipo: new FormControl('')
+  // Datos de Archivo de Unidad
+  readonly dataUnidadActual = signal<any | null>(null);
+  readonly tipoFiltroUnidad = signal<string>('TODOS');
+
+  // Datos de Archivo Institucional
+  readonly docsInstitucionales = signal<DocumentoArchivo[]>([]);
+
+  // Modales
+  readonly mostrarModalCarga = signal<boolean>(false);
+  readonly docAVersionar = signal<DocumentoArchivo | null>(null);
+  readonly docVersionesVer = signal<DocumentoArchivo | null>(null);
+  readonly nombreArchivoCarga = signal<string | null>(null);
+  readonly nombreArchivoVersion = signal<string | null>(null);
+
+  readonly cargaForm = new FormGroup({
+    cite: new FormControl('', [Validators.required]),
+    categoria: new FormControl('Resolución de Directorio', [Validators.required]),
+    referencia: new FormControl('', [Validators.required]),
+    observacion: new FormControl('')
   });
 
-  readonly resultadosMaestros = signal<any[]>([]);
-
-  readonly columnasGenerales = ['cite', 'tipo', 'ref', 'emisor', 'fecha', 'acciones'];
-  readonly columnasUnidad = ['cite', 'tipo', 'ref', 'responsable', 'estado', 'acciones'];
-  readonly columnasMaestras = ['cite', 'tipo', 'ref', 'emisor', 'fecha', 'acciones'];
-
-  readonly totalDocs = computed(() => this.todosDocumentos().length);
-  readonly totalUnidadDocs = computed(() => this.documentosUnidadFiltrados().length);
-  readonly totalFirmados = computed(() => 
-    this.todosDocumentos().filter(d => d.estado === 'CERRADO').length
-  );
-
-  readonly nombreUnidadUsuario = computed(() => {
-    const u = this.authService.currentUser() as any;
-    return u?.unidad || 'Dirección / Jefatura Asignada';
+  readonly versionForm = new FormGroup({
+    observacion: new FormControl('', [Validators.required])
   });
 
-  readonly documentosFiltrados = computed(() => {
-    const list = this.todosDocumentos();
-    const filtro = (this.filtroGeneralCtrl.value || '').toLowerCase();
-    const tipo = this.tipoSeleccionado();
+  readonly columnasGenerales = ['cite', 'tipo', 'ref', 'unidad', 'fecha', 'acciones'];
+  readonly columnasInstitucionales = ['cite', 'categoria', 'ref', 'version', 'fecha', 'acciones'];
 
-    return list.filter(d => {
-      const matchTexto = !filtro || 
-        (d.nombre && d.nombre.toLowerCase().includes(filtro)) ||
-        (d.ref && d.ref.toLowerCase().includes(filtro));
-      
-      const matchTipo = tipo === 'TODOS' || 
-        (d.nombre_plantilla && d.nombre_plantilla.toUpperCase().includes(tipo)) ||
-        (d.nombre && d.nombre.toUpperCase().includes(tipo));
+  readonly totalDocsGeneral = computed(() => this.docsGeneral().length);
+  readonly totalDocsUnidad = computed(() => this.dataUnidadActual()?.total_documentos || 0);
 
-      return matchTexto && matchTipo;
-    });
+  readonly docsGeneralesFiltrados = computed(() => {
+    let list = this.docsGeneral();
+    const tipo = this.tipoFiltroGeneral();
+    const query = (this.filtroGeneralCtrl.value || '').toLowerCase().trim();
+
+    if (tipo !== 'TODOS') {
+      list = list.filter(d => (d.nombre_plantilla || '').trim() === tipo);
+    }
+
+    if (query) {
+      list = list.filter(d =>
+        (d.nombre && d.nombre.toLowerCase().includes(query)) ||
+        (d.referencia && d.referencia.toLowerCase().includes(query)) ||
+        (d.usuario_creacion?.nombres && d.usuario_creacion.nombres.toLowerCase().includes(query)) ||
+        (d.usuario_creacion?.apellidos && d.usuario_creacion.apellidos.toLowerCase().includes(query))
+      );
+    }
+
+    return list;
   });
 
-  readonly documentosUnidadFiltrados = computed(() => {
-    const list = this.todosDocumentos();
-    const filtro = (this.filtroUnidadCtrl.value || '').toLowerCase();
-    const u = this.authService.currentUser();
+  readonly docsUnidadFiltrados = computed(() => {
+    const data = this.dataUnidadActual();
+    if (!data || !data.documentos_propios) return [];
 
-    return list.filter(d => {
-      const matchTexto = !filtro || 
-        (d.nombre && d.nombre.toLowerCase().includes(filtro)) ||
-        (d.ref && d.ref.toLowerCase().includes(filtro));
+    const tipo = this.tipoFiltroUnidad();
+    if (tipo === 'TODOS') return data.documentos_propios;
 
-      return matchTexto;
-    });
+    return data.documentos_propios.filter((d: any) => (d.nombre_plantilla || '').trim() === tipo);
   });
 
   ngOnInit(): void {
@@ -1226,69 +1526,230 @@ export class ArchivoComponent implements OnInit {
       }
     });
 
-    this.cargarDocumentosArchivo();
+    this.cargarDatos();
   }
 
   cambiarNivel(nivel: 'general' | 'unidad' | 'institucional'): void {
     this.nivelActivo.set(nivel);
+    this.cargarDatos();
   }
 
-  cargarDocumentosArchivo(): void {
+  cargarDatos(): void {
+    const nivel = this.nivelActivo();
+    if (nivel === 'general') {
+      this.cargarArchivoGeneral();
+    } else if (nivel === 'unidad') {
+      this.cargarArchivoUnidad();
+    } else if (nivel === 'institucional') {
+      this.cargarArchivoInstitucional();
+    }
+  }
+
+  cargarArchivoGeneral(): void {
     this.cargando.set(true);
-    const userId = this.authService.currentUser()?.id || 1;
-    
-    // Consulta documentos custodiados con CITE
-    this.http.get<any>(`/api/v1/plantillasFormly/documento/${userId}/archivo`).subscribe({
+    this.http.get<any>('/api/v1/archivo/general').subscribe({
       next: (res) => {
         this.cargando.set(false);
-        const docs = res.datos?.resultado || [];
-        this.todosDocumentos.set(docs);
-        this.resultadosMaestros.set(docs);
+        if (res.tipoMensaje === 'EXITO' && res.datos) {
+          this.unidadesGeneral.set(res.datos.unidades || []);
+          this.docsGeneral.set(res.datos.documentos || []);
+          this.tiposDisponiblesGeneral.set(res.datos.tipos_disponibles || []);
+        }
       },
       error: () => {
         this.cargando.set(false);
-        this.snackBar.open('Error al consultar el repositorio de archivo', 'Cerrar', { duration: 3000 });
+        this.snackBar.open('Error al consultar archivo general', 'Cerrar', { duration: 3000 });
       }
     });
   }
 
-  filtrarPorTipo(tipo: string): void {
-    this.tipoSeleccionado.set(tipo);
-  }
+  cargarArchivoUnidad(): void {
+    this.cargando.set(true);
+    const user = this.authService.currentUser() as any;
+    const unidadId = user?.fid_unidad || 1;
 
-  ejecutarBusquedaMaestra(): void {
-    const vals = this.buscadorForm.value;
-    const cite = (vals.cite || '').toLowerCase();
-    const ref = (vals.referencia || '').toLowerCase();
-    const func = (vals.funcionario || '').toLowerCase();
-    const tipo = (vals.tipo || '').toUpperCase();
-
-    const filtrados = this.todosDocumentos().filter(d => {
-      const matchCite = !cite || (d.nombre && d.nombre.toLowerCase().includes(cite));
-      const matchRef = !ref || (d.ref && d.ref.toLowerCase().includes(ref));
-      const matchFunc = !func || (
-        (d.usuario_creacion?.nombres && d.usuario_creacion.nombres.toLowerCase().includes(func)) ||
-        (d.usuario_creacion?.apellidos && d.usuario_creacion.apellidos.toLowerCase().includes(func))
-      );
-      const matchTipo = !tipo || (d.nombre_plantilla && d.nombre_plantilla.toUpperCase().includes(tipo));
-
-      return matchCite && matchRef && matchFunc && matchTipo;
+    this.http.get<any>(`/api/v1/archivo/unidad/${unidadId}`).subscribe({
+      next: (res) => {
+        this.cargando.set(false);
+        if (res.tipoMensaje === 'EXITO') {
+          this.dataUnidadActual.set(res.datos);
+        }
+      },
+      error: () => {
+        this.cargando.set(false);
+        this.snackBar.open('Error al consultar archivo de la unidad', 'Cerrar', { duration: 3000 });
+      }
     });
-
-    this.resultadosMaestros.set(filtrados);
   }
 
-  limpiarBusqueda(): void {
-    this.buscadorForm.reset();
-    this.resultadosMaestros.set(this.todosDocumentos());
+  cargarArchivoInstitucional(): void {
+    this.cargando.set(true);
+    this.http.get<any>('/api/v1/archivo/institucional').subscribe({
+      next: (res) => {
+        this.cargando.set(false);
+        if (res.tipoMensaje === 'EXITO') {
+          this.docsInstitucionales.set(res.datos?.resultado || []);
+        }
+      },
+      error: () => {
+        this.cargando.set(false);
+        this.snackBar.open('Error al consultar archivo institucional', 'Cerrar', { duration: 3000 });
+      }
+    });
   }
 
-  verExpediente(doc: any): void {
-    this.expedienteSeleccionado.set(doc);
+  filtrarTipoGeneral(tipo: string): void {
+    this.tipoFiltroGeneral.set(tipo);
   }
 
-  cerrarExpediente(): void {
-    this.expedienteSeleccionado.set(null);
+  contarDocsPorTipo(tipo: string): number {
+    return this.docsGeneral().filter(d => (d.nombre_plantilla || '').trim() === tipo).length;
+  }
+
+  puedePromover(): boolean {
+    return this.authService.hasRole('JEFE') || 
+           this.authService.hasRole('MAE') || 
+           this.authService.hasRole('ADMIN') || 
+           this.authService.isMae();
+  }
+
+  puedeVersionar(): boolean {
+    return this.authService.hasRole('ADMIN') || 
+           this.authService.hasRole('JEFE') || 
+           this.authService.hasRole('MAE');
+  }
+
+  esAdminOMae(): boolean {
+    return this.authService.hasRole('ADMIN') || 
+           this.authService.hasRole('MAE') || 
+           this.authService.isMae();
+  }
+
+  promoverAInstitucional(doc: DocumentoArchivo): void {
+    if (!confirm(`¿Desea promover el documento ${doc.nombre} a Archivo Institucional Oficial? Será visible para toda la entidad.`)) {
+      return;
+    }
+
+    this.http.post<any>(`/api/v1/archivo/promover/${doc.id_documento}`, {
+      categoria: doc.nombre_plantilla || 'Documento Oficial Promovido'
+    }).subscribe({
+      next: (res) => {
+        if (res.tipoMensaje === 'EXITO') {
+          this.snackBar.open(`¡Documento ${doc.nombre} promovido a Archivo Institucional!`, 'Aceptar', { duration: 4000 });
+          doc.es_institucional = true;
+          this.cargarArchivoInstitucional();
+        }
+      },
+      error: (err) => {
+        this.snackBar.open(err.error?.mensaje || 'Error al promover documento', 'Cerrar', { duration: 3000 });
+      }
+    });
+  }
+
+  abrirModalCarga(): void {
+    this.cargaForm.reset({ categoria: 'Resolución de Directorio' });
+    this.nombreArchivoCarga.set(null);
+    this.mostrarModalCarga.set(true);
+  }
+
+  cerrarModalCarga(): void {
+    this.mostrarModalCarga.set(false);
+  }
+
+  onArchivoSeleccionado(e: any): void {
+    const f = e.target.files?.[0];
+    if (f) {
+      this.nombreArchivoCarga.set(f.name);
+    }
+  }
+
+  guardarDocumentoInstitucional(): void {
+    if (this.cargaForm.invalid) return;
+
+    this.guardando.set(true);
+    const v = this.cargaForm.value;
+
+    this.http.post<any>('/api/v1/archivo/institucional/cargar', {
+      cite: v.cite,
+      categoria: v.categoria,
+      referencia: v.referencia,
+      observacion: v.observacion,
+      nombre_archivo: this.nombreArchivoCarga() || `${v.cite}.pdf`,
+      url_archivo: `/public/documentos/${v.cite}.pdf`
+    }).subscribe({
+      next: (res) => {
+        this.guardando.set(false);
+        this.cerrarModalCarga();
+        this.snackBar.open('Documento institucional registrado con éxito.', 'Aceptar', { duration: 4000 });
+        this.cargarArchivoInstitucional();
+      },
+      error: (err) => {
+        this.guardando.set(false);
+        this.snackBar.open(err.error?.mensaje || 'Error al cargar documento', 'Cerrar', { duration: 3000 });
+      }
+    });
+  }
+
+  abrirModalVersionar(doc: DocumentoArchivo): void {
+    this.docAVersionar.set(doc);
+    this.versionForm.reset();
+    this.nombreArchivoVersion.set(null);
+  }
+
+  cerrarModalVersionar(): void {
+    this.docAVersionar.set(null);
+  }
+
+  onArchivoVersionSeleccionado(e: any): void {
+    const f = e.target.files?.[0];
+    if (f) {
+      this.nombreArchivoVersion.set(f.name);
+    }
+  }
+
+  guardarNuevaVersion(): void {
+    const d = this.docAVersionar();
+    if (!d || this.versionForm.invalid) return;
+
+    this.guardando.set(true);
+    const obs = this.versionForm.value.observacion;
+    const nextVer = this.obtenerVersionActual(d) + 1;
+
+    this.http.post<any>(`/api/v1/archivo/versionar/${d.id_documento}`, {
+      observacion: obs,
+      nombre_archivo: this.nombreArchivoVersion() || `${d.nombre}_v${nextVer}.pdf`,
+      url_archivo: `/api/v1/documento/${d.id_documento}/pdf?v=${nextVer}`
+    }).subscribe({
+      next: (res) => {
+        this.guardando.set(false);
+        this.cerrarModalVersionar();
+        this.snackBar.open(`¡Nueva versión v${nextVer} registrada en la trazabilidad!`, 'Aceptar', { duration: 4000 });
+        this.cargarArchivoInstitucional();
+      },
+      error: (err) => {
+        this.guardando.set(false);
+        this.snackBar.open(err.error?.mensaje || 'Error al versionar archivo', 'Cerrar', { duration: 3000 });
+      }
+    });
+  }
+
+  verVersiones(doc: DocumentoArchivo): void {
+    this.docVersionesVer.set(doc);
+  }
+
+  cerrarVersiones(): void {
+    this.docVersionesVer.set(null);
+  }
+
+  obtenerVersionActual(doc: DocumentoArchivo): number {
+    if (doc.versiones && Array.isArray(doc.versiones) && doc.versiones.length > 0) {
+      return doc.versiones[doc.versiones.length - 1].version;
+    }
+    return 1;
+  }
+
+  verDetalle(doc: DocumentoArchivo): void {
+    this.verVersiones(doc);
   }
 
   descargarPdf(doc: any): void {
@@ -1297,17 +1758,17 @@ export class ArchivoComponent implements OnInit {
   }
 
   obtenerReferencia(d: any): string {
-    if (!d) return 'Sin Asunto';
-    if (d.ref) return d.ref;
+    if (!d) return 'Sin Referencia';
+    if (d.referencia) return d.referencia;
     if (d.plantilla_valor) {
       try {
-        const val = typeof d.plantilla_valor === 'string' ? JSON.parse(d.plantilla_valor) : d.plantilla_valor;
-        return val.ref || val.asunto || val.titulo || 'Documento Oficial Custodiado';
+        const parsed = typeof d.plantilla_valor === 'string' ? JSON.parse(d.plantilla_valor) : d.plantilla_valor;
+        return parsed.ref || parsed.asunto || parsed.referencia || 'Documento Oficial Concluido';
       } catch {
-        return 'Documento Oficial Custodiado';
+        return 'Documento Oficial Concluido';
       }
     }
-    return 'Documento Oficial Custodiado';
+    return 'Documento Oficial Concluido';
   }
 
   formatearFecha(f?: string): string {
@@ -1318,5 +1779,9 @@ export class ArchivoComponent implements OnInit {
     } catch {
       return f;
     }
+  }
+
+  obtenerClaves(obj?: Record<string, any>): string[] {
+    return obj ? Object.keys(obj) : [];
   }
 }
