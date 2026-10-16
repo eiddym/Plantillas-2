@@ -7,8 +7,66 @@ module.exports = app => {
   const HistorialFlujo = app.src.db.models.historial_flujo;
   const Usuario = app.src.db.models.usuario;
   const Unidad = app.src.db.models.unidad;
+  const Correlativo = app.src.db.models.correlativo;
   const util = app.src.lib.util;
   const Op = app.src.db.Sequelize.Op;
+
+  /**
+   * Extrae de forma inteligente la sigla/código de un documento institucional.
+   * Ejemplos:
+   *  - 'Reglamento Interno de Personal' -> 'rip'
+   *  - 'Personalidad Jurídica' -> 'PJ'
+   *  - 'Estatuto Orgánico' -> 'eo'
+   */
+  function derivarSigla(nombreDoc) {
+    if (!nombreDoc) return 'DOC';
+    const clean = nombreDoc.trim();
+    const lower = clean.toLowerCase();
+
+    if (lower.includes('personalidad jur') || lower.includes('personeria jur') || lower.includes('personería jur')) {
+      return 'PJ';
+    }
+    if (lower.includes('reglamento interno') && lower.includes('personal')) {
+      return 'rip';
+    }
+    if (lower.includes('reglamento interno') && lower.includes('trabajo')) {
+      return 'rit';
+    }
+    if (lower.includes('estatuto')) {
+      return 'eo';
+    }
+    if (lower.includes('codigo de etica') || lower.includes('código de ética')) {
+      return 'ce';
+    }
+    if (lower.includes('manual') && (lower.includes('funciones') || lower.includes('organizacion') || lower.includes('organización'))) {
+      return 'mof';
+    }
+    if (lower.includes('plan operativo')) {
+      return 'poa';
+    }
+    if (lower.includes('plan estrategico') || lower.includes('plan estratégico')) {
+      return 'pei';
+    }
+    if (lower.includes('resolucion de directorio') || lower.includes('resolución de directorio')) {
+      return 'rd';
+    }
+    if (lower.includes('convenio')) {
+      return 'ci';
+    }
+
+    const stopwords = new Set([
+      'de', 'del', 'la', 'el', 'los', 'las', 'en', 'y', 'para', 'a', 'con', 'por', 'sobre', 'al', 'o', 'e', 'un', 'una', 'unos', 'unas'
+    ]);
+    const palabras = clean
+      .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g, '')
+      .split(/\s+/)
+      .filter(p => p.length > 0 && !stopwords.has(p.toLowerCase()));
+
+    if (palabras.length === 0) return 'DOC';
+    if (palabras.length === 1) return palabras[0].substring(0, 3).toLowerCase();
+
+    return palabras.map(p => p[0].toLowerCase()).join('');
+  }
 
   /**
    * GET /api/v1/archivo/general
@@ -236,36 +294,130 @@ module.exports = app => {
   });
 
   /**
+   * GET /api/v1/archivo/institucional/proximo-cite
+   * Previsualiza o calcula el próximo CITE oficial para un documento institucional.
+   * Ej: marabunta/rip/1/2026, marabunta/PJ/1/2026
+   */
+  app.get('/api/v1/archivo/institucional/proximo-cite', async (req, res) => {
+    try {
+      const nombreDoc = req.query.nombre || '';
+      let sigla = (req.query.sigla || '').trim();
+      const anio = String(req.query.anio || new Date().getFullYear());
+      const entidad = 'marabunta';
+
+      if (!sigla && nombreDoc) {
+        sigla = derivarSigla(nombreDoc);
+      }
+      if (!sigla) {
+        sigla = 'DOC';
+      }
+
+      const abreviacionCite = `${entidad}/${sigla}`;
+      const corr = await Correlativo.findOne({
+        where: { abreviacion: abreviacionCite, anio: anio }
+      });
+
+      const proximoValor = corr ? corr.valor : 1;
+      const citeGenerado = `${abreviacionCite}/${proximoValor}/${anio}`;
+
+      res.status(200).send(util.formatearMensaje("EXITO", "Próximo CITE institucional calculado con éxito.", {
+        cite: citeGenerado,
+        entidad,
+        sigla,
+        correlativo: proximoValor,
+        anio
+      }));
+    } catch (error) {
+      res.status(412).send(util.formatearMensaje("ERROR", error.message || error));
+    }
+  });
+
+  /**
    * POST /api/v1/archivo/institucional/cargar
    * Solo ADMIN o MAE carga directamente un documento institucional.
+   * Genera de forma inteligente y automática el CITE oficial con correlativo y año.
+   * Ej: marabunta/rip/1/2026, marabunta/PJ/1/2026
    */
   app.post('/api/v1/archivo/institucional/cargar', async (req, res) => {
     try {
-      const { cite, referencia, categoria, nombre_archivo, url_archivo, observacion } = req.body;
+      const {
+        nombre_documento,
+        descripcion,
+        categoria,
+        nombre_archivo,
+        url_archivo,
+        observacion
+      } = req.body;
+      let sigla = (req.body.sigla || '').trim();
+      const anio = String(req.body.anio || new Date().getFullYear());
+      const entidad = 'marabunta';
       const auditUser = req.body.audit_usuario || {};
 
-      if (!cite || !referencia) {
-        return res.status(400).send(util.formatearMensaje("ERROR", "CITE y Referencia son obligatorios."));
+      const tituloDoc = nombre_documento || req.body.referencia;
+      const descDoc = descripcion || req.body.observacion || req.body.referencia || '';
+
+      if (!tituloDoc) {
+        return res.status(400).send(util.formatearMensaje("ERROR", "El nombre o título del documento institucional es obligatorio."));
       }
+
+      if (!sigla) {
+        sigla = derivarSigla(tituloDoc);
+      }
+
+      const abreviacionCite = `${entidad}/${sigla}`;
+
+      // Incrementar o crear correlativo para este tipo de documento y año
+      let corr = await Correlativo.findOne({
+        where: { abreviacion: abreviacionCite, anio: anio }
+      });
+
+      let numeroCorrelativo = 1;
+      if (!corr) {
+        corr = await Correlativo.create({
+          abreviacion: abreviacionCite,
+          anio: anio,
+          valor: 2, // Siguiente documento será 2
+          _usuario_creacion: auditUser.id_usuario || 1
+        });
+        numeroCorrelativo = 1;
+      } else {
+        numeroCorrelativo = corr.valor;
+        await corr.update({
+          valor: corr.valor + 1,
+          _usuario_modificacion: auditUser.id_usuario || 1
+        });
+      }
+
+      // Si el usuario especificó un CITE custom lo respetamos, sino usamos el oficial generado
+      const citeFinal = req.body.cite ? req.body.cite.trim() : `${abreviacionCite}/${numeroCorrelativo}/${anio}`;
+      const referenciaFinal = descDoc ? `${tituloDoc} - ${descDoc}` : tituloDoc;
 
       const versiones = [
         {
           version: 1,
-          nombre_archivo: nombre_archivo || `${cite}.pdf`,
-          ruta: url_archivo || `/public/documentos/${cite}.pdf`,
+          nombre_archivo: nombre_archivo || `${sigla}_v1.pdf`,
+          ruta: url_archivo || `/public/documentos/${citeFinal.replace(/\//g, '_')}.pdf`,
           fecha: new Date(),
-          usuario: `${auditUser.nombres || 'Administrador'}`,
-          observacion: observacion || 'Carga inicial en archivo institucional'
+          usuario: auditUser.nombres ? `${auditUser.nombres} ${auditUser.apellidos || ''}`.trim() : 'Administrador',
+          observacion: observacion || `Carga inicial de ${tituloDoc} en custodia institucional (v1)`
         }
       ];
 
       const nuevoDoc = await Documento.create({
-        nombre: cite,
-        referencia: referencia,
-        nombre_plantilla: categoria || 'Documento Institucional',
-        categoria_institucional: categoria || 'Normativa y Políticas',
-        plantilla: '{"tipo": "institucional"}',
-        plantilla_valor: JSON.stringify({ ref: referencia, cite: cite, observacion }),
+        nombre: citeFinal,
+        referencia: referenciaFinal,
+        nombre_plantilla: tituloDoc,
+        abreviacion: sigla,
+        categoria_institucional: categoria || 'Documento Institucional',
+        plantilla: JSON.stringify({ tipo: 'institucional', nombre_documento: tituloDoc, sigla, descripcion: descDoc }),
+        plantilla_valor: JSON.stringify({
+          cite: citeFinal,
+          nombre_documento: tituloDoc,
+          sigla,
+          descripcion: descDoc,
+          ref: referenciaFinal,
+          observacion: observacion || ''
+        }),
         estado: 'CERRADO',
         es_institucional: true,
         versiones: versiones,

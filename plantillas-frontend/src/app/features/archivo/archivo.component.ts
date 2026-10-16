@@ -524,11 +524,39 @@ export interface UnidadArchivo {
               </div>
             } @else {
               <table mat-table [dataSource]="docsInstitucionales()" class="archivo-table">
-                <!-- CITE -->
+                <!-- CITE con Copiado Rápido -->
                 <ng-container matColumnDef="cite">
-                  <th mat-header-cell *matHeaderCellDef>CITE</th>
+                  <th mat-header-cell *matHeaderCellDef>CITE Oficial</th>
                   <td mat-cell *matCellDef="let d">
-                    <span class="cite-text">{{ d.nombre }}</span>
+                    <div class="cite-cell">
+                      <span class="cite-badge-mono">{{ d.nombre }}</span>
+                      <button mat-icon-button class="btn-copy-mini" (click)="copiarCite(d.nombre); $event.stopPropagation()" matTooltip="Copiar CITE para referenciar en trámites">
+                        <mat-icon>content_copy</mat-icon>
+                      </button>
+                    </div>
+                  </td>
+                </ng-container>
+
+                <!-- Documento / Sigla -->
+                <ng-container matColumnDef="documento">
+                  <th mat-header-cell *matHeaderCellDef>Documento Institucional</th>
+                  <td mat-cell *matCellDef="let d">
+                    <div class="doc-title-box">
+                      <strong class="doc-main-name">{{ d.nombre_plantilla || obtenerTituloDoc(d) }}</strong>
+                      @if (d.abreviacion) {
+                        <span class="sigla-tag">{{ d.abreviacion }}</span>
+                      }
+                    </div>
+                  </td>
+                </ng-container>
+
+                <!-- Referencia / Descripción -->
+                <ng-container matColumnDef="ref">
+                  <th mat-header-cell *matHeaderCellDef>Descripción / Objeto</th>
+                  <td mat-cell *matCellDef="let d">
+                    <span class="ref-text" [matTooltip]="obtenerDescripcionDoc(d)">
+                      {{ obtenerDescripcionDoc(d) }}
+                    </span>
                   </td>
                 </ng-container>
 
@@ -536,15 +564,7 @@ export interface UnidadArchivo {
                 <ng-container matColumnDef="categoria">
                   <th mat-header-cell *matHeaderCellDef>Categoría</th>
                   <td mat-cell *matCellDef="let d">
-                    <span class="cat-pill">{{ d.categoria_institucional || d.nombre_plantilla }}</span>
-                  </td>
-                </ng-container>
-
-                <!-- Referencia -->
-                <ng-container matColumnDef="ref">
-                  <th mat-header-cell *matHeaderCellDef>Referencia / Asunto</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span class="ref-text" [matTooltip]="obtenerReferencia(d)">{{ obtenerReferencia(d) }}</span>
+                    <span class="cat-pill">{{ d.categoria_institucional || 'Normativa y Políticas' }}</span>
                   </td>
                 </ng-container>
 
@@ -552,7 +572,7 @@ export interface UnidadArchivo {
                 <ng-container matColumnDef="version">
                   <th mat-header-cell *matHeaderCellDef>Versión Actual</th>
                   <td mat-cell *matCellDef="let d">
-                    <span class="version-badge" (click)="verVersiones(d)">
+                    <span class="version-badge" (click)="verVersiones(d)" matTooltip="Ver trazabilidad completa de versiones">
                       v{{ obtenerVersionActual(d) }}
                       <mat-icon class="icon-v">history</mat-icon>
                     </span>
@@ -561,7 +581,7 @@ export interface UnidadArchivo {
 
                 <!-- Fecha -->
                 <ng-container matColumnDef="fecha">
-                  <th mat-header-cell *matHeaderCellDef>Fecha Registro</th>
+                  <th mat-header-cell *matHeaderCellDef>Fecha Custodia</th>
                   <td mat-cell *matCellDef="let d">
                     <span class="date-text">{{ formatearFecha(d._fecha_creacion || d.fecha) }}</span>
                   </td>
@@ -572,10 +592,10 @@ export interface UnidadArchivo {
                   <th mat-header-cell *matHeaderCellDef>Acciones</th>
                   <td mat-cell *matCellDef="let d">
                     <div class="action-btn-row">
-                      <button mat-icon-button (click)="descargarPdf(d)" matTooltip="Descargar Documento" class="btn-action pdf">
+                      <button mat-icon-button (click)="descargarPdf(d)" matTooltip="Descargar Copia Digital (PDF)" class="btn-action pdf">
                         <mat-icon>picture_as_pdf</mat-icon>
                       </button>
-                      <button mat-icon-button (click)="verVersiones(d)" matTooltip="Historial de Versiones" class="btn-action">
+                      <button mat-icon-button (click)="verVersiones(d)" matTooltip="Historial de Versiones y Trazabilidad" class="btn-action">
                         <mat-icon>history</mat-icon>
                       </button>
                       @if (puedeVersionar()) {
@@ -613,35 +633,83 @@ export interface UnidadArchivo {
             </div>
 
             <form [formGroup]="cargaForm" (ngSubmit)="guardarDocumentoInstitucional()" class="modal-form">
+              <!-- Sugerencias Rápidas de Documentos Habituales -->
+              <div class="sugerencias-bar col-span-full">
+                <span class="sug-label">Tipos Frecuentes:</span>
+                <div class="sug-chips">
+                  @for (s of sugerenciasInstitucionales; track s.sigla) {
+                    <button type="button" class="sug-chip" (click)="seleccionarSugerencia(s)">
+                      {{ s.nombre }} ({{ s.sigla }})
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <!-- Nombre del Documento -->
+              <mat-form-field appearance="outline" class="col-span-full">
+                <mat-label>Nombre del Documento Institucional</mat-label>
+                <input matInput formControlName="nombre_documento" (input)="onNombreDocumentoChange()" placeholder="Ej. Reglamento Interno de Personal o Personalidad Jurídica" required>
+                <mat-icon matPrefix>description</mat-icon>
+              </mat-form-field>
+
+              <!-- Sigla y Año -->
               <mat-form-field appearance="outline">
-                <mat-label>CITE o Código Institucional</mat-label>
-                <input matInput formControlName="cite" placeholder="Ej. MARABUNTA-RES-001/2026" required>
+                <mat-label>Sigla / Código (editable)</mat-label>
+                <input matInput formControlName="sigla" (input)="onSiglaChange()" placeholder="Ej. rip, PJ, eo" required>
+                <mat-icon matPrefix>tag</mat-icon>
+                <mat-hint>Calculada automáticamente por el sistema</mat-hint>
               </mat-form-field>
 
               <mat-form-field appearance="outline">
+                <mat-label>Año de Custodia</mat-label>
+                <input matInput type="number" formControlName="anio" (input)="onAnioChange()" required>
+                <mat-icon matPrefix>calendar_today</mat-icon>
+              </mat-form-field>
+
+              <!-- Banner de CITE Oficial Asignado en Tiempo Real -->
+              <div class="cite-preview-banner col-span-full">
+                <div class="cite-preview-icon">
+                  <mat-icon>verified</mat-icon>
+                </div>
+                <div class="cite-preview-info">
+                  <span class="preview-title">CITE OFICIAL GENERADO PARA REFERENCIARSE:</span>
+                  <strong class="preview-cite-code">{{ citeCalculadoPreview() }}</strong>
+                  <span class="preview-sub">Asignado de forma correlativa para este documento en {{ cargaForm.get('anio')?.value }}. Quedará referenciable en todo el sistema.</span>
+                </div>
+              </div>
+
+              <!-- Categoría Institucional -->
+              <mat-form-field appearance="outline" class="col-span-full">
                 <mat-label>Categoría Institucional</mat-label>
                 <mat-select formControlName="categoria">
-                  <mat-option value="Resolución de Directorio">Resolución de Directorio</mat-option>
-                  <mat-option value="Reglamento Interno">Reglamento Interno</mat-option>
+                  <mat-option value="Reglamento Interno">Reglamento Interno / Normativa Laboral</mat-option>
+                  <mat-option value="Personería Jurídica / Legal">Personería Jurídica / Reconocimiento Legal</mat-option>
+                  <mat-option value="Estatuto Orgánico">Estatuto Orgánico Institucional</mat-option>
+                  <mat-option value="Resolución de Directorio">Resolución de Directorio / Asamblea</mat-option>
                   <mat-option value="Convenio Interinstitucional">Convenio Interinstitucional</mat-option>
-                  <mat-option value="Circular Normativa">Circular Normativa</mat-option>
-                  <mat-option value="Estatuto Orgánico">Estatuto Orgánico</mat-option>
+                  <mat-option value="Manual de Funciones">Manual de Organización y Funciones</mat-option>
+                  <mat-option value="Normativa y Ética">Código de Ética y Conducta</mat-option>
+                  <mat-option value="Planes y Programas">Plan Operativo Anual (POA) / PEI</mat-option>
                 </mat-select>
               </mat-form-field>
 
+              <!-- Descripción del Documento (Obligatoria) -->
               <mat-form-field appearance="outline" class="col-span-full">
-                <mat-label>Referencia o Asunto</mat-label>
-                <input matInput formControlName="referencia" placeholder="Objeto y alcance del documento" required>
+                <mat-label>Descripción y Objeto del Documento</mat-label>
+                <textarea matInput formControlName="descripcion" rows="3" placeholder="Descripción detallada del contenido, objeto institucional, resolución o alcance..." required></textarea>
+                <mat-hint>Esta descripción servirá como referencia en las búsquedas y citas del sistema</mat-hint>
               </mat-form-field>
 
+              <!-- Observación de Digitalización -->
               <mat-form-field appearance="outline" class="col-span-full">
-                <mat-label>Observación / Justificación</mat-label>
-                <textarea matInput formControlName="observacion" rows="2" placeholder="Detalle de digitalización o motivo de carga"></textarea>
+                <mat-label>Detalle de Digitalización / Observación (Opcional)</mat-label>
+                <input matInput formControlName="observacion" placeholder="Ej. Escaneo de testimonio notariado original / resguardo en archivo central">
               </mat-form-field>
 
+              <!-- Archivo PDF -->
               <div class="file-drop-area col-span-full">
                 <mat-icon>attach_file</mat-icon>
-                <span>Archivo Escaneado o Copia Digital (PDF)</span>
+                <span>Archivo Escaneado o Copia Digital (PDF Oficial)</span>
                 <input type="file" (change)="onArchivoSeleccionado($event)" accept="application/pdf" style="display: none" #fileCarga>
                 <button type="button" mat-stroked-button (click)="fileCarga.click()">
                   {{ nombreArchivoCarga() || 'Seleccionar Archivo PDF' }}
@@ -652,7 +720,7 @@ export interface UnidadArchivo {
                 <button type="button" mat-button (click)="cerrarModalCarga()">Cancelar</button>
                 <button type="submit" mat-flat-button class="btn-primary-action" [disabled]="cargaForm.invalid || guardando()">
                   <mat-icon>save</mat-icon>
-                  <span>{{ guardando() ? 'Guardando...' : 'Cargar en Archivo Institucional' }}</span>
+                  <span>{{ guardando() ? 'Guardando...' : 'Cargar y Asignar CITE Institucional' }}</span>
                 </button>
               </div>
             </form>
@@ -1270,6 +1338,151 @@ export interface UnidadArchivo {
       .icon-v { font-size: 14px; width: 14px; height: 14px; }
     }
 
+    /* CITE Cell y Copiado Rápido */
+    .cite-cell {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .cite-badge-mono {
+      font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #0f2027;
+      background: #f1f5f9;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+    }
+
+    .btn-copy-mini {
+      width: 28px !important;
+      height: 28px !important;
+      line-height: 28px !important;
+      color: #64748b;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+      &:hover { color: #0083b0; background: #e0f2fe; }
+    }
+
+    .doc-title-box {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .doc-main-name {
+      font-size: 13.5px;
+      color: #0f2027;
+      font-weight: 700;
+    }
+
+    .sigla-tag {
+      display: inline-block;
+      width: fit-content;
+      font-size: 11px;
+      font-weight: 800;
+      color: #0369a1;
+      background: #e0f2fe;
+      padding: 1px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    /* Sugerencias Rápidas */
+    .sugerencias-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: #f8fafc;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .sug-label {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .sug-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .sug-chip {
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+      padding: 4px 10px;
+      border-radius: 14px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      &:hover {
+        background: #0f2027;
+        color: #fff;
+        border-color: #0f2027;
+      }
+    }
+
+    /* Banner CITE Oficial Previsualizado */
+    .cite-preview-banner {
+      background: linear-gradient(135deg, #0f2027 0%, #203a43 100%);
+      color: #fff;
+      border-radius: 12px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border: 1px solid #00b4db;
+      box-shadow: 0 4px 12px rgba(0, 180, 219, 0.15);
+    }
+
+    .cite-preview-icon {
+      background: rgba(0, 180, 219, 0.2);
+      color: #00b4db;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      mat-icon { font-size: 24px; width: 24px; height: 24px; }
+    }
+
+    .cite-preview-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .preview-title {
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      color: #00b4db;
+      text-transform: uppercase;
+    }
+
+    .preview-cite-code {
+      font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+      font-size: 17px;
+      font-weight: 900;
+      color: #38ef7d;
+      letter-spacing: 0.5px;
+    }
+
+    .preview-sub {
+      font-size: 11.5px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
     /* Modales */
     .modal-overlay {
       position: fixed;
@@ -1471,18 +1684,31 @@ export class ArchivoComponent implements OnInit {
   readonly nombreArchivoVersion = signal<string | null>(null);
 
   readonly cargaForm = new FormGroup({
-    cite: new FormControl('', [Validators.required]),
-    categoria: new FormControl('Resolución de Directorio', [Validators.required]),
-    referencia: new FormControl('', [Validators.required]),
+    nombre_documento: new FormControl('', [Validators.required]),
+    sigla: new FormControl('rip', [Validators.required]),
+    anio: new FormControl(new Date().getFullYear(), [Validators.required]),
+    categoria: new FormControl('Reglamento Interno', [Validators.required]),
+    descripcion: new FormControl('', [Validators.required]),
     observacion: new FormControl('')
   });
+
+  readonly citeCalculadoPreview = signal<string>('marabunta/rip/1/2026');
+
+  readonly sugerenciasInstitucionales = [
+    { nombre: 'Reglamento Interno de Personal', sigla: 'rip', cat: 'Reglamento Interno', desc: 'Normativa interna de derechos, deberes y régimen laboral de la cooperativa.' },
+    { nombre: 'Personalidad Jurídica', sigla: 'PJ', cat: 'Personería Jurídica / Legal', desc: 'Resolución Suprema y reconocimiento de Personalidad Jurídica de la Cooperativa.' },
+    { nombre: 'Estatuto Orgánico', sigla: 'eo', cat: 'Estatuto Orgánico', desc: 'Estatuto orgánico constitutivo aprobado en asamblea general extraordinaria.' },
+    { nombre: 'Manual de Organización y Funciones', sigla: 'mof', cat: 'Manual de Funciones', desc: 'Manual de organización institucional y descripción de funciones por puesto.' },
+    { nombre: 'Código de Ética y Conducta', sigla: 'ce', cat: 'Normativa y Ética', desc: 'Código de ética, valores corporativos y régimen de transparencia.' },
+    { nombre: 'Convenio Interinstitucional', sigla: 'ci', cat: 'Convenio Interinstitucional', desc: 'Convenio marco de cooperación interinstitucional.' }
+  ];
 
   readonly versionForm = new FormGroup({
     observacion: new FormControl('', [Validators.required])
   });
 
   readonly columnasGenerales = ['cite', 'tipo', 'ref', 'unidad', 'fecha', 'acciones'];
-  readonly columnasInstitucionales = ['cite', 'categoria', 'ref', 'version', 'fecha', 'acciones'];
+  readonly columnasInstitucionales = ['cite', 'documento', 'ref', 'categoria', 'version', 'fecha', 'acciones'];
 
   readonly totalDocsGeneral = computed(() => this.docsGeneral().length);
   readonly totalDocsUnidad = computed(() => this.dataUnidadActual()?.total_documentos || 0);
@@ -1646,9 +1872,119 @@ export class ArchivoComponent implements OnInit {
     });
   }
 
+  seleccionarSugerencia(sug: any): void {
+    this.cargaForm.patchValue({
+      nombre_documento: sug.nombre,
+      sigla: sug.sigla,
+      categoria: sug.cat,
+      descripcion: sug.desc
+    });
+    this.actualizarProximoCite();
+  }
+
+  derivarSiglaFront(nombre: string): string {
+    if (!nombre) return 'DOC';
+    const clean = nombre.trim();
+    const lower = clean.toLowerCase();
+    if (lower.includes('personalidad jur') || lower.includes('personeria jur') || lower.includes('personería jur')) return 'PJ';
+    if (lower.includes('reglamento interno') && lower.includes('personal')) return 'rip';
+    if (lower.includes('reglamento interno') && lower.includes('trabajo')) return 'rit';
+    if (lower.includes('estatuto')) return 'eo';
+    if (lower.includes('codigo de etica') || lower.includes('código de ética')) return 'ce';
+    if (lower.includes('manual') && (lower.includes('funciones') || lower.includes('organizacion') || lower.includes('organización'))) return 'mof';
+    if (lower.includes('plan operativo')) return 'poa';
+    if (lower.includes('plan estrategico') || lower.includes('plan estratégico')) return 'pei';
+    if (lower.includes('resolucion de directorio') || lower.includes('resolución de directorio')) return 'rd';
+    if (lower.includes('convenio')) return 'ci';
+
+    const stopwords = new Set(['de', 'del', 'la', 'el', 'los', 'las', 'en', 'y', 'para', 'a', 'con', 'por', 'sobre', 'al', 'o', 'e', 'un', 'una']);
+    const palabras = clean
+      .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g, '')
+      .split(/\s+/)
+      .filter(p => p.length > 0 && !stopwords.has(p.toLowerCase()));
+    if (palabras.length === 0) return 'DOC';
+    if (palabras.length === 1) return palabras[0].substring(0, 3).toLowerCase();
+    return palabras.map(p => p[0].toLowerCase()).join('');
+  }
+
+  onNombreDocumentoChange(): void {
+    const nom = this.cargaForm.get('nombre_documento')?.value || '';
+    const sig = this.derivarSiglaFront(nom);
+    this.cargaForm.get('sigla')?.setValue(sig, { emitEvent: false });
+    this.actualizarProximoCite();
+  }
+
+  onSiglaChange(): void {
+    this.actualizarProximoCite();
+  }
+
+  onAnioChange(): void {
+    this.actualizarProximoCite();
+  }
+
+  actualizarProximoCite(): void {
+    const nom = this.cargaForm.get('nombre_documento')?.value || '';
+    const sig = this.cargaForm.get('sigla')?.value || this.derivarSiglaFront(nom);
+    const anio = this.cargaForm.get('anio')?.value || new Date().getFullYear();
+
+    this.http.get<any>(`/api/v1/archivo/institucional/proximo-cite?nombre=${encodeURIComponent(nom)}&sigla=${encodeURIComponent(sig)}&anio=${anio}`)
+      .subscribe({
+        next: (res) => {
+          if (res.tipoMensaje === 'EXITO' && res.datos?.cite) {
+            this.citeCalculadoPreview.set(res.datos.cite);
+          } else {
+            this.citeCalculadoPreview.set(`marabunta/${sig}/1/${anio}`);
+          }
+        },
+        error: () => {
+          this.citeCalculadoPreview.set(`marabunta/${sig}/1/${anio}`);
+        }
+      });
+  }
+
+  copiarCite(cite: string): void {
+    if (!cite) return;
+    navigator.clipboard.writeText(cite).then(() => {
+      this.snackBar.open(`¡CITE "${cite}" copiado al portapapeles!`, 'Aceptar', { duration: 3000 });
+    }).catch(() => {
+      this.snackBar.open(`CITE: ${cite}`, 'Cerrar', { duration: 4000 });
+    });
+  }
+
+  obtenerTituloDoc(d: any): string {
+    if (!d) return 'Documento Oficial';
+    if (d.plantilla_valor) {
+      try {
+        const parsed = typeof d.plantilla_valor === 'string' ? JSON.parse(d.plantilla_valor) : d.plantilla_valor;
+        if (parsed.nombre_documento) return parsed.nombre_documento;
+      } catch {}
+    }
+    return d.nombre_plantilla || d.categoria_institucional || 'Documento Oficial';
+  }
+
+  obtenerDescripcionDoc(d: any): string {
+    if (!d) return 'Sin descripción registrada';
+    if (d.plantilla_valor) {
+      try {
+        const parsed = typeof d.plantilla_valor === 'string' ? JSON.parse(d.plantilla_valor) : d.plantilla_valor;
+        if (parsed.descripcion) return parsed.descripcion;
+        if (parsed.ref) return parsed.ref;
+      } catch {}
+    }
+    return d.referencia || 'Documento oficial en custodia institucional';
+  }
+
   abrirModalCarga(): void {
-    this.cargaForm.reset({ categoria: 'Resolución de Directorio' });
+    this.cargaForm.reset({
+      nombre_documento: 'Reglamento Interno de Personal',
+      sigla: 'rip',
+      anio: new Date().getFullYear(),
+      categoria: 'Reglamento Interno',
+      descripcion: 'Normativa interna de derechos, deberes y régimen laboral de la cooperativa.',
+      observacion: ''
+    });
     this.nombreArchivoCarga.set(null);
+    this.actualizarProximoCite();
     this.mostrarModalCarga.set(true);
   }
 
@@ -1668,24 +2004,29 @@ export class ArchivoComponent implements OnInit {
 
     this.guardando.set(true);
     const v = this.cargaForm.value;
+    const user = this.authService.currentUser() as any;
 
     this.http.post<any>('/api/v1/archivo/institucional/cargar', {
-      cite: v.cite,
+      nombre_documento: v.nombre_documento,
+      sigla: v.sigla,
+      anio: v.anio,
       categoria: v.categoria,
-      referencia: v.referencia,
+      descripcion: v.descripcion,
       observacion: v.observacion,
-      nombre_archivo: this.nombreArchivoCarga() || `${v.cite}.pdf`,
-      url_archivo: `/public/documentos/${v.cite}.pdf`
+      nombre_archivo: this.nombreArchivoCarga() || `${v.sigla}_v1.pdf`,
+      url_archivo: `/public/documentos/${this.citeCalculadoPreview().replace(/\//g, '_')}.pdf`,
+      audit_usuario: user
     }).subscribe({
       next: (res) => {
         this.guardando.set(false);
         this.cerrarModalCarga();
-        this.snackBar.open('Documento institucional registrado con éxito.', 'Aceptar', { duration: 4000 });
+        const citeAsignado = res.datos?.nombre || this.citeCalculadoPreview();
+        this.snackBar.open(`¡Documento Institucional registrado con CITE: ${citeAsignado}!`, 'Aceptar', { duration: 5000 });
         this.cargarArchivoInstitucional();
       },
       error: (err) => {
         this.guardando.set(false);
-        this.snackBar.open(err.error?.mensaje || 'Error al cargar documento', 'Cerrar', { duration: 3000 });
+        this.snackBar.open(err.error?.mensaje || 'Error al cargar documento institucional', 'Cerrar', { duration: 4000 });
       }
     });
   }
