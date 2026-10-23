@@ -1,7 +1,8 @@
 node_modules/
 *.log
 .env
-.sql
+*.sql
+!plantillas-backend/recursos/*.sql
 pgdata/
 respaldos/
 *.pdf
