@@ -9,6 +9,9 @@ const headers = {
 module.exports = {
   
   crearSolicitud: (solicitante, responsable, items, id) => new Promise((resolve, reject) => {
+    if (!config.almacen || !config.almacen.habilitado) {
+      return reject('El sistema externo de almacenes no está habilitado en la configuración actual.');
+    }
     const datos = {
       solicitante,
       responsable,
@@ -36,6 +39,9 @@ module.exports = {
   }),
 
   consultar: (textoBuscar, todos) => {
+    if (!config.almacen || !config.almacen.habilitado) {
+      return Promise.resolve([]);
+    }
     let url = config.almacen.url_consulta;
     if (textoBuscar) url = `${url}?descripcion=${textoBuscar}`;
     if (todos && todos == 1) url += '&todos=1';
@@ -59,6 +65,7 @@ module.exports = {
   },
 
   recuperar: (id) => new Promise((resolve, reject) => {
+    if (!config.almacen || !config.almacen.habilitado) return resolve({ cabecera: {}, items: [] });
     if (!id) return resolve([]);
     const url = `${config.almacen.url_recuperar}?id=${id}`;
     return axios({

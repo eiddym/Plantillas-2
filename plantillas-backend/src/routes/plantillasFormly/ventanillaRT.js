@@ -266,7 +266,12 @@ module.exports = app => {
         archivo_adjunto
       } = req.body;
 
-      const nombreSolicitante = (nombreCompleto || remitente || '').trim();
+      const nombreSolicitante = (nombreCompleto || remitente || (req.body.nombres ? `${req.body.nombres} ${req.body.apellidos || ''}`.trim() : '')).trim();
+      const correoDestino = (email || req.body.correo || '').trim();
+      const numIdentidad = ci || req.body.numero_documento || req.body.nro_documento || '';
+      const entidadNombre = entidad || req.body.institucion || '';
+      const cantFojas = fojas || req.body.nro_fojas || 1;
+
       if (!nombreSolicitante || !referencia) {
         return res.status(400).send(util.formatearMensaje("ERROR", "El nombre del remitente y la referencia son obligatorios."));
       }
@@ -278,7 +283,7 @@ module.exports = app => {
       }
 
       // Validar correo estrictamente
-      const resCorreo = validarCorreoEstricto(email);
+      const resCorreo = validarCorreoEstricto(correoDestino);
       if (!resCorreo.valido) {
         return res.status(400).send(util.formatearMensaje("ERROR", resCorreo.mensaje));
       }
@@ -292,15 +297,15 @@ module.exports = app => {
       });
 
       const datosRemitente = {
-        ci: ci || '',
+        ci: numIdentidad,
         remitente: nombreSolicitante,
-        email: email || '',
+        email: correoDestino,
         telefono: telefono || '',
-        entidad: entidad || '',
+        entidad: entidadNombre,
         tipoTramite: tipoTramite || 'NOTA_OFICIAL',
         citeExterno: citeExterno || '',
         referencia: referencia,
-        fojas: Number(fojas) || 1,
+        fojas: Number(cantFojas) || 1,
         prioridad: prioridad || 'NORMAL',
         fecha_radicacion: new Date()
       };
@@ -310,7 +315,7 @@ module.exports = app => {
         de: nombreSolicitante,
         para: 'Ventanilla Única de Correspondencia / Pendiente de Derivación',
         ref: referencia,
-        institucion: entidad || 'Persona Natural',
+        institucion: entidadNombre || 'Persona Natural',
         datos_remitente: datosRemitente
       };
 
@@ -344,8 +349,8 @@ module.exports = app => {
 
       // Enviar correo de confirmación si se facilitó email
       let emailEnviado = false;
-      if (email) {
-        emailEnviado = await enviarCorreoRadicacion(email, {
+      if (correoDestino) {
+        emailEnviado = await enviarCorreoRadicacion(correoDestino, {
           codigo_hoja_ruta: codigoHR,
           remitente: nombreSolicitante,
           referencia: referencia
@@ -448,19 +453,29 @@ module.exports = app => {
       const auditUser = req.body.audit_usuario || {};
       const {
         ci,
+        documentoIdentidad,
         remitente,
         nombreCompleto,
         email,
+        correo,
         telefono,
+        celular,
         entidad,
+        institucion,
         tipoTramite,
         citeExterno,
         referencia,
         fojas,
+        nroFojas,
         prioridad
       } = req.body;
 
-      const nombreSolicitante = (nombreCompleto || remitente || '').trim();
+      const nombreSolicitante = (remitente || nombreCompleto || '').trim();
+      const numIdentidad = ci || documentoIdentidad || '';
+      const correoDestino = (email || correo || '').trim();
+      const entidadNombre = entidad || institucion || '';
+      const cantFojas = fojas || nroFojas || 1;
+
       if (!nombreSolicitante || !referencia) {
         return res.status(400).send(util.formatearMensaje("ERROR", "El remitente y la referencia son obligatorios."));
       }
@@ -472,8 +487,8 @@ module.exports = app => {
       }
 
       // Si se ingresó correo, validar estrictamente
-      if (email && email.trim() !== '') {
-        const resCorreo = validarCorreoEstricto(email);
+      if (correoDestino !== '') {
+        const resCorreo = validarCorreoEstricto(correoDestino);
         if (!resCorreo.valido) {
           return res.status(400).send(util.formatearMensaje("ERROR", resCorreo.mensaje));
         }
@@ -483,15 +498,15 @@ module.exports = app => {
       const codigoHR = await generarCodigoHojaRuta(anioActual, auditUser.id_usuario || 1);
 
       const datosRemitente = {
-        ci: ci || '',
+        ci: numIdentidad,
         remitente: nombreSolicitante,
-        email: email || '',
-        telefono: telefono || '',
-        entidad: entidad || '',
+        email: correoDestino,
+        telefono: telefono || celular || '',
+        entidad: entidadNombre,
         tipoTramite: tipoTramite || 'NOTA_OFICIAL',
         citeExterno: citeExterno || '',
         referencia: referencia,
-        fojas: Number(fojas) || 1,
+        fojas: Number(cantFojas) || 1,
         prioridad: prioridad || 'NORMAL',
         fecha_radicacion: new Date()
       };

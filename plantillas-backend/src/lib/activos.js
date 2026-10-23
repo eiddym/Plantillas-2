@@ -9,8 +9,9 @@ const headers = {
 
 module.exports = {
   consultar: (textoBuscar = '', tipo = 'asignacion') => {
-    console.log('[libActivos] consultar ...');
-
+    if (!config.activos || !config.activos.habilitado) {
+      return Promise.resolve([]);
+    }
     return _buscar(textoBuscar, 'codigo', tipo)
       .then(resp1 => _buscar(textoBuscar, 'descripcion', tipo).then(resp2 => resp1.concat(resp2)))
       .catch(error => {
@@ -21,7 +22,9 @@ module.exports = {
   },
 
   consultarPorUsuario: (ci = '', ci_responsable) => {
-    console.log('[libActivos] consultarPorUsuario ...');
+    if (!config.activos || !config.activos.habilitado) {
+      return Promise.resolve([]);
+    }
 
     return new Promise((resolve, reject) => {
       const url = encodeURI(`${config.activos.url_consulta_por_usuario}/${ci}?responsable_ci=${ci_responsable}`);
@@ -44,7 +47,9 @@ module.exports = {
   },
 
   asignar: (data) => {
-    console.log('[libActivos] asignar ....'.blue, data);
+    if (!config.activos || !config.activos.habilitado) {
+      return Promise.reject('El sistema de Activos Fijos no se encuentra habilitado.');
+    }
     return new Promise((resolve, reject) => {
       const url = encodeURI(config.activos.url_asignacion);
       console.log('[libActivos] url = '.blue, url);

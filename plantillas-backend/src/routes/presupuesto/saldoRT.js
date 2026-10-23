@@ -61,33 +61,11 @@ module.exports = app => {
 
   app.get('/api/v1/presupuesto/saldos', (req, res) => {
 
-    const gestion = req.query.gestion;
-    const qry = 'select p.numero, p.descripcion, p.monto as inicial, ' +
-                'coalesce(mo.sum,0) as modificado, ' +
-                'p.monto + coalesce(mo.sum,0) as vigente, ' +
-                'coalesce(co.sum,0) - coalesce(re.sum,0) as comprometido, ' +
-                'coalesce(pa.sum,0) as pagado, ' +
-                '(p.monto - coalesce(co.tot,0)-coalesce(pa.tot,0)+coalesce(mo.sum,0)) as saldo ' +
-                'from partida as p ' +
-                'left join ( ' +
-                    'select p1.numero, sum(coalesce(p1.monto,0)), avg(coalesce(p2.monto,0)) as tot ' +
-                    'from partida p1 ' +
-                    'left join ( ' +
-                        'select numero, sum(coalesce(monto,0)) as monto ' +
-                        'from partida ' +
-                        'where tipo = :comprometido and gestion = :gestion and fid_partida is null and estado=\'ACTIVO\' ' +
-                        'group by numero ' +
-                    ') as p2 ' +
-                    'on p1.numero = p2.numero ' +
-                    'where p1.tipo = :comprometido and p1.gestion = :gestion and p1.estado=\'ACTIVO\'' +
-                    'group by p1.numero ' +
-                ') as co ' +
-                'on p.numero = co.numero ' +
-                'left join ( ' +
-                    'select numero, sum(coalesce(monto,0)) ' +
-                    'from partida ' +
-                    'where tipo=:comprometido and gestion=:gestion and estado=\'ACTIVO\'' +
-                    'and  id_partida in ( ' +
+    const gestion = req.query.gestion || `${moment().tz("America/La_Paz").year()}`;
+
+    /* _oldQuery obsoleto */
+    const _oldQuery = '';
+    if (false) {
                         'select fid_partida ' +
                         'from partida ' +
                         'where tipo=:pagado and gestion=:gestion and monto=0 and estado=\'ACTIVO\'' +
@@ -114,31 +92,20 @@ module.exports = app => {
                         'where tipo = :pagado and gestion = :gestion and not fid_partida is null and estado=\'ACTIVO\'' +
                         'group by numero ' +
                     ') as p2 ' +
-                    'on p1.numero = p2.numero ' +
-                    'where p1.tipo = :pagado and p1.gestion = :gestion and p1.estado=\'ACTIVO\'' +
-                    'group by p1.numero ' +
-                ') as pa ' +
-                'on p.numero = pa.numero ' +
-                'left join ( ' +
-                    'select numero, sum(coalesce(monto,0)) ' +
-                    'from partida ' +
-                    'where tipo = :modificado and gestion = :gestion and estado=\'ACTIVO\'' +
-                    'group by numero ' +
-                ') as mo ' +
-                'on p.numero = mo.numero ' +
-                'where p.tipo=:inicial and p.gestion = :gestion and p.estado=\'ACTIVO\'' +
-                'order by numero';
-
-        sequelize.query(qry, { replacements: { comprometido: 'COMPROMETIDO', gestion, pagado:'PAGADO', modificado:'MODIFICADO', inicial: 'INICIAL' }, type: sequelize.QueryTypes.SELECT })
+                    'on p1.numero = p2.numero ';
+    }
+        const presupuestoService = require('../../services/presupuestoService');
+        presupuestoService.obtenerSaldosGestion(sequelize, gestion)
         .then(saldos => {
-          if (saldos){
+          if (saldos && saldos.length > 0){
             res.status(200).send(util.formatearMensaje("EXITO", "Obtención de datos exitosa.", saldos));
           }else{
-            res.status(200).send(util.formatearMensaje("INFORMACION", "No existen saldos."));
+            res.status(200).send(util.formatearMensaje("INFORMACION", "No existen saldos.", []));
           }
         })
         .catch(pError => {
-          res.status(412).send(util.formatearMensaje('ERROR', pError));
+          logger.error('[PRESUPUESTO SALDOS] Error:', pError);
+          res.status(412).send(util.formatearMensaje('ERROR', pError.message || pError));
         });
   });
 

@@ -55,56 +55,34 @@ module.exports = app => {
     ]
   }
 */
-  // app.get('/resumen', (req,res) => {
-  app.get('/api/v1/presupuesto/resumen', (req,res) => {
-    const partidas = JSON.parse(req.query.partidas) || [];
-    const datos = {};
-    modelPartida.findAll({
-      attributes:['id_partida','cite','numero','monto','fid_partida','gestion','tipo','estado'],
-      where: {
-        numero: {
-          [Op.like]: { [Op.any]: partidas },
-        },
-      },
-    })
-    .then(partidasResp => {
-      const procesado = [];
-      const partidasClasificadas = _.map(partidasResp, item => {
+  const presupuestoService = require('../../services/presupuestoService');
 
-        const indicePartida = _.findIndex(procesado, itemPartida => (itemPartida.partida == item.numero));
-        if( indicePartida == -1) {
-          const temp =  {
-            partida : item.numero,
-            monto : 0,
-            comprometido : 0,
-            pagado : 0,
-            saldo : 0,
-            total : 0,
-          };
-          procesado.push(calcularMontosPorTipo(temp, item));
+  app.get('/api/v1/presupuesto/resumen', (req, res) => {
+    let partidas = [];
+    try {
+      if (req.query.partidas) {
+        partidas = typeof req.query.partidas === 'string' && req.query.partidas.startsWith('[')
+          ? JSON.parse(req.query.partidas)
+          : [req.query.partidas];
+      }
+    } catch (e) {
+      partidas = [req.query.partidas];
+    }
+
+    const gestion = req.query.gestion || `${moment().tz("America/La_Paz").year()}`;
+
+    presupuestoService.obtenerResumenPartidas(modelPartida, Op, partidas, gestion)
+      .then(procesado => {
+        if (procesado && procesado.length > 0) {
+          res.status(200).send(util.formatearMensaje('EXITO', 'Obtención de datos exitosa.', procesado));
+        } else {
+          res.status(200).send(util.formatearMensaje('INFORMACION', 'No existe resumen para las partidas especificadas.', []));
         }
-        else {
-          calcularMontosPorTipo(procesado[indicePartida], item);
-        }
+      })
+      .catch(error => {
+        logger.error('[PRESUPUESTO RESUMEN] Error en la búsqueda de partidas:', error);
+        res.status(200).send(util.formatearMensaje('INFORMACION', 'No existe resumen.', []));
       });
-
-      logger.error("Revisando lo procesado", procesado);
-      res.status(200).send(util.formatearMensaje('EXITO', 'Obtención de datos exitosa.', procesado));
-    })
-    .catch(error => {
-      logger.error("Error en la busqueda de partidas", error);
-      res.status(200).send(util.formatearMensaje('INFORMACION', 'No existe resumen.'));
-    });
   });
-  function calcularMontosPorTipo(respuesta, item) {
-    const diccionario = {
-      INICIAL: 'total',
-      COMPROMETIDO: 'comprometido',
-      PAGADO: 'pagado',
-      MODIFICADO: 'total',
-    };
-    respuesta[diccionario[item.tipo]] += parseFloat(item.monto);
-    return respuesta;
-  }
 
 };

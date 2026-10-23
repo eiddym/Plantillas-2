@@ -43,18 +43,19 @@ module.exports = () => {
       },
     },
     aprobacionCD: {
-      ruta_externos_aprobacion: process.env.RUTA_DOCUMENTOS_APROBACION || "./public/aprobacion", // ".public/aprobacion" Pdf por aprobar con ciudania digital
+      habilitado: envBoolean(process.env.APROBACION_CD_HABILITADO, false),
+      ruta_externos_aprobacion: process.env.RUTA_DOCUMENTOS_APROBACION || "./public/aprobacion",
       max_bytes_por_pdf: 20971520,
       max_sum_bytes_pdfs_por_documento: 31457280, 
-      url_validar_documento: 'https://interoperabilidad.agetic.gob.bo/fake/aprobacion-documentos/v1/verificaciones',
-      url: 'https://interoperabilidad.agetic.gob.bo/fake/aprobacion-documentos/v1/aprobaciones',
-      token: 'Bearer  [token]'
+      url_validar_documento: process.env.APROBACION_CD_URL_VALIDAR || 'https://interoperabilidad.agetic.gob.bo/fake/aprobacion-documentos/v1/verificaciones',
+      url: process.env.APROBACION_CD_URL || 'https://interoperabilidad.agetic.gob.bo/fake/aprobacion-documentos/v1/aprobaciones',
+      token: process.env.APROBACION_CD_TOKEN || 'Bearer [token]'
     }, 
-    ruta_externos: process.env.RUTA_ARCHIVOS_EXTERNOS || "./public/externos", // ".public/externos"
+    ruta_externos: process.env.RUTA_ARCHIVOS_EXTERNOS || "./public/externos",
     ruta_documentos: process.env.RUTA_DOCUMENTOS || "./public/documentos/",
-    host: process.env.HOST_BACKEND || 'localhost:8001', // Host backend sobre dominio
-    front: process.env.HOST_FRONTEND || 'localhost:3000', // Host frontend sobre dominio
-    urlVerificar: process.env.URL_VERIFICACION || 'http://192.168.1.7/verificar',
+    host: process.env.HOST_BACKEND || 'localhost:8001',
+    front: process.env.HOST_FRONTEND || process.env.URL_FRONTEND || 'localhost',
+    urlVerificar: process.env.URL_VERIFICACION || 'http://localhost/verificar',
 
     entidad: {
       nombre: process.env.ENTIDAD_NOMBRE || '',
@@ -68,17 +69,20 @@ module.exports = () => {
       web: process.env.ENTIDAD_WEB || '',
       sede: process.env.ENTIDAD_SEDE || ''
     },
-    prefijo: 1, // Prefijo en los documentos para su verificación
-    tiempo_token: Number(process.env.TIEMPO_TOKEN || 60), // Tiempo de vida del token en minutos.
-    tiempo_inactividad: Number(process.env.TIEMPO_INACTIVIDAD || 15), // Inactividad máxima en minutos.
-    tiempo_sesion_absoluto: Number(process.env.TIEMPO_SESION_ABSOLUTO || 480), // Duración absoluta en minutos.
+    prefijo: 1,
+    tiempo_token: Number(process.env.TIEMPO_TOKEN || 60),
+    tiempo_inactividad: Number(process.env.TIEMPO_INACTIVIDAD || 15),
+    tiempo_sesion_absoluto: Number(process.env.TIEMPO_SESION_ABSOLUTO || 480),
     validacion: {},
     sistema: {
-      // remover el [], dejar solamente el numero identificador.
-      director: process.env.IDENTIFICADOR_DIRECTOR || 1, // id_usuario del usuario con cargo de MAE
-      direccion: process.env.IDENTIFICADOR_DIRECTOR_UNIDAD || 1, // id_unidad de la unidad Dirección General Ejecutiva
-      cite_ceros: process.env.CITE_DIGITOS || 5, // Cantidad de digitos que posee el cite.
-      cite_principal: process.env.CITE_GUIA || 'PLANTILLAS', // Descripción guia del cite, miCiteGuia/IT/0001/2020
+      director: process.env.IDENTIFICADOR_DIRECTOR || 2, // id_usuario de MAE (Fabiola Sanchez Vaca)
+      direccion: process.env.IDENTIFICADOR_DIRECTOR_UNIDAD || 2, // id_unidad Dirección General Ejecutiva (MAE)
+      unidad_ficticia: 1, // Unidad de Test reservada para pruebas iniciales
+      cite_ceros: process.env.CITE_DIGITOS || 5,
+      cite_principal: process.env.CITE_GUIA || 'PLANTILLAS',
+      sys_default_user: process.env.SYS_DEFAULT_USER || 'sys_default',
+      sys_default_password: process.env.SYS_DEFAULT_PASSWORD || 'Developer',
+      demo_cd_user: process.env.DEMO_CD_USER || '10794552-1J',
     },
     correo: {
       port: parseInt(process.env.CORREO_PUERTO || process.env.SMTP_PORT || 25),
@@ -102,7 +106,7 @@ module.exports = () => {
       correo_url: process.env.NOTIFICACION_CORREO_URL || 'http://localhost/miApiCorreo',
       correo_token: process.env.NOTIFICACION_CORREO_TOKEN || '[miTokenCorreo]',
     },
-    envio_notificacion: 'CORREO',//CORREO o ALERTIN
+    envio_notificacion: process.env.ENVIO_NOTIFICACION || 'CORREO',
     ldap: {
       server: {
         url: process.env.LDAP_URL || 'ldaps://ldap.example.abc:123',
@@ -112,64 +116,65 @@ module.exports = () => {
         searchFilter: process.env.LDAP_SEARCHFILTER || '(|(cn={{username}})(sAMAccountName={{username}})(uid={{username}}))',
       },
     },
-    // configuracion con jwt poner una palabra secreta segura
-    jwtSecret: process.env.JWT_SECRET || 'SECRET', //Se recomienda una llave alfanumerica generada min de 20 caracteres
+    jwtSecret: process.env.JWT_SECRET || 'SECRET',
     jwtSession: {
       session: process.env.JWT_SESSION || false,
     },
-    puerto: process.env.BACKEND_PUERTO || 8001, // Puerto donde se expone el api
+    puerto: process.env.BACKEND_PUERTO || 8000,
     recaptcha: {
       secretKey: process.env.RECAPTCHA_SECRET_KEY || '6LdpTNAtAAAAADLJK8fQ8CYZifzA-bhMoSxsdswc',
       url: 'https://www.google.com/recaptcha/api/siteverify',
     },
     almacen: {
-      url_estado: process.env.ALMACEN_ESTADO || 'http://localhost:3000/',
-      url_consulta: process.env.ALMACEN_CONSULTA || 'http://localhost:3000/api/v2/almacenes/articulos',
-      url_crear_solicitud: process.env.ALMACEN_CREAR_SOLICITUD || 'http://localhost:3000/api/v2/almacenes/solicitud',
-      url_recuperar: process.env.ALMACEN_RECUPERAR || 'http://localhost:3000/api/v2/almacenes/solicitud',
-      url_notificar: process.env.ALMACEN_NOTIFICAR || 'http://localhost:3000/api/v2/almacenes/solicitud',
-      url_proveedor: process.env.ALMACEN_PROVEEDOR || 'http://localhost:3000/api/v2/almacenes/proveedores',
-      url_ingreso: process.env.ALMACEN_INGRESO || 'http://localhost:3000/api/v2/almacenes/ingreso',
+      habilitado: envBoolean(process.env.ALMACEN_HABILITADO, false),
+      url_estado: process.env.ALMACEN_ESTADO || 'http://localhost:8000/',
+      url_consulta: process.env.ALMACEN_CONSULTA || 'http://localhost:8000/api/v2/almacenes/articulos',
+      url_crear_solicitud: process.env.ALMACEN_CREAR_SOLICITUD || 'http://localhost:8000/api/v2/almacenes/solicitud',
+      url_recuperar: process.env.ALMACEN_RECUPERAR || 'http://localhost:8000/api/v2/almacenes/solicitud',
+      url_notificar: process.env.ALMACEN_NOTIFICAR || 'http://localhost:8000/api/v2/almacenes/solicitud',
+      url_proveedor: process.env.ALMACEN_PROVEEDOR || 'http://localhost:8000/api/v2/almacenes/proveedores',
+      url_ingreso: process.env.ALMACEN_INGRESO || 'http://localhost:8000/api/v2/almacenes/ingreso',
       token: process.env.ALMACEN_TOKEN || 'Bearer TOKEN_ACCESSO',
     },
     activos: {
-      url_estado: process.env.ACTIVOS_ESTADO || 'http://localhost:3000/',
-      url_consulta: process.env.ACTIVOS_CONSULTA || 'http://localhost:3000/api/v2/activos/buscar',
-      url_asignacion: process.env.ACTIVOS_ASIGNACION || 'http://localhost:3000/api/v2/activos/asignacion',
-      url_devolucion: process.env.ACTIVOS_DEVOLUCION || 'http://localhost:3000/api/v2/activos/devolucion',
-      url_consulta_por_usuario: process.env.ACTIVOS_CONSULTA_POR_USUARIO || 'http://localhost:3000/api/v2/activos/usuario',
+      habilitado: envBoolean(process.env.ACTIVOS_HABILITADO, false),
+      url_estado: process.env.ACTIVOS_ESTADO || 'http://localhost:8000/',
+      url_consulta: process.env.ACTIVOS_CONSULTA || 'http://localhost:8000/api/v2/activos/buscar',
+      url_asignacion: process.env.ACTIVOS_ASIGNACION || 'http://localhost:8000/api/v2/activos/asignacion',
+      url_devolucion: process.env.ACTIVOS_DEVOLUCION || 'http://localhost:8000/api/v2/activos/devolucion',
+      url_consulta_por_usuario: process.env.ACTIVOS_CONSULTA_POR_USUARIO || 'http://localhost:8000/api/v2/activos/usuario',
       token: process.env.ACTIVOS_TOKEN || 'Bearer TOKEN_ACCESO',
     },
-    // Configuracion de cliente SMTP,
     mail: {
-      host: process.env.MAIL_HOST || 'smtp.gmail.com',
-      port: process.env.MAIL_PORT || 587,
-      secure: false, // true para 465, false para otros puertos
+      host: process.env.MAIL_HOST || process.env.CORREO_HOST || 'smtp.gmail.com',
+      port: process.env.MAIL_PORT || process.env.CORREO_PUERTO || 587,
+      secure: envBoolean(process.env.CORREO_SECURE, false),
       auth: {
-        user: process.env.MAIL_USER || 'tu-correo@dominio.com',
-        pass: process.env.MAIL_PASS || 'tu-password-o-token'
+        user: process.env.MAIL_USER || process.env.CORREO_USUARIO || 'tu-correo@dominio.com',
+        pass: process.env.MAIL_PASS || process.env.CORREO_PASSWORD || 'tu-password-o-token'
       },
       tls: {
-        rejectUnauthorized: false
+        rejectUnauthorized: envBoolean(process.env.CORREO_TLS_RECHAZAR, false)
       }
     },
-    // Configuracion de cliente, para ciudadania digital
+    // Configuración de Ciudadanía Digital (preservada para interoperabilidad)
+    ciudadania_digital: {
+      habilitado: envBoolean(process.env.CIUDADANIA_DIGITAL_HABILITADO, false),
+    },
     issuer: process.env.ISSUER || null,
     client: {
       post_logout_redirect_uris: [
-        'http://localhost:3000/oauth/logout.html',
+        process.env.URL_LOGOUT_REDIRECT || '/auth/login',
       ],
       client_id: process.env.CLIENT_ID || 'IaaIMscMLSJZDoI9JQ7YK',
       client_secret: process.env.CLIENT_SECRET || '1xpviV31Fte0wvVW-LncpVF_J6KVNj73H-6E0XUxriNqGb8yL_iGVoaOxSVGZtAxm6GYCPP6Htft0oz2OJQTGA',
       redirect_uris: [
-        'http://localhost:3000/oauth/login.html',
+        process.env.URL_LOGIN_REDIRECT || '/auth/login',
       ],
     },
-    // parameters registry client
     client_params: {
       scope: ['openid profile email fecha_nacimiento celular offline_access'],
     },
-
   };
 
   return config;
