@@ -15,6 +15,7 @@ const libActivos = require('../../lib/activos');
 const Op = require('sequelize').Op;
 const logger = require('../../lib/logger');
 const FileType = require('file-type');
+const sanitizarHTML = require('../../lib/sanitizarHTML');
 
 
 function normalizarIds(valor) {
@@ -44,9 +45,12 @@ module.exports = {
 
 
   actualizarDocumento: (pDocumento, pDatos, pModeloHistorial, tr) =>
-    new Promise((resolve, reject) =>
-    pDocumento.update(pDatos, tr)
-    .then(pDoc => {
+    new Promise((resolve, reject) => {
+      if (pDatos && pDatos.plantilla_valor) {
+        pDatos.plantilla_valor = sanitizarHTML.sanitizarPlantillaValor(pDatos.plantilla_valor);
+      }
+      return pDocumento.update(pDatos, tr)
+      .then(pDoc => {
       const flag=(pDatos.estado == 'DERIVADO' && pDatos.via_actual == pDatos._usuario_modificacion)? false:true;
 
       if(flag ){
@@ -60,8 +64,8 @@ module.exports = {
       }
       else resolve();
     })
-    .catch(pError => reject(pError))
-  ),
+    .catch(pError => reject(pError));
+  }),
 
   /**
    * Función que realiza el cierre de un documento y el flujo.
@@ -568,111 +572,23 @@ module.exports = {
 
       } else return resolve();
       
-      // verificamos que los montos no excedan de las partidas
+      // verificamos que los montos no excedan de las partidas con exactitud al centavo
       function verificarMontosPartidas () {
-        valores['cajachica-0'].rows.forEach( row => {
-          
-          if (!xnumeros_obj[row.partida.numero]) {
-            xnumeros.push(row.partida.numero);
-            xnumeros_obj[row.partida.numero] = { numero:row.partida.numero, monto:toFloat(row.monto) };
-          } else {
-            xnumeros_obj[row.partida.numero].monto += toFloat(row.monto);
-          }
-        });
+        const rows = valores['cajachica-0'].rows || [];
+        const tipoOp = valores['cajachica-0'].tipo;
+        const presupuestoService = require('../../services/presupuestoService');
 
-        pPartida.findAll({
-          attributes: ['id_partida', 'numero', 'monto'],
-          where: {
-            numero: {[Op.in]:xnumeros},
-            tipo: 'INICIAL',
-            gestion: anioActual,
-            estado: 'ACTIVO',
-          },
-          raw: true,
-        })
-        .then( resp => {
-          partidas = resp;
-          return pPartida.findAll({
-            attributes: ['numero', [sequelize.fn('SUM',sequelize.fn('COALESCE', (sequelize.col('monto')), 0)), 'monto']],
-            where: {
-              numero: { [Op.in]:xnumeros },
-              tipo: 'MODIFICADO',
-              gestion: anioActual,
-              estado: 'ACTIVO',
-            },
-            group: 'numero',
-            raw: true,
-          })
-        })
-        .then( resp => {
-          modificados = resp;
-          return pPartida.findAll({
-            attributes: ['numero', [sequelize.fn('SUM',sequelize.fn('COALESCE', (sequelize.col('monto')), 0)), 'monto']],
-            where: {
-              numero: { [Op.in]:xnumeros },
-              tipo: 'COMPROMETIDO',
-              gestion: anioActual,
-              fid_partida: null, //los comprometidos que no fueron paagados
-              estado: 'ACTIVO',
-            },
-            group: 'numero',
-            raw: true,
-          })
-        })
-        .then( resp => {
-          comprometidos = resp;
-          return pPartida.findAll({
-            attributes: ['numero', [sequelize.fn('SUM',sequelize.fn('COALESCE', (sequelize.col('monto')), 0)), 'monto']],
-            where: {
-              numero: { [Op.in]:xnumeros },
-              tipo: 'PAGADO',
-              gestion: anioActual,
-              fid_partida: {[Op.ne]:null},
-              estado: 'ACTIVO',
-            },
-            group: 'numero',
-            raw: true,
-          })
-
-        })
-        .then( resp => {
-          pagados = resp;
-          arrToObj(partidas, partidas_obj, 'numero');
-          arrToObj(pagados, pagados_obj, 'numero');
-          arrToObj(comprometidos, comprometidos_obj, 'numero');
-          arrToObj(modificados, modificados_obj, 'numero');
-          
-          xnumeros.forEach( num => {
-            if(!saldos[num]) saldos[num] = {};
-            saldo = toFloat( getMonto(partidas_obj, num) - getMonto(comprometidos_obj,num) - getMonto(pagados_obj,num) + getMonto(modificados_obj,num) );
-            saldos[num].saldoInicial = saldo;
-            if( valores['cajachica-0'].tipo == 'COMPROMETIDO') {
-              if ((saldo-getMonto(xnumeros_obj,num))<0) {
-                newError(`La partida número ${num} no cuenta con saldo suficiente para el requerimiento.<br>
-                Saldo actual < monto total requerido <br>
-                ${saldo} < ${getMonto(xnumeros_obj,num)}`);
-              }
-              else {
-                saldos[num].saldoFinal = saldo - getMonto(xnumeros_obj, num);
-                saldos[num].montoComprometido = getMonto(xnumeros_obj, num);
-                // saldos[num].montoComprometido = getMonto(xnumeros_obj, num) + getMonto(comprometidos_obj, num);
-              }
-            } else if( valores['cajachica-0'].tipo == 'MODIFICADO') {
-              if (getMonto(xnumeros_obj,num)<0){
-                if ((saldo+getMonto(xnumeros_obj,num))<0) {
-                  newError(`La partida número ${num} no cuenta con saldo suficiente para la modificación.<br>
-                    Saldo actual < monto total a cambiar <br>
-                    ${saldo} < ${getMonto(xnumeros_obj,num)}`);
-                }
-              }
+        presupuestoService.validarDisponibilidad(pPartida, Op, rows, tipoOp, anioActual)
+          .then(resultado => {
+            if (!resultado.valido) {
+              return newError(resultado.error);
             }
+            return resolve(resultado.saldos);
           })
-          resolve(saldos);
-        })
-        .catch( err => {
-          logger.error(err);
-          reject('Ocurrio un error al verificar el presupuesto')
-        })
+          .catch(err => {
+            logger.error('[PRESUPUESTO VALIDACION]', err);
+            reject(err.message || err || 'Ocurrio un error al verificar el presupuesto');
+          });
       }
 
       // verifica que no se inicien dos partidas con el mismo numero para una gestion

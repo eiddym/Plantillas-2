@@ -24,6 +24,7 @@ module.exports = app => {
   const notificar = require('../../lib/notificacion');
   const archivo = require('../../lib/archivos');
   const bl = require('../../bl/plantillasFormly/documentoBL');
+  const sanitizarHTML = require('../../lib/sanitizarHTML');
   const blm = require('../../bl/monitor/monitorBL');
   const sequelize = app.src.db.sequelize;
   const director = app.src.config.config.sistema.director;
@@ -153,6 +154,9 @@ module.exports = app => {
         bl.verificarExternos(req.body)
         .then(pValores => {
           if(pValores) req.body.plantilla_valor=pValores;
+          if (req.body.plantilla_valor) {
+            req.body.plantilla_valor = sanitizarHTML.sanitizarPlantillaValor(req.body.plantilla_valor);
+          }
           let pValObj = {};
           try { pValObj = JSON.parse(req.body.plantilla_valor || '{}'); } catch(e) {}
           if (!pValObj.inputSelect) {
@@ -1320,6 +1324,9 @@ module.exports = app => {
 
         // Si existe la respuesta actualiza plantilla_valor.
         if(pValores) req.body.plantilla_valor=pValores;
+        if (req.body.plantilla_valor) {
+          req.body.plantilla_valor = sanitizarHTML.sanitizarPlantillaValor(req.body.plantilla_valor);
+        }
         return documento.findByPk(req.params.id)
         .then( resp => {
           xdoc = resp;

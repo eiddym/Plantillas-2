@@ -39,6 +39,7 @@
     "ejs": "^3.1.6",
     "express": "^4.13.4",
     "express-fileupload": "^1.1.10",
+    "express-rate-limit": "^8.7.1",
     "file-type": "15.0.1",
     "helmet": "^3.4.0",
     "jsonwebtoken": "^9.0.2",
@@ -60,6 +61,7 @@
     "prompts": "^2.4.2",
     "puppeteer-core": "^13.7.0",
     "qrcode": "^1.5.4",
+    "sanitize-html": "^2.18.1",
     "sequelize": "^6.19.1",
     "sequelize-cli": "^6.4.1",
     "winston": "^2.2.0"

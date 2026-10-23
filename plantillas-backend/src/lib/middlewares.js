@@ -45,6 +45,50 @@ module.exports = app => {
   app.use(helmet({referrerPolicy: { policy: "no-referrer" }}));
   app.use(nocache());
 
+  // Rate Limiting / Throttler institucional para protección DoS y contención de recursos
+  let rateLimit;
+  try {
+    rateLimit = require('express-rate-limit');
+  } catch (e) {
+    rateLimit = null;
+  }
+
+  if (rateLimit) {
+    const generalLimiter = rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 1500,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { tipoMensaje: 'ERROR', mensaje: 'Demasiadas solicitudes desde esta IP, por favor intente más tarde.' }
+    });
+
+    const authLimiter = rateLimit({
+      windowMs: 1 * 60 * 1000,
+      max: 30,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { tipoMensaje: 'ERROR', mensaje: 'Demasiados intentos de acceso. Por favor espere un momento antes de reintentar.' }
+    });
+
+    const pdfLimiter = rateLimit({
+      windowMs: 1 * 60 * 1000,
+      max: 45,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { tipoMensaje: 'ERROR', mensaje: 'Límite de generación de documentos alcanzado. Por favor espere un momento.' }
+    });
+
+    app.use('/api/', generalLimiter);
+    app.use('/api/v1/auth', authLimiter);
+    app.use('/api/v1/seguridad/login', authLimiter);
+    app.use('/api/v1/plantillasFormly/documento', (req, res, next) => {
+      if (req.path.includes('/pdf') || req.path.includes('/imprimir') || req.path.includes('/html')) {
+        return pdfLimiter(req, res, next);
+      }
+      next();
+    });
+  }
+
   app.use(bodyParser.json({limit:'100mb'}));
 
   // Para poder subir archivos.

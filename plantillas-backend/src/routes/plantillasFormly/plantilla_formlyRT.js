@@ -207,7 +207,7 @@ app.post('/api/v1/plantillasFormly/generarDocumento', (req, res) => {
 
 app.post('/api/v1/plantillasFormly/plantilla_formly/verificar', (req,res) => {
   const datos = req.body;
-  const respuesta = { valido: false};
+  const respuesta = { valido: false, hash: null };
   return plantilla_formly.findAll({
     attributes: ['id_plantilla_formly', 'nombre', 'abreviacion', 'plantilla', 'estado'],
     where: {
@@ -219,6 +219,7 @@ app.post('/api/v1/plantillasFormly/plantilla_formly/verificar', (req,res) => {
   })
   .then(plantillas => {
     respuesta.valido = bl.validarPlantilla(plantillas, datos.plantilla);
+    respuesta.hash = bl.generarHashPlantilla(datos.plantilla);
   })
   .then(() => {
     res.status(200).send(util.formatearMensaje('EXITO', "Validación exitosa.", respuesta));
