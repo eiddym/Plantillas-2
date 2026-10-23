@@ -128,12 +128,16 @@ module.exports = {
 
       if(pResultado != null){
         if(pResultado.estado=='NUEVO' || pResultado.estado=='RECHAZADO'){
-          return module.exports.actualizarDocumento(pResultado,
-          {
-            estado:'ELIMINADO',
-            _usuario_modificacion: pIdUsuario,
-            documento_padre: -pResultado.documento_padre,
-          }, pModeloHistorial)
+          if (!pResultado.nombre || pResultado.nombre.indexOf('/') === -1) {
+            return module.exports.actualizarDocumento(pResultado,
+            {
+              estado:'ELIMINADO',
+              _usuario_modificacion: pIdUsuario,
+              documento_padre: -pResultado.documento_padre,
+            }, pModeloHistorial);
+          } else {
+            throw new Error('No se puede eliminar un documento con CITE oficial asignado.');
+          }
         }
         else throw new Error("La modificacion no esta disponible en este momento.");
       }
