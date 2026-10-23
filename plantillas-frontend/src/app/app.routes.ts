@@ -41,6 +41,11 @@ export const routes: Routes = [
         pathMatch: 'full'
       },
       {
+        path: 'inicio',
+        redirectTo: 'dashboard',
+        pathMatch: 'full'
+      },
+      {
         path: 'dashboard',
         loadComponent: () =>
           import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent)
@@ -67,6 +72,11 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'plantilla/:id',
+        redirectTo: 'plantillas/:id/editar',
+        pathMatch: 'full'
+      },
+      {
         path: 'documentos',
         loadComponent: () =>
           import('./features/documentos/documentos-list.component').then(
@@ -79,6 +89,11 @@ export const routes: Routes = [
           import('./features/documentos/document-workbench.component').then(
             (m) => m.DocumentWorkbenchComponent
           )
+      },
+      {
+        path: 'documento/:id',
+        redirectTo: 'documentos/:id',
+        pathMatch: 'full'
       },
       {
         path: 'aprobacion',
@@ -100,6 +115,16 @@ export const routes: Routes = [
           import('./features/documentos/documentos-list.component').then(
             (m) => m.DocumentosListComponent
           )
+      },
+      {
+        path: 'progreso',
+        redirectTo: 'en_curso',
+        pathMatch: 'full'
+      },
+      {
+        path: 'vista_pdf',
+        redirectTo: 'documentos',
+        pathMatch: 'full'
       },
       {
         path: 'aprobar_documento',
