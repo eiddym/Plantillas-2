@@ -1,5 +1,7 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const loteBL = require('../../bl/plantillasFormly/loteBL');
 
 module.exports = app => {
@@ -27,31 +29,31 @@ module.exports = app => {
       return 'PJ';
     }
     if (lower.includes('reglamento interno') && lower.includes('personal')) {
-      return 'rip';
+      return 'RIP';
     }
     if (lower.includes('reglamento interno') && lower.includes('trabajo')) {
-      return 'rit';
+      return 'RIT';
     }
     if (lower.includes('estatuto')) {
-      return 'eo';
+      return 'EO';
     }
     if (lower.includes('codigo de etica') || lower.includes('código de ética')) {
-      return 'ce';
+      return 'CE';
     }
     if (lower.includes('manual') && (lower.includes('funciones') || lower.includes('organizacion') || lower.includes('organización'))) {
-      return 'mof';
+      return 'MOF';
     }
     if (lower.includes('plan operativo')) {
-      return 'poa';
+      return 'POA';
     }
     if (lower.includes('plan estrategico') || lower.includes('plan estratégico')) {
-      return 'pei';
+      return 'PEI';
     }
     if (lower.includes('resolucion de directorio') || lower.includes('resolución de directorio')) {
-      return 'rd';
+      return 'RD';
     }
     if (lower.includes('convenio')) {
-      return 'ci';
+      return 'CI';
     }
 
     const stopwords = new Set([
@@ -63,9 +65,9 @@ module.exports = app => {
       .filter(p => p.length > 0 && !stopwords.has(p.toLowerCase()));
 
     if (palabras.length === 0) return 'DOC';
-    if (palabras.length === 1) return palabras[0].substring(0, 3).toLowerCase();
+    if (palabras.length === 1) return palabras[0].substring(0, 3).toUpperCase();
 
-    return palabras.map(p => p[0].toLowerCase()).join('');
+    return palabras.map(p => p[0].toUpperCase()).join('');
   }
 
   /**
@@ -301,9 +303,9 @@ module.exports = app => {
   app.get('/api/v1/archivo/institucional/proximo-cite', async (req, res) => {
     try {
       const nombreDoc = req.query.nombre || '';
-      let sigla = (req.query.sigla || '').trim();
+      let sigla = (req.query.sigla || '').trim().toUpperCase();
       const anio = String(req.query.anio || new Date().getFullYear());
-      const entidad = 'marabunta';
+      const entidad = 'MARABUNTA';
 
       if (!sigla && nombreDoc) {
         sigla = derivarSigla(nombreDoc);
@@ -336,7 +338,7 @@ module.exports = app => {
    * POST /api/v1/archivo/institucional/cargar
    * Solo ADMIN o MAE carga directamente un documento institucional.
    * Genera de forma inteligente y automática el CITE oficial con correlativo y año.
-   * Ej: marabunta/rip/1/2026, marabunta/PJ/1/2026
+   * Ej: MARABUNTA/RIP/1/2026, MARABUNTA/PJ/1/2026
    */
   app.post('/api/v1/archivo/institucional/cargar', async (req, res) => {
     try {
@@ -346,11 +348,13 @@ module.exports = app => {
         categoria,
         nombre_archivo,
         url_archivo,
-        observacion
+        observacion,
+        archivo_base64,
+        archivo_adjunto
       } = req.body;
-      let sigla = (req.body.sigla || '').trim();
+      let sigla = (req.body.sigla || '').trim().toUpperCase();
       const anio = String(req.body.anio || new Date().getFullYear());
-      const entidad = 'marabunta';
+      const entidad = 'MARABUNTA';
       const auditUser = req.body.audit_usuario || {};
 
       const tituloDoc = nombre_documento || req.body.referencia;
@@ -388,15 +392,34 @@ module.exports = app => {
         });
       }
 
-      // Si el usuario especificó un CITE custom lo respetamos, sino usamos el oficial generado
-      const citeFinal = req.body.cite ? req.body.cite.trim() : `${abreviacionCite}/${numeroCorrelativo}/${anio}`;
+      // Si el usuario especificó un CITE custom lo respetamos en mayúsculas, sino usamos el oficial generado
+      const citeFinal = req.body.cite ? req.body.cite.trim().toUpperCase() : `${abreviacionCite}/${numeroCorrelativo}/${anio}`;
       const referenciaFinal = descDoc ? `${tituloDoc} - ${descDoc}` : tituloDoc;
+
+      // Guardar archivo PDF físico en disco si se envió base64
+      let rutaArchivoFisico = url_archivo || `/public/documentos/${citeFinal.replace(/\//g, '_')}.pdf`;
+      const archivoData = archivo_base64 || archivo_adjunto;
+      if (archivoData && typeof archivoData === 'string' && archivoData.includes('base64,')) {
+        try {
+          const base64Content = archivoData.split('base64,')[1];
+          const buffer = Buffer.from(base64Content, 'base64');
+          const dirDocs = path.resolve('./public/documentos');
+          if (!fs.existsSync(dirDocs)) {
+            fs.mkdirSync(dirDocs, { recursive: true });
+          }
+          const filePath = path.join(dirDocs, `${citeFinal.replace(/\//g, '_')}.pdf`);
+          fs.writeFileSync(filePath, buffer);
+          rutaArchivoFisico = `/public/documentos/${citeFinal.replace(/\//g, '_')}.pdf`;
+        } catch (e) {
+          console.error('[ARCHIVO INSTITUCIONAL] Error al guardar PDF en disco:', e);
+        }
+      }
 
       const versiones = [
         {
           version: 1,
           nombre_archivo: nombre_archivo || `${sigla}_v1.pdf`,
-          ruta: url_archivo || `/public/documentos/${citeFinal.replace(/\//g, '_')}.pdf`,
+          ruta: rutaArchivoFisico,
           fecha: new Date(),
           usuario: auditUser.nombres ? `${auditUser.nombres} ${auditUser.apellidos || ''}`.trim() : 'Administrador',
           observacion: observacion || `Carga inicial de ${tituloDoc} en custodia institucional (v1)`
@@ -408,7 +431,8 @@ module.exports = app => {
         referencia: referenciaFinal,
         nombre_plantilla: tituloDoc,
         abreviacion: sigla,
-        categoria_institucional: categoria || 'Documento Institucional',
+        categoria_institucional: categoria || 'DOCUMENTO INSTITUCIONAL',
+        archivo_adjunto: archivoData || null,
         plantilla: JSON.stringify({ tipo: 'institucional', nombre_documento: tituloDoc, sigla, descripcion: descDoc }),
         plantilla_valor: JSON.stringify({
           cite: citeFinal,

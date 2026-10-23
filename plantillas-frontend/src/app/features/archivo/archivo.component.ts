@@ -53,6 +53,8 @@ export interface DocumentoArchivo {
     };
   };
   plantilla_valor?: string;
+  archivo_adjunto?: string;
+  archivo_base64?: string;
 }
 
 export interface UnidadArchivo {
@@ -167,7 +169,23 @@ export interface UnidadArchivo {
                 </div>
               </div>
               <div class="visor-iframe-wrapper">
-                <iframe [src]="urlPdfSegura()" class="pdf-local-iframe" title="Visor Documental Embebido"></iframe>
+                @if (cargandoVisor()) {
+                  <div class="visor-loading-state">
+                    <mat-spinner diameter="40"></mat-spinner>
+                    <p>Cargando visualización del documento...</p>
+                  </div>
+                } @else if (errorVisor()) {
+                  <div class="visor-error-state">
+                    <mat-icon>error_outline</mat-icon>
+                    <p>{{ errorVisor() }}</p>
+                    <button mat-stroked-button color="primary" (click)="reintentarCargaVisor()">
+                      <mat-icon>refresh</mat-icon>
+                      <span>Reintentar</span>
+                    </button>
+                  </div>
+                } @else if (urlPdfSegura()) {
+                  <iframe [src]="urlPdfSegura()" class="pdf-local-iframe" title="Visor Documental Embebido"></iframe>
+                }
               </div>
             } @else {
               <div class="visor-empty-state">
@@ -540,12 +558,6 @@ export interface UnidadArchivo {
               <h2>Archivo Institucional Oficial</h2>
               <p>Documentos de alcance corporativo promovidos por Jefaturas/MAE o cargados por Administración.</p>
             </div>
-            @if (esAdminOMae()) {
-              <button mat-flat-button class="btn-upload-inst" (click)="abrirModalCarga()">
-                <mat-icon>cloud_upload</mat-icon>
-                <span>Cargar Documento Oficial</span>
-              </button>
-            }
           </div>
 
           <div class="content-card">
@@ -677,18 +689,6 @@ export interface UnidadArchivo {
             </div>
 
             <form [formGroup]="cargaForm" (ngSubmit)="guardarDocumentoInstitucional()" class="modal-form">
-              <!-- Sugerencias Rápidas de Documentos Habituales -->
-              <div class="sugerencias-bar col-span-full">
-                <span class="sug-label">Tipos Frecuentes:</span>
-                <div class="sug-chips">
-                  @for (s of sugerenciasInstitucionales; track s.sigla) {
-                    <button type="button" class="sug-chip" (click)="seleccionarSugerencia(s)">
-                      {{ s.nombre }} ({{ s.sigla }})
-                    </button>
-                  }
-                </div>
-              </div>
-
               <!-- Nombre del Documento -->
               <mat-form-field appearance="outline" class="col-span-full">
                 <mat-label>Nombre del Documento Institucional</mat-label>
@@ -699,7 +699,7 @@ export interface UnidadArchivo {
               <!-- Sigla y Año -->
               <mat-form-field appearance="outline">
                 <mat-label>Sigla / Código (editable)</mat-label>
-                <input matInput formControlName="sigla" (input)="onSiglaChange()" placeholder="Ej. rip, PJ, eo" required>
+                <input matInput formControlName="sigla" (input)="onSiglaChange()" placeholder="Ej. RIP, PJ, EO" style="text-transform: uppercase;" required>
                 <mat-icon matPrefix>tag</mat-icon>
                 <mat-hint>Calculada automáticamente por el sistema</mat-hint>
               </mat-form-field>
@@ -717,25 +717,10 @@ export interface UnidadArchivo {
                 </div>
                 <div class="cite-preview-info">
                   <span class="preview-title">CITE OFICIAL GENERADO PARA REFERENCIARSE:</span>
-                  <strong class="preview-cite-code">{{ citeCalculadoPreview() }}</strong>
+                  <strong class="preview-cite-code">{{ citeCalculadoPreview().toUpperCase() }}</strong>
                   <span class="preview-sub">Asignado de forma correlativa para este documento en {{ cargaForm.get('anio')?.value }}. Quedará referenciable en todo el sistema.</span>
                 </div>
               </div>
-
-              <!-- Categoría Institucional -->
-              <mat-form-field appearance="outline" class="col-span-full">
-                <mat-label>Categoría Institucional</mat-label>
-                <mat-select formControlName="categoria">
-                  <mat-option value="Reglamento Interno">Reglamento Interno / Normativa Laboral</mat-option>
-                  <mat-option value="Personería Jurídica / Legal">Personería Jurídica / Reconocimiento Legal</mat-option>
-                  <mat-option value="Estatuto Orgánico">Estatuto Orgánico Institucional</mat-option>
-                  <mat-option value="Resolución de Directorio">Resolución de Directorio / Asamblea</mat-option>
-                  <mat-option value="Convenio Interinstitucional">Convenio Interinstitucional</mat-option>
-                  <mat-option value="Manual de Funciones">Manual de Organización y Funciones</mat-option>
-                  <mat-option value="Normativa y Ética">Código de Ética y Conducta</mat-option>
-                  <mat-option value="Planes y Programas">Plan Operativo Anual (POA) / PEI</mat-option>
-                </mat-select>
-              </mat-form-field>
 
               <!-- Descripción del Documento (Obligatoria) -->
               <mat-form-field appearance="outline" class="col-span-full">
@@ -1799,6 +1784,23 @@ export interface UnidadArchivo {
       display: block;
     }
 
+    .visor-loading-state, .visor-error-state {
+      height: 100%;
+      min-height: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 30px;
+      gap: 16px;
+      background: #1e293b;
+      color: #cbd5e1;
+      p { margin: 0; font-size: 13.5px; max-width: 300px; }
+      mat-icon { font-size: 40px; width: 40px; height: 40px; color: #f87171; }
+      button { border-color: rgba(255, 255, 255, 0.2); color: #38bdf8; }
+    }
+
     .visor-empty-state {
       height: 100%;
       padding: 40px 24px;
@@ -1892,6 +1894,10 @@ export class ArchivoComponent implements OnInit {
   // Visor Local Embebido (Split Screen)
   readonly docSeleccionado = signal<DocumentoArchivo | null>(null);
   readonly urlPdfSegura = signal<SafeResourceUrl | null>(null);
+  readonly cargandoVisor = signal<boolean>(false);
+  readonly errorVisor = signal<string | null>(null);
+  private currentObjectUrl: string | null = null;
+  archivoPdfBase64: string | null = null;
 
   readonly nivelActivo = signal<'general' | 'unidad' | 'institucional'>('general');
   readonly cargando = signal<boolean>(false);
@@ -1920,23 +1926,16 @@ export class ArchivoComponent implements OnInit {
 
   readonly cargaForm = new FormGroup({
     nombre_documento: new FormControl('', [Validators.required]),
-    sigla: new FormControl('rip', [Validators.required]),
+    sigla: new FormControl('', [Validators.required]),
     anio: new FormControl(new Date().getFullYear(), [Validators.required]),
-    categoria: new FormControl('Reglamento Interno', [Validators.required]),
+    categoria: new FormControl('Documento Institucional'),
     descripcion: new FormControl('', [Validators.required]),
     observacion: new FormControl('')
   });
 
-  readonly citeCalculadoPreview = signal<string>('marabunta/rip/1/2026');
+  readonly citeCalculadoPreview = signal<string>('MARABUNTA/DOC/1/2026');
 
-  readonly sugerenciasInstitucionales = [
-    { nombre: 'Reglamento Interno de Personal', sigla: 'rip', cat: 'Reglamento Interno', desc: 'Normativa interna de derechos, deberes y régimen laboral de la cooperativa.' },
-    { nombre: 'Personalidad Jurídica', sigla: 'PJ', cat: 'Personería Jurídica / Legal', desc: 'Resolución Suprema y reconocimiento de Personalidad Jurídica de la Cooperativa.' },
-    { nombre: 'Estatuto Orgánico', sigla: 'eo', cat: 'Estatuto Orgánico', desc: 'Estatuto orgánico constitutivo aprobado en asamblea general extraordinaria.' },
-    { nombre: 'Manual de Organización y Funciones', sigla: 'mof', cat: 'Manual de Funciones', desc: 'Manual de organización institucional y descripción de funciones por puesto.' },
-    { nombre: 'Código de Ética y Conducta', sigla: 'ce', cat: 'Normativa y Ética', desc: 'Código de ética, valores corporativos y régimen de transparencia.' },
-    { nombre: 'Convenio Interinstitucional', sigla: 'ci', cat: 'Convenio Interinstitucional', desc: 'Convenio marco de cooperación interinstitucional.' }
-  ];
+  readonly sugerenciasInstitucionales: any[] = [];
 
   readonly versionForm = new FormGroup({
     observacion: new FormControl('', [Validators.required])
@@ -2122,15 +2121,15 @@ export class ArchivoComponent implements OnInit {
     const clean = nombre.trim();
     const lower = clean.toLowerCase();
     if (lower.includes('personalidad jur') || lower.includes('personeria jur') || lower.includes('personería jur')) return 'PJ';
-    if (lower.includes('reglamento interno') && lower.includes('personal')) return 'rip';
-    if (lower.includes('reglamento interno') && lower.includes('trabajo')) return 'rit';
-    if (lower.includes('estatuto')) return 'eo';
-    if (lower.includes('codigo de etica') || lower.includes('código de ética')) return 'ce';
-    if (lower.includes('manual') && (lower.includes('funciones') || lower.includes('organizacion') || lower.includes('organización'))) return 'mof';
-    if (lower.includes('plan operativo')) return 'poa';
-    if (lower.includes('plan estrategico') || lower.includes('plan estratégico')) return 'pei';
-    if (lower.includes('resolucion de directorio') || lower.includes('resolución de directorio')) return 'rd';
-    if (lower.includes('convenio')) return 'ci';
+    if (lower.includes('reglamento interno') && lower.includes('personal')) return 'RIP';
+    if (lower.includes('reglamento interno') && lower.includes('trabajo')) return 'RIT';
+    if (lower.includes('estatuto')) return 'EO';
+    if (lower.includes('codigo de etica') || lower.includes('código de ética')) return 'CE';
+    if (lower.includes('manual') && (lower.includes('funciones') || lower.includes('organizacion') || lower.includes('organización'))) return 'MOF';
+    if (lower.includes('plan operativo')) return 'POA';
+    if (lower.includes('plan estrategico') || lower.includes('plan estratégico')) return 'PEI';
+    if (lower.includes('resolucion de directorio') || lower.includes('resolución de directorio')) return 'RD';
+    if (lower.includes('convenio')) return 'CI';
 
     const stopwords = new Set(['de', 'del', 'la', 'el', 'los', 'las', 'en', 'y', 'para', 'a', 'con', 'por', 'sobre', 'al', 'o', 'e', 'un', 'una']);
     const palabras = clean
@@ -2138,8 +2137,8 @@ export class ArchivoComponent implements OnInit {
       .split(/\s+/)
       .filter(p => p.length > 0 && !stopwords.has(p.toLowerCase()));
     if (palabras.length === 0) return 'DOC';
-    if (palabras.length === 1) return palabras[0].substring(0, 3).toLowerCase();
-    return palabras.map(p => p[0].toLowerCase()).join('');
+    if (palabras.length === 1) return palabras[0].substring(0, 3).toUpperCase();
+    return palabras.map(p => p[0].toUpperCase()).join('');
   }
 
   onNombreDocumentoChange(): void {
@@ -2150,6 +2149,11 @@ export class ArchivoComponent implements OnInit {
   }
 
   onSiglaChange(): void {
+    const raw = this.cargaForm.get('sigla')?.value || '';
+    const sigUpper = raw.toUpperCase();
+    if (raw !== sigUpper) {
+      this.cargaForm.get('sigla')?.setValue(sigUpper, { emitEvent: false });
+    }
     this.actualizarProximoCite();
   }
 
@@ -2159,20 +2163,20 @@ export class ArchivoComponent implements OnInit {
 
   actualizarProximoCite(): void {
     const nom = this.cargaForm.get('nombre_documento')?.value || '';
-    const sig = this.cargaForm.get('sigla')?.value || this.derivarSiglaFront(nom);
+    const sig = (this.cargaForm.get('sigla')?.value || this.derivarSiglaFront(nom) || 'DOC').toUpperCase();
     const anio = this.cargaForm.get('anio')?.value || new Date().getFullYear();
 
     this.http.get<any>(`/api/v1/archivo/institucional/proximo-cite?nombre=${encodeURIComponent(nom)}&sigla=${encodeURIComponent(sig)}&anio=${anio}`)
       .subscribe({
         next: (res) => {
           if (res.tipoMensaje === 'EXITO' && res.datos?.cite) {
-            this.citeCalculadoPreview.set(res.datos.cite);
+            this.citeCalculadoPreview.set(res.datos.cite.toUpperCase());
           } else {
-            this.citeCalculadoPreview.set(`marabunta/${sig}/1/${anio}`);
+            this.citeCalculadoPreview.set(`MARABUNTA/${sig}/1/${anio}`);
           }
         },
         error: () => {
-          this.citeCalculadoPreview.set(`marabunta/${sig}/1/${anio}`);
+          this.citeCalculadoPreview.set(`MARABUNTA/${sig}/1/${anio}`);
         }
       });
   }
@@ -2211,14 +2215,15 @@ export class ArchivoComponent implements OnInit {
 
   abrirModalCarga(): void {
     this.cargaForm.reset({
-      nombre_documento: 'Reglamento Interno de Personal',
-      sigla: 'rip',
+      nombre_documento: '',
+      sigla: '',
       anio: new Date().getFullYear(),
-      categoria: 'Reglamento Interno',
-      descripcion: 'Normativa interna de derechos, deberes y régimen laboral de la cooperativa.',
+      categoria: 'Documento Institucional',
+      descripcion: '',
       observacion: ''
     });
     this.nombreArchivoCarga.set(null);
+    this.archivoPdfBase64 = null;
     this.actualizarProximoCite();
     this.mostrarModalCarga.set(true);
   }
@@ -2231,6 +2236,11 @@ export class ArchivoComponent implements OnInit {
     const f = e.target.files?.[0];
     if (f) {
       this.nombreArchivoCarga.set(f.name);
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.archivoPdfBase64 = reader.result as string;
+      };
+      reader.readAsDataURL(f);
     }
   }
 
@@ -2240,22 +2250,25 @@ export class ArchivoComponent implements OnInit {
     this.guardando.set(true);
     const v = this.cargaForm.value;
     const user = this.authService.currentUser() as any;
+    const siglaUpper = (v.sigla || 'DOC').toUpperCase();
 
     this.http.post<any>('/api/v1/archivo/institucional/cargar', {
       nombre_documento: v.nombre_documento,
-      sigla: v.sigla,
+      sigla: siglaUpper,
       anio: v.anio,
-      categoria: v.categoria,
+      categoria: v.categoria || 'Documento Institucional',
       descripcion: v.descripcion,
       observacion: v.observacion,
-      nombre_archivo: this.nombreArchivoCarga() || `${v.sigla}_v1.pdf`,
-      url_archivo: `/public/documentos/${this.citeCalculadoPreview().replace(/\//g, '_')}.pdf`,
+      nombre_archivo: this.nombreArchivoCarga() || `${siglaUpper}_v1.pdf`,
+      archivo_base64: this.archivoPdfBase64,
+      archivo_adjunto: this.archivoPdfBase64,
+      url_archivo: `/public/documentos/${this.citeCalculadoPreview().toUpperCase().replace(/\//g, '_')}.pdf`,
       audit_usuario: user
     }).subscribe({
       next: (res) => {
         this.guardando.set(false);
         this.cerrarModalCarga();
-        const citeAsignado = res.datos?.nombre || this.citeCalculadoPreview();
+        const citeAsignado = (res.datos?.nombre || this.citeCalculadoPreview()).toUpperCase();
         this.snackBar.open(`¡Documento Institucional registrado con CITE: ${citeAsignado}!`, 'Aceptar', { duration: 5000 });
         this.cargarArchivoInstitucional();
       },
@@ -2331,28 +2344,110 @@ export class ArchivoComponent implements OnInit {
   seleccionarDocumento(doc: DocumentoArchivo): void {
     if (!doc || !doc.id_documento) return;
     this.docSeleccionado.set(doc);
-    const rawUrl = `/api/v1/documento/${doc.id_documento}/pdf#toolbar=1&navpanes=0`;
-    this.urlPdfSegura.set(this.sanitizer.bypassSecurityTrustResourceUrl(rawUrl));
+    this.cargandoVisor.set(true);
+    this.errorVisor.set(null);
+    this.urlPdfSegura.set(null);
+
+    if (this.currentObjectUrl) {
+      URL.revokeObjectURL(this.currentObjectUrl);
+      this.currentObjectUrl = null;
+    }
+
+    // 1. Si el documento ya cuenta con archivo adjunto en formato base64
+    if (doc.archivo_adjunto && typeof doc.archivo_adjunto === 'string' && doc.archivo_adjunto.startsWith('data:application/pdf')) {
+      try {
+        const base64Part = doc.archivo_adjunto.split('base64,')[1];
+        if (base64Part) {
+          const byteCharacters = atob(base64Part);
+          const byteNumbers = new Uint8Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const blob = new Blob([byteNumbers], { type: 'application/pdf' });
+          this.currentObjectUrl = URL.createObjectURL(blob);
+          this.urlPdfSegura.set(this.sanitizer.bypassSecurityTrustResourceUrl(`${this.currentObjectUrl}#toolbar=1&navpanes=0`));
+          this.cargandoVisor.set(false);
+          return;
+        }
+      } catch (err) {
+        console.warn('Error decodificando archivo_adjunto local, solicitando al servidor:', err);
+      }
+    }
+
+    // 2. Solicitar el PDF al backend mediante blob para evitar pantallas negras de iframe
+    this.http.get(`/api/v1/documento/${doc.id_documento}/pdf`, { responseType: 'blob' }).subscribe({
+      next: (blob) => {
+        if (blob.type === 'application/json' || blob.size < 100) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              const errJson = JSON.parse(reader.result as string);
+              this.errorVisor.set(errJson.mensaje || errJson.message || 'El documento no tiene un archivo PDF disponible.');
+            } catch {
+              this.errorVisor.set('El documento no tiene un archivo PDF disponible.');
+            }
+            this.cargandoVisor.set(false);
+          };
+          reader.readAsText(blob);
+          return;
+        }
+
+        this.currentObjectUrl = URL.createObjectURL(blob);
+        this.urlPdfSegura.set(this.sanitizer.bypassSecurityTrustResourceUrl(`${this.currentObjectUrl}#toolbar=1&navpanes=0`));
+        this.cargandoVisor.set(false);
+      },
+      error: () => {
+        this.cargandoVisor.set(false);
+        this.errorVisor.set('No se pudo cargar la vista previa del documento. Intente nuevamente.');
+      }
+    });
+  }
+
+  reintentarCargaVisor(): void {
+    const doc = this.docSeleccionado();
+    if (doc) {
+      this.seleccionarDocumento(doc);
+    }
   }
 
   cerrarVisor(): void {
+    if (this.currentObjectUrl) {
+      URL.revokeObjectURL(this.currentObjectUrl);
+      this.currentObjectUrl = null;
+    }
     this.docSeleccionado.set(null);
     this.urlPdfSegura.set(null);
+    this.cargandoVisor.set(false);
+    this.errorVisor.set(null);
   }
 
   descargarPdf(doc: any): void {
     if (!doc || !doc.id_documento) return;
-    // En lugar de salir a otra pestaña con pantalla negra, se previsualiza localmente en el visor embebido
     this.seleccionarDocumento(doc);
   }
 
   descargarArchivoFisico(doc: any): void {
     if (!doc || !doc.id_documento) return;
-    const a = document.createElement('a');
-    a.href = `/api/v1/documento/${doc.id_documento}/pdf`;
-    a.download = `${doc.nombre || 'documento'}.pdf`;
-    a.target = '_blank';
-    a.click();
+    if (this.currentObjectUrl) {
+      const a = document.createElement('a');
+      a.href = this.currentObjectUrl;
+      a.download = `${doc.nombre || 'documento'}.pdf`;
+      a.click();
+      return;
+    }
+    this.http.get(`/api/v1/documento/${doc.id_documento}/pdf`, { responseType: 'blob' }).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${doc.nombre || 'documento'}.pdf`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      },
+      error: () => {
+        this.snackBar.open('Error al descargar archivo PDF', 'Cerrar', { duration: 3000 });
+      }
+    });
   }
 
   obtenerReferencia(d: any): string {

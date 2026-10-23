@@ -595,6 +595,160 @@ module.exports = app => {
   app.get('/api/v1/plantillasFormly/documentoPDF/:cite(*)', procesarDocumentoPDF);
   app.get('/public/documentos/:cite(*)', procesarDocumentoPDF);
 
+  const servirDocumentoPDFPorId = async (req, res) => {
+    try {
+      const idOrCite = req.params.id;
+      let doc = null;
+      if (!isNaN(idOrCite)) {
+        doc = await modelos.documento.findByPk(Number(idOrCite));
+      }
+      if (!doc) {
+        doc = await modelos.documento.findOne({ where: { nombre: idOrCite } });
+      }
+      if (!doc) {
+        return res.status(404).send(util.formatearMensaje("ERROR", "Documento no encontrado."));
+      }
+
+      // 1. Si tiene archivo_adjunto con base64 Data URL, enviarlo directamente
+      if (doc.archivo_adjunto && typeof doc.archivo_adjunto === 'string' && doc.archivo_adjunto.startsWith('data:application/pdf')) {
+        const base64Data = doc.archivo_adjunto.split('base64,')[1];
+        if (base64Data) {
+          const buffer = Buffer.from(base64Data, 'base64');
+          res.set('Content-Type', 'application/pdf');
+          res.set('Content-Disposition', `inline; filename="${util.formatoNombreDoc(doc.nombre)}.pdf"`);
+          return res.send(buffer);
+        }
+      }
+
+      // 2. Si tiene versiones o archivo físico en disco
+      let candidatePaths = [];
+      if (doc.versiones && Array.isArray(doc.versiones)) {
+        for (const v of doc.versiones) {
+          if (v.ruta) candidatePaths.push(v.ruta, `.${v.ruta}`);
+        }
+      }
+      if (doc.archivo_adjunto && !doc.archivo_adjunto.startsWith('data:')) {
+        candidatePaths.push(doc.archivo_adjunto, `.${doc.archivo_adjunto}`);
+      }
+      const formattedName = `${util.formatoNombreDoc(doc.nombre)}.pdf`;
+      candidatePaths.push(
+        `${dirDocumento}${formattedName}`,
+        `./public/documentos/${formattedName}`,
+        `./public/documentos/${doc.nombre.replace(/\//g, '_')}.pdf`
+      );
+
+      for (const p of candidatePaths) {
+        if (p && fs.existsSync(p)) {
+          res.set('Content-Type', 'application/pdf');
+          res.set('Content-Disposition', `inline; filename="${formattedName}"`);
+          return res.sendFile(path.resolve(p));
+        }
+      }
+
+      // 3. Si es un documento institucional o MARABUNTA/... sin archivo físico adjunto previo, generar la ficha/custodia oficial en PDF
+      if (doc.es_institucional || (doc.nombre && doc.nombre.startsWith('MARABUNTA/'))) {
+        let meta = {};
+        try {
+          if (doc.plantilla_valor) {
+            meta = typeof doc.plantilla_valor === 'string' ? JSON.parse(doc.plantilla_valor) : doc.plantilla_valor;
+          }
+        } catch (e) {}
+
+        const tituloDoc = meta.nombre_documento || doc.nombre_plantilla || 'Documento Oficial Institucional';
+        const descDoc = meta.descripcion || doc.referencia || 'Documento bajo custodia del Archivo Central Institucional.';
+        const obsDoc = meta.observacion || 'Documento verificado y custodiado por Administración y MAE.';
+        const fechaReg = doc._fecha_creacion ? new Date(doc._fecha_creacion).toLocaleDateString('es-BO', { year: 'numeric', month: 'long', day: '2-digit' }) : '2026';
+
+        const htmlInstitucional = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <style>
+              body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 40px; color: #1e293b; background: #fff; }
+              .header { text-align: center; border-bottom: 3px double #0f172a; padding-bottom: 20px; margin-bottom: 30px; }
+              .entidad { font-size: 14pt; font-weight: 800; letter-spacing: 1.5px; color: #0f172a; margin-bottom: 4px; text-transform: uppercase; }
+              .fondo { font-size: 10pt; font-weight: 600; color: #64748b; letter-spacing: 1px; text-transform: uppercase; }
+              .badge-cite { margin: 25px auto; padding: 12px 24px; background: #f8fafc; border: 2px solid #0f172a; border-radius: 6px; display: inline-block; }
+              .cite-title { font-size: 9pt; font-weight: 700; color: #475569; letter-spacing: 1px; }
+              .cite-code { font-size: 16pt; font-weight: 900; color: #0284c7; letter-spacing: 1.5px; display: block; margin-top: 4px; }
+              .info-box { background: #f1f5f9; border-left: 4px solid #0284c7; padding: 20px; border-radius: 4px; margin: 25px 0; }
+              .info-row { margin-bottom: 12px; }
+              .info-row:last-child { margin-bottom: 0; }
+              .info-lbl { font-size: 9pt; font-weight: 700; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 2px; }
+              .info-val { font-size: 12pt; font-weight: 600; color: #0f172a; }
+              .desc-val { font-size: 11pt; font-weight: 400; color: #334155; line-height: 1.6; }
+              .footer-box { margin-top: 60px; border-top: 1px dashed #cbd5e1; padding-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+              .sello { border: 2px solid #0284c7; color: #0284c7; padding: 10px 18px; border-radius: 4px; font-weight: 800; font-size: 9pt; text-align: center; text-transform: uppercase; letter-spacing: 1px; display: inline-block; }
+              .legal { font-size: 8.5pt; color: #94a3b8; text-align: right; max-width: 320px; line-height: 1.4; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div class="entidad">COOPERATIVA MINERA MARABUNTA R.L.</div>
+              <div class="fondo">FONDO DOCUMENTAL & ARCHIVO INSTITUCIONAL</div>
+            </div>
+            <div style="text-align: center;">
+              <div class="badge-cite">
+                <span class="cite-title">CITE OFICIAL DE CUSTODIA</span>
+                <span class="cite-code">${doc.nombre}</span>
+              </div>
+            </div>
+            <div class="info-box">
+              <div class="info-row">
+                <span class="info-lbl">Denominación del Documento Institucional:</span>
+                <span class="info-val">${tituloDoc}</span>
+              </div>
+              <div class="info-row" style="margin-top: 16px;">
+                <span class="info-lbl">Objeto / Descripción Oficial:</span>
+                <p class="desc-val">${descDoc}</p>
+              </div>
+              ${obsDoc ? `
+              <div class="info-row" style="margin-top: 16px;">
+                <span class="info-lbl">Observación / Registro de Digitalización:</span>
+                <p class="desc-val">${obsDoc}</p>
+              </div>` : ''}
+              <div class="info-row" style="margin-top: 16px;">
+                <span class="info-lbl">Fecha de Registro y Custodia:</span>
+                <span class="info-val">${fechaReg}</span>
+              </div>
+            </div>
+            <div class="footer-box">
+              <div class="sello">
+                CUSTODIA INSTITUCIONAL VÁLIDA<br>
+                ARCHIVO CENTRAL - MAE
+              </div>
+              <div class="legal">
+                Documento oficial registrado en el catálogo institucional del Sistema de Gestión Documental. Referenciable y auditable en todas las dependencias.
+              </div>
+            </div>
+          </body>
+          </html>
+        `;
+
+        try {
+          const pdfBuffer = await util.renderPdfPuppeteer({ html: htmlInstitucional, format: 'Letter' });
+          res.set('Content-Type', 'application/pdf');
+          res.set('Content-Disposition', `inline; filename="${util.formatoNombreDoc(doc.nombre)}.pdf"`);
+          return res.send(pdfBuffer);
+        } catch (errPdf) {
+          logger.error('Error generando PDF de custodia institucional:', errPdf);
+        }
+      }
+
+      // 4. Si no es institucional y no existe archivo físico estático, generarlo dinámicamente con util.generarDocumento
+      req.body = req.body || {};
+      req.body.cite = doc.nombre;
+      return procesarDocumentoPDF(req, res);
+    } catch (err) {
+      logger.error('Error al servir PDF por ID:', err);
+      return res.status(500).send(util.formatearMensaje("ERROR", "Error al procesar el archivo PDF."));
+    }
+  };
+
+  app.get('/api/v1/documento/:id/pdf', servirDocumentoPDFPorId);
+  app.get('/api/v1/documentos/:id/pdf', servirDocumentoPDFPorId);
+
   app.post('/api/v1/plantillasFormly/multiple', (req, res) => {
     console.log('Iniciando la busqueda de documentos multiples', req.body.cite);
     if (!req.body.cite || req.body.cite == "") {
