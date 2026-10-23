@@ -45,17 +45,37 @@ export const CUSTOM_FORMLY_TYPES: ConfigOption['types'] = [
   // Tipos institucionales incorporados
   { name: 'ccArchivo', component: FormlyFieldCcArchivoComponent },
   { name: 'inputt', component: FormlyFieldInputtComponent },
+  { name: 'input', component: FormlyFieldInputtComponent },
   { name: 'documentosRelacionados', component: FormlyFieldDocumentosRelacionadosComponent },
   { name: 'calendario', component: FormlyFieldCalendarioComponent },
   { name: 'datepicker', component: FormlyFieldCalendarioComponent },
   { name: 'archivo', component: FormlyFieldArchivoComponent },
   { name: 'cargadorArchivos', component: FormlyFieldArchivoComponent },
   { name: 'listas', component: FormlyFieldListasComponent },
+  { name: 'lista', component: FormlyFieldListasComponent },
+  { name: 'select', component: FormlyFieldListasComponent },
+  { name: 'radio', component: FormlyFieldListasComponent },
+  { name: 'checkbox', component: FormlyFieldTextoComponent },
+  { name: 'layout', component: FormlyFieldVacioComponent },
+  { name: 'editor-texto', component: FormlyFieldEditorTextoComponent },
+  { name: 'editor', component: FormlyFieldEditorTextoComponent },
+  { name: 'textarea', component: FormlyFieldEditorTextoComponent },
   { name: 'listaContactos', component: FormlyFieldListaContactosComponent },
   { name: 'cajachica', component: FormlyFieldCajachicaComponent },
   { name: 'certificacionComprometido', component: FormlyFieldCajachicaComponent },
   { name: 'partidas', component: FormlyFieldCajachicaComponent },
   { name: 'aprobacionCD', component: FormlyFieldAprobacionCdComponent },
   { name: 'pdfsAprobacionCD', component: FormlyFieldAprobacionCdComponent },
-  { name: 'documentosAnular', component: FormlyFieldDocumentosAnularComponent }
+  { name: 'documentosAnular', component: FormlyFieldDocumentosAnularComponent },
+
+  // Módulos especializados Almacén / Activos
+  { name: 'consultaAlmacen', component: FormlyFieldTextoComponent },
+  { name: 'ingresoAlmacen', component: FormlyFieldTextoComponent },
+  { name: 'recuperarEntregaAlmacen', component: FormlyFieldTextoComponent },
+  { name: 'consultaActivo', component: FormlyFieldTextoComponent },
+  { name: 'asignacionActivo', component: FormlyFieldTextoComponent },
+  { name: 'devolucionActivo', component: FormlyFieldTextoComponent },
+  { name: 'tablaActivos', component: FormlyFieldTextoComponent },
+  { name: 'ingresoActivos', component: FormlyFieldTextoComponent },
+  { name: 'bajaActivos', component: FormlyFieldTextoComponent }
 ];
