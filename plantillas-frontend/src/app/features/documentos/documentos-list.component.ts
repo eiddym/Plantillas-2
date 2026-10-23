@@ -82,6 +82,17 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
             <mat-tab label="Aprobados"></mat-tab>
             <mat-tab label="Cerrados / Oficiales"></mat-tab>
           </ng-container>
+
+          <ng-container *ngIf="modoVista() === 'en_curso'">
+            <mat-tab label="Todos en Curso"></mat-tab>
+            <mat-tab label="Borradores (NUEVO)"></mat-tab>
+            <mat-tab label="Derivados"></mat-tab>
+          </ng-container>
+
+          <ng-container *ngIf="modoVista() === 'aprobar_documento'">
+            <mat-tab label="Pendientes de Aprobación"></mat-tab>
+            <mat-tab label="Aprobados"></mat-tab>
+          </ng-container>
         </mat-tab-group>
 
         <!-- Filtros y Búsqueda -->
@@ -611,6 +622,8 @@ export class DocumentosListComponent implements OnInit {
   private readonly estadoTabsDocumentos = ['', 'NUEVO', 'DERIVADO', 'APROBADO', 'CERRADO'];
   private readonly estadoTabsDerivados = ['DERIVADO', 'EN CURSO', 'APROBADO'];
   private readonly estadoTabsImpresion = ['', 'APROBADO', 'CERRADO'];
+  private readonly estadoTabsEnCurso = ['NUEVO,DERIVADO', 'NUEVO', 'DERIVADO'];
+  private readonly estadoTabsAprobar = ['DERIVADO', 'APROBADO'];
 
   ngOnInit(): void {
     this.currentUrl.set(this.router.url);
@@ -669,6 +682,10 @@ export class DocumentosListComponent implements OnInit {
       this.currentEstado = this.estadoTabsDerivados[tabIndex] || 'DERIVADO';
     } else if (this.modoVista() === 'impresion') {
       this.currentEstado = this.estadoTabsImpresion[tabIndex] || '';
+    } else if (this.modoVista() === 'en_curso') {
+      this.currentEstado = this.estadoTabsEnCurso[tabIndex] || 'NUEVO,DERIVADO';
+    } else if (this.modoVista() === 'aprobar_documento') {
+      this.currentEstado = this.estadoTabsAprobar[tabIndex] || 'DERIVADO';
     }
     this.pageIndex.set(0);
     this.cargarDocumentos();

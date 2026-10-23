@@ -13,62 +13,32 @@ import { FieldType, FieldTypeConfig } from '@ngx-formly/core';
       @if (to.label) {
         <label class="editor-label">{{ to.label }}</label>
       }
-      @defer (on viewport; prefetch on idle) {
+      <div class="editor-wrapper">
         <editor
           [formControl]="formControl"
           [init]="tinyConfig"
           [disabled]="to.disabled || false">
         </editor>
-      } @placeholder {
-        <div class="editor-skeleton">
-          <div class="skeleton-header">
-            <span class="skeleton-pill"></span>
-            <span class="skeleton-pill"></span>
-            <span class="skeleton-pill"></span>
-          </div>
-          <div class="skeleton-body">Cargando editor de texto enriquecido (TinyMCE)...</div>
-        </div>
-      }
+      </div>
     </div>
   `,
   styles: [`
     .editor-texto-container {
       margin-bottom: 20px;
+      width: 100%;
     }
     .editor-label {
       display: block;
       margin-bottom: 8px;
-      font-weight: 600;
+      font-weight: 700;
       color: #37474f;
       font-size: 0.9rem;
     }
-    .editor-skeleton {
-      border: 1px dashed #b0bec5;
+    .editor-wrapper {
+      border: 1px solid #cfd8dc;
       border-radius: 4px;
-      background: #fafafa;
-      padding: 16px;
-      min-height: 200px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      .skeleton-header {
-        display: flex;
-        gap: 8px;
-        .skeleton-pill {
-          width: 60px;
-          height: 24px;
-          background: #e0e0e0;
-          border-radius: 4px;
-        }
-      }
-      .skeleton-body {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #78909c;
-        font-style: italic;
-      }
+      overflow: hidden;
+      background: #ffffff;
     }
   `]
 })
@@ -76,17 +46,50 @@ export class FormlyFieldEditorTextoComponent extends FieldType<FieldTypeConfig> 
   readonly tinyConfig = {
     base_url: '/tinymce',
     suffix: '.min',
-    height: 380,
-    menubar: true,
+    min_height: 320,
+    menubar: false,
+    branding: false,
+    statusbar: true,
+    elementpath: false,
     plugins: [
       'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-      'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-      'insertdatetime', 'media', 'table', 'help', 'wordcount'
+      'searchreplace', 'visualblocks', 'code', 'fullscreen', 'table', 'wordcount'
     ],
     toolbar:
-      'undo redo | formatselect | bold italic underline | ' +
+      'undo redo | blocks | bold italic underline strikethrough | ' +
       'alignleft aligncenter alignright alignjustify | ' +
-      'bullist numlist outdent indent | table | removeformat | code',
-    content_style: 'body { font-family: Roboto, Arial, sans-serif; font-size: 14px; line-height: 1.6; }'
+      'bullist numlist outdent indent | table link | removeformat | code',
+    table_default_attributes: {
+      border: '1'
+    },
+    table_default_styles: {
+      'width': '100%',
+      'border-collapse': 'collapse'
+    },
+    content_style: `
+      body {
+        font-family: 'Open Sans', Roboto, Arial, Helvetica, sans-serif;
+        font-size: 11pt;
+        line-height: 1.35;
+        color: #222222;
+        margin: 20px 25px;
+        background-color: #ffffff;
+      }
+      p { margin: 0 0 8px 0; }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 12px;
+      }
+      td, th {
+        border: 1px solid #bdbdbd;
+        padding: 6px 8px;
+      }
+      h1, h2, h3, h4 {
+        color: #1a237e;
+        margin-top: 12px;
+        margin-bottom: 6px;
+      }
+    `
   };
 }

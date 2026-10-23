@@ -19,6 +19,12 @@ export const routes: Routes = [
       import('./features/auth/verificar/verificar.component').then((m) => m.VerificarComponent)
   },
   {
+    path: 'elegir',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/auth/elegir/elegir.component').then((m) => m.ElegirComponent)
+  },
+  {
     path: 'ventanilla-virtual',
     loadComponent: () =>
       import('./features/ventanilla/ventanilla-virtual.component').then((m) => m.VentanillaVirtualComponent)
