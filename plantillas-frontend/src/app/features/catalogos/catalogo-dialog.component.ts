@@ -368,9 +368,8 @@ export class CatalogoDialogComponent implements OnInit {
     this.seguridadService.getUsuarios().subscribe({
       next: (res) => {
         this.cargando.set(false);
-        const users = Array.isArray(res.datos) ? res.datos : [];
-        // Filtrar administradores puros y usuario actual
-        this.todosLosUsuarios.set(users.filter((u) => u.usuario !== 'admin' && u.usuario !== 'sys_default'));
+        const users: any[] = Array.isArray(res.datos) ? res.datos : [];
+        this.todosLosUsuarios.set(users.filter((u: any) => u.estado === 'ACTIVO'));
       },
       error: () => this.cargando.set(false)
     });

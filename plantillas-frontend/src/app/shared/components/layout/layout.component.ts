@@ -707,7 +707,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
       'compartidos': 'share',
       'ventanilla/externa': 'cloud_download',
       'ventanilla/interna': 'edit_document',
-      'ventanilla-unica': 'inbox'
+      'ventanilla-unica': 'inbox',
+      'admin/firma': 'verified'
     };
 
     return rawMenus.map((padre) => {

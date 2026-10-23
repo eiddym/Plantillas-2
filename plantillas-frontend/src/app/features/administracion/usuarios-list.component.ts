@@ -238,7 +238,7 @@ import { SeguridadService, UsuarioAdmin, Unidad, Rol } from '../../core/services
 
                   <div class="form-field-group">
                     <label class="field-label-custom">Nombre de usuario *</label>
-                    <input type="text" formControlName="usuario" class="custom-input" placeholder="Ej: sys_default">
+                    <input type="text" formControlName="usuario" class="custom-input" placeholder="Ej: j.perez">
                   </div>
 
                   <!-- Dropdown Tipo de Autenticación con las 3 opciones exactas -->

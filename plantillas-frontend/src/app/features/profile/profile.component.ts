@@ -90,11 +90,11 @@ interface AlertasConfig {
           </div>
 
           <div class="profile-details-list">
-            <p><strong>Nombre de usuario: </strong><span>{{ user()?.username || 'sys_default' }}</span></p>
-            <p><strong>Número de documento: </strong><span>{{ user()?.doc || '111111' }}</span></p>
-            <p><strong>Nombre(s): </strong><span>{{ user()?.first_name || 'system' }}</span></p>
-            <p><strong>Apellido(s): </strong><span>{{ user()?.last_name || 'default' }}</span></p>
-            <p><strong>Correo electrónico: </strong><span>{{ user()?.email || 'docs@marabuntarl.com' }}</span></p>
+            <p><strong>Nombre de usuario: </strong><span>{{ user()?.username || '-' }}</span></p>
+            <p><strong>Número de documento: </strong><span>{{ user()?.doc || '-' }}</span></p>
+            <p><strong>Nombre(s): </strong><span>{{ user()?.first_name || '-' }}</span></p>
+            <p><strong>Apellido(s): </strong><span>{{ user()?.last_name || '-' }}</span></p>
+            <p><strong>Correo electrónico: </strong><span>{{ user()?.email || '-' }}</span></p>
             <p><strong>Activo desde: </strong><span>{{ fechaFormateada() }}</span></p>
           </div>
         </div>

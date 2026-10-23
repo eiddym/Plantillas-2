@@ -89,6 +89,20 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'en_curso',
+        loadComponent: () =>
+          import('./features/documentos/documentos-list.component').then(
+            (m) => m.DocumentosListComponent
+          )
+      },
+      {
+        path: 'aprobar_documento',
+        loadComponent: () =>
+          import('./features/documentos/documentos-list.component').then(
+            (m) => m.DocumentosListComponent
+          )
+      },
+      {
         path: 'archivo',
         loadComponent: () =>
           import('./features/archivo/archivo.component').then(
@@ -155,14 +169,24 @@ export const routes: Routes = [
           )
       },
       {
-        path: 'cuenta',
-        redirectTo: 'profile'
+        path: 'contactos',
+        loadComponent: () =>
+          import('./features/contactos/contactos-list.component').then(
+            (m) => m.ContactosListComponent
+          )
       },
       {
         path: 'menu',
         loadComponent: () =>
           import('./features/administracion/menus-list.component').then(
             (m) => m.MenusListComponent
+          )
+      },
+      {
+        path: 'admin/firma',
+        loadComponent: () =>
+          import('./features/administracion/firma-config.component').then(
+            (m) => m.FirmaConfigComponent
           )
       },
       {

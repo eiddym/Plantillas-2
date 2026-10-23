@@ -138,52 +138,7 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
               <!-- MODO 1: REDACCIÓN ACTIVA (FORMULARIO FORMLY) -->
               <!-- ============================================ -->
               <div *ngIf="modoEdicion()" class="editor-mode-container">
-                
-                <!-- Encabezado Editable de Metadatos Documentales -->
-                <div class="editor-header-fields">
-                  <div class="form-row-2">
-                    <mat-form-field appearance="outline" class="w-full">
-                      <mat-label>Destinatario (PARA)</mat-label>
-                      <input matInput [(ngModel)]="model['para']" placeholder="Ej. Lic. Carlos Mendoza - Director">
-                      <mat-icon matPrefix>person</mat-icon>
-                    </mat-form-field>
-
-                    <mat-form-field appearance="outline" class="w-full">
-                      <mat-label>Vía de Aprobación (VÍA)</mat-label>
-                      <input matInput [(ngModel)]="model['via']" placeholder="Ej. Abg. Marco Antonio Soliz - Jefe Legal">
-                      <mat-icon matPrefix>alt_route</mat-icon>
-                    </mat-form-field>
-                  </div>
-
-                  <div class="form-row-2">
-                    <mat-form-field appearance="outline" class="w-full">
-                      <mat-label>Remitente (DE)</mat-label>
-                      <input matInput [(ngModel)]="model['de']" placeholder="Ej. Ing. Juan Pérez - Técnico">
-                      <mat-icon matPrefix>badge</mat-icon>
-                    </mat-form-field>
-
-                    <mat-form-field appearance="outline" class="w-full">
-                      <mat-label>Clasificación de Seguridad</mat-label>
-                      <mat-select [(ngModel)]="model['inputSelect']">
-                        <mat-option value="Ordinario">Ordinario (Público)</mat-option>
-                        <mat-option value="Reservado">Reservado</mat-option>
-                        <mat-option value="Confidencial">Confidencial</mat-option>
-                        <mat-option value="Secreto">Secreto</mat-option>
-                      </mat-select>
-                      <mat-icon matPrefix>security</mat-icon>
-                    </mat-form-field>
-                  </div>
-
-                  <mat-form-field appearance="outline" class="w-full">
-                    <mat-label>Referencia o Asunto (REF)</mat-label>
-                    <input matInput [(ngModel)]="model['ref']" placeholder="Ej. Dictamen técnico para adecuación minera...">
-                    <mat-icon matPrefix>subject</mat-icon>
-                  </mat-form-field>
-                </div>
-
-                <div class="sheet-divider"></div>
-
-                <!-- Formulario Formly Dinámico de la Plantilla -->
+                <!-- Formulario Formly Dinámico de la Plantilla (Directo sobre la Hoja) -->
                 <div class="formly-wrapper">
                   <form [formGroup]="form">
                     <formly-form 
@@ -1033,10 +988,33 @@ export class DocumentWorkbenchComponent implements OnInit {
     return '';
   }
 
+  private sincronizarMetadatosDesdeDatosGenerales(): void {
+    if (this.model['datosGenerales']) {
+      const dg = this.model['datosGenerales'];
+      if (dg.para) {
+        this.model['para'] = typeof dg.para === 'object' ? `${dg.para.nombres} ${dg.para.apellidos} - ${dg.para.cargo}` : dg.para;
+      }
+      if (dg.via && Array.isArray(dg.via) && dg.via.length > 0) {
+        this.model['via'] = dg.via.map((v: any) => `${v.nombres} ${v.apellidos} - ${v.cargo}`).join(' / ');
+      } else if (dg.via && typeof dg.via === 'object' && dg.via.nombres) {
+        this.model['via'] = `${dg.via.nombres} ${dg.via.apellidos} - ${dg.via.cargo}`;
+      }
+      if (dg.de && Array.isArray(dg.de) && dg.de.length > 0) {
+        this.model['de'] = dg.de.map((rem: any) => `${rem.nombres} ${rem.apellidos} - ${rem.cargo}`).join(' / ');
+      } else if (dg.de && typeof dg.de === 'object' && dg.de.nombres) {
+        this.model['de'] = `${dg.de.nombres} ${dg.de.apellidos} - ${dg.de.cargo}`;
+      }
+      if (dg.ref) {
+        this.model['ref'] = dg.ref;
+      }
+    }
+  }
+
   guardarBorrador(): void {
     const d = this.doc();
     if (!d || !d.id_documento) return;
 
+    this.sincronizarMetadatosDesdeDatosGenerales();
     this.guardando.set(true);
 
     const payload: Partial<Documento> = {
@@ -1079,6 +1057,7 @@ export class DocumentWorkbenchComponent implements OnInit {
     const d = this.doc();
     if (!d || !d.id_documento) return;
 
+    this.sincronizarMetadatosDesdeDatosGenerales();
     this.guardando.set(true);
     // Transiciona a estado DERIVADO
     const payload = {

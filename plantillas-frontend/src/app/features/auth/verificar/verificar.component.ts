@@ -74,6 +74,20 @@ export interface VerificacionResultado {
         </div>
       </header>
 
+      <!-- Banner Hero Institucional Petróleo -->
+      <section class="verif-hero">
+        <div class="hero-inner">
+          <div class="hero-badge">
+            <mat-icon>verified</mat-icon>
+            <span>Portal Oficial de Fe Pública y Autenticidad Jurídica</span>
+          </div>
+          <h1 class="hero-title">Cotejo y Verificación de Documentos</h1>
+          <p class="hero-subtitle">
+            Consulte la validez legal, integridad criptográfica y firmas digitales de resoluciones, notas y documentos institucionales custodiados.
+          </p>
+        </div>
+      </section>
+
       <!-- Contenedor Principal -->
       <main class="verif-main">
         <div class="verif-layout">
@@ -285,7 +299,7 @@ export interface VerificacionResultado {
       display: block;
       min-height: 100vh;
       background: #0f172a;
-      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      font-family: 'Poppins', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
       color: #0f172a;
     }
 
@@ -293,15 +307,16 @@ export interface VerificacionResultado {
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      background: #f8fafc;
+      background: #f1f5f9;
     }
 
     /* Cabecera Solemne */
     .verif-header {
-      background: #0a192f;
-      border-bottom: 2px solid #0284c7;
-      padding: 0.85rem 1.5rem;
+      background: linear-gradient(135deg, #0a171d 0%, #0f2027 50%, #15303c 100%);
+      border-bottom: 2px solid #005c53;
+      padding: 0.85rem 1.75rem;
       color: #ffffff;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
     }
 
     .header-inner {
@@ -323,12 +338,12 @@ export interface VerificacionResultado {
       width: 44px;
       height: 44px;
       background: #ffffff;
-      border-radius: 8px;
+      border-radius: 10px;
       padding: 4px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
     }
 
     .brand-logo {
@@ -351,26 +366,28 @@ export interface VerificacionResultado {
 
     .system-sub {
       font-size: 0.78rem;
-      color: #94a3b8;
+      color: #5eead4;
     }
 
     .login-link {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      color: #93c5fd;
+      color: #22d3ee;
       text-decoration: none;
       font-size: 0.85rem;
       font-weight: 600;
-      padding: 6px 14px;
-      border-radius: 6px;
-      border: 1px solid rgba(147, 197, 253, 0.3);
-      transition: all 0.2s ease;
+      padding: 7px 16px;
+      border-radius: 20px;
+      background: rgba(34, 211, 238, 0.08);
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      transition: all 0.25s ease;
 
       &:hover {
-        background: rgba(147, 197, 253, 0.1);
+        background: #0d5c63;
         color: #ffffff;
-        border-color: #93c5fd;
+        border-color: #22d3ee;
+        box-shadow: 0 2px 10px rgba(13, 92, 99, 0.4);
       }
 
       mat-icon {
@@ -380,14 +397,72 @@ export interface VerificacionResultado {
       }
     }
 
+    /* Banner Hero Institucional Petróleo */
+    .verif-hero {
+      background: linear-gradient(145deg, #0f2027 0%, #15303c 50%, #0f3d3e 100%);
+      color: #ffffff;
+      padding: 44px 24px 72px;
+      text-align: center;
+      position: relative;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .hero-inner {
+      max-width: 860px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #22d3ee;
+      letter-spacing: 0.3px;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: #22d3ee;
+      }
+    }
+
+    .hero-title {
+      font-size: 32px;
+      font-weight: 800;
+      margin: 0;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+    }
+
+    .hero-subtitle {
+      font-size: 15px;
+      color: rgba(255, 255, 255, 0.78);
+      line-height: 1.5;
+      margin: 0;
+      max-width: 680px;
+    }
+
     /* Cuerpo Principal */
     .verif-main {
       flex: 1;
-      padding: 2rem 1.5rem;
+      padding: 0 24px 40px;
       max-width: 1280px;
-      margin: 0 auto;
+      margin: -42px auto 40px;
       width: 100%;
       box-sizing: border-box;
+      position: relative;
+      z-index: 10;
     }
 
     .verif-layout {
@@ -405,28 +480,30 @@ export interface VerificacionResultado {
     .query-card {
       background: #ffffff;
       border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 1.5rem;
-      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+      border-top: 4px solid #0d5c63;
+      border-radius: 16px;
+      padding: 1.75rem;
+      box-shadow: 0 12px 32px rgba(15, 32, 39, 0.08);
     }
 
     .card-lead {
       display: flex;
-      gap: 12px;
+      gap: 14px;
       margin-bottom: 1.25rem;
       align-items: flex-start;
     }
 
     .lead-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
-      background: #eff6ff;
-      color: #0284c7;
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #0f383e 0%, #0d5c63 100%);
+      color: #ffffff;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(15, 56, 62, 0.3);
 
       mat-icon {
         font-size: 24px;
@@ -437,15 +514,15 @@ export interface VerificacionResultado {
 
     .lead-title {
       margin: 0;
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: #0f172a;
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: #0f2027;
     }
 
     .lead-desc {
       margin: 4px 0 0;
       font-size: 0.82rem;
-      color: #64748b;
+      color: #475569;
       line-height: 1.4;
     }
 
@@ -467,9 +544,9 @@ export interface VerificacionResultado {
     }
 
     .field-label {
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: #334155;
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: #0f2027;
     }
 
     .w-full {
@@ -477,35 +554,53 @@ export interface VerificacionResultado {
     }
 
     .form-icon {
-      color: #64748b;
+      color: #0d5c63;
       margin-right: 6px;
+    }
+
+    /* Custom form-field outline styling con enfoque verde petroleo */
+    ::ng-deep .query-card {
+      .mat-mdc-text-field-wrapper.mdc-text-field--focused .mdc-notched-outline__leading,
+      .mat-mdc-text-field-wrapper.mdc-text-field--focused .mdc-notched-outline__notch,
+      .mat-mdc-text-field-wrapper.mdc-text-field--focused .mdc-notched-outline__trailing {
+        border-color: #0d5c63 !important;
+        border-width: 2px !important;
+      }
+      .mat-mdc-form-field.mat-focused .form-icon {
+        color: #0d5c63 !important;
+      }
     }
 
     .btn-validar {
       width: 100%;
-      height: 46px;
-      background: #0284c7;
+      height: 48px;
+      background: linear-gradient(135deg, #0f383e 0%, #0d5c63 100%);
       color: #ffffff;
       border: none;
-      border-radius: 8px;
-      font-size: 0.92rem;
-      font-weight: 600;
+      border-radius: 25px;
+      font-size: 0.94rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
       cursor: pointer;
-      transition: background 0.2s;
-      box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3);
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 14px rgba(15, 56, 62, 0.35);
 
       &:hover:not(:disabled) {
-        background: #0369a1;
+        background: linear-gradient(135deg, #0b2c31 0%, #084348 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(15, 56, 62, 0.45);
       }
 
       &:disabled {
-        background: #94a3b8;
+        background: linear-gradient(135deg, #78999d 0%, #688a8e 100%);
+        color: rgba(255, 255, 255, 0.85);
         cursor: not-allowed;
         box-shadow: none;
+        opacity: 0.8;
       }
 
       .spin {
@@ -557,9 +652,10 @@ export interface VerificacionResultado {
       margin-top: 1.5rem;
       background: #ffffff;
       border: 1px solid #e2e8f0;
-      border-radius: 12px;
+      border-top: 4px solid #0d5c63;
+      border-radius: 14px;
       padding: 1.25rem;
-      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+      box-shadow: 0 6px 20px rgba(15, 32, 39, 0.06);
     }
 
     .signers-header {
@@ -572,7 +668,7 @@ export interface VerificacionResultado {
       margin-bottom: 0.75rem;
 
       mat-icon {
-        color: #0284c7;
+        color: #0d5c63;
         font-size: 22px;
         width: 22px;
         height: 22px;
@@ -582,6 +678,7 @@ export interface VerificacionResultado {
         margin: 0;
         font-size: 0.95rem;
         font-weight: 700;
+        color: #0f2027;
       }
     }
 
@@ -595,22 +692,23 @@ export interface VerificacionResultado {
       display: flex;
       align-items: flex-start;
       gap: 10px;
-      padding: 8px 10px;
+      padding: 10px 12px;
       background: #f8fafc;
-      border: 1px solid #f1f5f9;
-      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
     }
 
     .signer-badge {
-      width: 32px;
-      height: 32px;
+      width: 34px;
+      height: 34px;
       border-radius: 50%;
-      background: #ecfdf5;
-      color: #059669;
+      background: linear-gradient(135deg, #0f383e 0%, #0d5c63 100%);
+      color: #ffffff;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(15, 56, 62, 0.25);
 
       mat-icon {
         font-size: 18px;
@@ -631,12 +729,13 @@ export interface VerificacionResultado {
 
     .signer-cargo {
       font-size: 0.78rem;
-      color: #64748b;
+      color: #0d5c63;
+      font-weight: 600;
     }
 
     .signer-meta {
       font-size: 0.75rem;
-      color: #94a3b8;
+      color: #64748b;
       margin-top: 2px;
       font-variant-numeric: tabular-nums;
     }
@@ -646,11 +745,11 @@ export interface VerificacionResultado {
       font-size: 0.68rem;
       font-weight: 700;
       text-transform: uppercase;
-      padding: 3px 6px;
-      border-radius: 4px;
-      background: #ecfdf5;
-      color: #059669;
-      border: 1px solid #a7f3d0;
+      padding: 3px 8px;
+      border-radius: 12px;
+      background: #e6f6f7;
+      color: #0d5c63;
+      border: 1px solid #99dcdc;
       white-space: nowrap;
     }
 
@@ -665,7 +764,7 @@ export interface VerificacionResultado {
       align-items: center;
 
       mat-icon {
-        color: #0284c7;
+        color: #0d5c63;
         font-size: 20px;
         width: 20px;
         height: 20px;
@@ -675,35 +774,37 @@ export interface VerificacionResultado {
     /* Columna Derecha: Placeholder */
     .placeholder-card {
       background: #ffffff;
-      border: 2px dashed #cbd5e1;
-      border-radius: 12px;
-      padding: 3rem 2rem;
+      border: 2px dashed rgba(13, 92, 99, 0.35);
+      border-radius: 16px;
+      padding: 3.5rem 2rem;
       text-align: center;
       color: #64748b;
+      box-shadow: 0 10px 30px rgba(15, 32, 39, 0.05);
     }
 
     .placeholder-graphic {
-      width: 72px;
-      height: 72px;
+      width: 76px;
+      height: 76px;
       border-radius: 50%;
-      background: #f1f5f9;
-      color: #94a3b8;
+      background: linear-gradient(135deg, #e6f6f7 0%, #d0eded 100%);
+      color: #0d5c63;
       display: flex;
       align-items: center;
       justify-content: center;
       margin: 0 auto 1.25rem;
+      box-shadow: 0 6px 18px rgba(13, 92, 99, 0.15);
 
       mat-icon {
-        font-size: 40px;
-        width: 40px;
-        height: 40px;
+        font-size: 42px;
+        width: 42px;
+        height: 42px;
       }
     }
 
     .placeholder-card h3 {
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: #1e293b;
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: #0f2027;
       margin: 0 0 0.5rem;
     }
 
@@ -718,18 +819,20 @@ export interface VerificacionResultado {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 6px 14px;
+      padding: 8px 18px;
       border-radius: 20px;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      font-size: 0.75rem;
-      color: #475569;
+      background: #f0fdfa;
+      border: 1px solid #99f6e4;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #0f383e;
+      box-shadow: 0 2px 6px rgba(13, 92, 99, 0.06);
 
       mat-icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-        color: #0284c7;
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: #0d5c63;
       }
     }
 
@@ -737,36 +840,37 @@ export interface VerificacionResultado {
     .certified-card {
       background: #ffffff;
       border: 1px solid #cbd5e1;
-      border-radius: 12px;
+      border-radius: 16px;
       overflow: hidden;
-      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+      box-shadow: 0 12px 36px rgba(15, 32, 39, 0.12);
     }
 
     .cert-banner {
-      background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+      background: linear-gradient(145deg, #0f2027 0%, #15303c 50%, #0f3d3e 100%);
       color: #ffffff;
-      padding: 1.5rem;
+      padding: 1.75rem;
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 1.25rem;
+      border-bottom: 3px solid #005c53;
     }
 
     .cert-icon-wrap {
-      width: 56px;
-      height: 56px;
+      width: 58px;
+      height: 58px;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.15);
-      border: 2px solid rgba(255, 255, 255, 0.4);
+      background: rgba(34, 211, 238, 0.15);
+      border: 2px solid rgba(34, 211, 238, 0.4);
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
 
       mat-icon {
-        font-size: 34px;
-        width: 34px;
-        height: 34px;
-        color: #34d399;
+        font-size: 36px;
+        width: 36px;
+        height: 36px;
+        color: #22d3ee;
       }
     }
 
@@ -775,48 +879,50 @@ export interface VerificacionResultado {
 
       .cert-eyebrow {
         font-size: 0.72rem;
-        font-weight: 700;
+        font-weight: 800;
         letter-spacing: 1px;
-        color: #a7f3d0;
+        color: #22d3ee;
         display: block;
       }
 
       h2 {
         margin: 2px 0 4px;
-        font-size: 1.2rem;
+        font-size: 1.25rem;
         font-weight: 800;
+        letter-spacing: -0.3px;
       }
 
       .cert-cite {
         margin: 0;
-        font-size: 0.88rem;
-        color: #ecfdf5;
+        font-size: 0.9rem;
+        color: #e2e8f0;
 
         strong {
           font-variant-numeric: tabular-nums;
           font-weight: 700;
+          color: #5eead4;
         }
       }
     }
 
     .stamp-pill {
-      font-size: 0.78rem;
+      font-size: 0.8rem;
       font-weight: 800;
       letter-spacing: 1px;
-      background: #10b981;
+      background: linear-gradient(135deg, #0d5c63 0%, #0083b0 100%);
       color: #ffffff;
-      padding: 6px 14px;
+      padding: 7px 16px;
       border-radius: 20px;
       border: 1px solid rgba(255, 255, 255, 0.3);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
     }
 
     /* Grilla de Integridad */
     .integrity-grid {
       display: grid;
-      grid-template-columns: 200px 1fr;
+      grid-template-columns: 220px 1fr;
       border-bottom: 1px solid #f1f5f9;
-      background: #fafafa;
+      background: #fafbfc;
 
       @media (max-width: 600px) {
         grid-template-columns: 1fr;
@@ -824,10 +930,10 @@ export interface VerificacionResultado {
     }
 
     .integ-cell {
-      padding: 12px 16px;
+      padding: 14px 18px;
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 3px;
       border-right: 1px solid #f1f5f9;
 
       &:last-child {
@@ -838,19 +944,19 @@ export interface VerificacionResultado {
     .cell-label {
       font-size: 0.68rem;
       font-weight: 700;
-      color: #64748b;
-      letter-spacing: 0.5px;
+      color: #0d5c63;
+      letter-spacing: 0.6px;
     }
 
     .code-val {
-      font-size: 0.95rem;
-      font-weight: 700;
+      font-size: 1rem;
+      font-weight: 800;
       font-family: monospace;
       color: #0f172a;
     }
 
     .hash-val {
-      font-size: 0.75rem;
+      font-size: 0.76rem;
       font-family: monospace;
       color: #334155;
       overflow: hidden;
@@ -860,7 +966,7 @@ export interface VerificacionResultado {
 
     /* Acciones del Certificado */
     .cert-actions {
-      padding: 1rem 1.5rem;
+      padding: 1.25rem 1.5rem;
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
@@ -872,23 +978,28 @@ export interface VerificacionResultado {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 10px 18px;
-      background: #0284c7;
+      padding: 11px 22px;
+      background: linear-gradient(135deg, #0f383e 0%, #0d5c63 100%);
       color: #ffffff;
       border: none;
-      border-radius: 8px;
+      border-radius: 25px;
       font-size: 0.88rem;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 14px rgba(15, 56, 62, 0.3);
 
       &:hover:not(:disabled) {
-        background: #0369a1;
+        background: linear-gradient(135deg, #0b2c31 0%, #084348 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(15, 56, 62, 0.4);
       }
 
       &:disabled {
-        background: #94a3b8;
+        background: linear-gradient(135deg, #78999d 0%, #688a8e 100%);
         cursor: not-allowed;
+        box-shadow: none;
+        opacity: 0.8;
       }
 
       mat-icon {
@@ -902,18 +1013,20 @@ export interface VerificacionResultado {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 10px 16px;
-      background: #f1f5f9;
-      color: #334155;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
+      padding: 10px 18px;
+      background: #f0fdfa;
+      color: #0d5c63;
+      border: 1.5px solid #0d5c63;
+      border-radius: 25px;
       font-size: 0.88rem;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.25s ease;
 
       &:hover {
-        background: #e2e8f0;
+        background: #0d5c63;
+        color: #ffffff;
+        box-shadow: 0 4px 12px rgba(13, 92, 99, 0.25);
       }
 
       mat-icon {
@@ -925,7 +1038,7 @@ export interface VerificacionResultado {
 
     /* Visor PDF Integrado */
     .pdf-frame-wrapper {
-      padding: 1rem 1.5rem 1.5rem;
+      padding: 1.25rem 1.5rem 1.75rem;
       background: #f8fafc;
     }
 
@@ -933,50 +1046,51 @@ export interface VerificacionResultado {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.85rem;
       padding: 0 4px;
     }
 
     .toolbar-title {
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-size: 0.85rem;
+      gap: 8px;
+      font-size: 0.88rem;
       font-weight: 700;
-      color: #334155;
+      color: #0f2027;
 
       mat-icon {
         font-size: 18px;
         width: 18px;
         height: 18px;
-        color: #0284c7;
+        color: #0d5c63;
       }
     }
 
     .sheet-badge {
       font-size: 0.72rem;
-      font-weight: 600;
-      color: #64748b;
-      background: #e2e8f0;
-      padding: 3px 8px;
-      border-radius: 4px;
+      font-weight: 700;
+      color: #0d5c63;
+      background: #e6f6f7;
+      border: 1px solid #99dcdc;
+      padding: 3px 10px;
+      border-radius: 12px;
     }
 
     .pdf-iframe {
       width: 100%;
-      height: 620px;
+      height: 640px;
       border: 1px solid #cbd5e1;
-      border-radius: 8px;
+      border-radius: 10px;
       background: #ffffff;
-      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
     }
 
     /* Pie de Página */
     .verif-footer {
-      background: #0f172a;
+      background: linear-gradient(145deg, #0a171d 0%, #0f2027 100%);
       color: #94a3b8;
-      padding: 1.5rem;
-      border-top: 1px solid #1e293b;
+      padding: 1.75rem 1.5rem;
+      border-top: 3px solid #005c53;
       font-size: 0.8rem;
       text-align: center;
     }

@@ -19,6 +19,7 @@ import { Documento, DocumentosService } from '../../core/services/documentos.ser
 import { AuthService } from '../../core/auth/auth.service';
 import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component';
 import { NuevoDocumentoDialogComponent } from './nuevo-documento-dialog.component';
+import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.component';
 
 @Component({
   selector: 'app-documentos-list',
@@ -174,6 +175,9 @@ import { NuevoDocumentoDialogComponent } from './nuevo-documento-dialog.componen
                   <button mat-icon-button (click)="verPdf(d)" matTooltip="Vista previa PDF">
                     <mat-icon>visibility</mat-icon>
                   </button>
+                  <button mat-icon-button (click)="verHistorial(d)" matTooltip="Trazabilidad y Flujo" class="btn-history-action">
+                    <mat-icon>history</mat-icon>
+                  </button>
                 </ng-container>
 
                 <!-- ACCIÓN PARA BANDEJA DE IMPRESIÓN (ROL SECRETARÍA) -->
@@ -187,6 +191,9 @@ import { NuevoDocumentoDialogComponent } from './nuevo-documento-dialog.componen
                     <mat-icon>print</mat-icon>
                     <span>Imprimir / Descargar</span>
                   </button>
+                  <button mat-icon-button (click)="verHistorial(d)" matTooltip="Trazabilidad y Flujo" class="btn-history-action">
+                    <mat-icon>history</mat-icon>
+                  </button>
                   <span *ngIf="!esSecretariaOMae()" class="locked-action" matTooltip="Solo secretaría puede imprimir o descargar este documento oficial">
                     <mat-icon>lock</mat-icon> Bloqueado
                   </span>
@@ -199,6 +206,9 @@ import { NuevoDocumentoDialogComponent } from './nuevo-documento-dialog.componen
                   </button>
                   <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento">
                     <mat-icon>visibility</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="verHistorial(d)" matTooltip="Trazabilidad y Flujo" class="btn-history-action">
+                    <mat-icon>history</mat-icon>
                   </button>
                   <button 
                     *ngIf="puedePromover() && d.estado === 'CERRADO'" 
@@ -441,6 +451,13 @@ import { NuevoDocumentoDialogComponent } from './nuevo-documento-dialog.componen
       }
     }
 
+    .btn-history-action {
+      color: #0d5c63 !important;
+      &:hover {
+        background-color: rgba(13, 92, 99, 0.08) !important;
+      }
+    }
+
     .btn-imprimir-action {
       background: #0284c7 !important;
       color: #ffffff !important;
@@ -550,11 +567,13 @@ export class DocumentosListComponent implements OnInit {
 
   readonly currentUrl = signal<string>(this.router.url);
 
-  readonly modoVista = computed<'documentos' | 'derivados' | 'firmar' | 'impresion'>(() => {
+  readonly modoVista = computed<'documentos' | 'derivados' | 'firmar' | 'impresion' | 'en_curso' | 'aprobar_documento'>(() => {
     const url = this.currentUrl();
     if (url.includes('/firmar')) return 'firmar';
     if (url.includes('/aprobacion')) return 'derivados';
     if (url.includes('/impresion')) return 'impresion';
+    if (url.includes('/en_curso')) return 'en_curso';
+    if (url.includes('/aprobar_documento')) return 'aprobar_documento';
     return 'documentos';
   });
 
@@ -563,6 +582,8 @@ export class DocumentosListComponent implements OnInit {
       case 'firmar': return 'Documentos para Firma Digital';
       case 'derivados': return 'Bandeja de Derivados';
       case 'impresion': return 'Imprimir Documentos Oficiales';
+      case 'en_curso': return 'Documentos En Curso';
+      case 'aprobar_documento': return 'Aprobación Documental';
       default: return 'Bandeja Documental';
     }
   });
@@ -572,6 +593,8 @@ export class DocumentosListComponent implements OnInit {
       case 'firmar': return 'Trámites cerrados y aprobados con CITE oficial que esperan su firma en la cadena de flujo';
       case 'derivados': return 'Bandeja de documentos derivados y en revisión de flujo institucional';
       case 'impresion': return 'Bandeja oficial de expedición física e impresión certificada (Secretaría)';
+      case 'en_curso': return 'Trámites y borradores en redacción y elaboración activa';
+      case 'aprobar_documento': return 'Trámites pendientes de visto bueno y aprobación por Jefatura o Dirección General';
       default: return 'Gestión, redacción y seguimiento de trámites';
     }
   });
@@ -579,10 +602,10 @@ export class DocumentosListComponent implements OnInit {
   readonly esSecretariaOMae = computed(() => {
     const u = this.user();
     if (!u) return false;
-    if (u.es_mae || u.username === 'admin' || u.username === 'sys_default') return true;
+    if (u.es_mae || this.authService.isMae() || this.authService.hasRole('ADMIN') || this.authService.hasRole('SUPERADMIN')) return true;
     const cargo = (u.cargo || '').toLowerCase();
     if (cargo.includes('secretari') || cargo.includes('recepcion') || cargo.includes('correspondencia')) return true;
-    return this.authService.hasRole('SECRETARIA') || this.authService.hasRole('ADMIN') || this.authService.hasRole('SUPERADMIN');
+    return this.authService.hasRole('SECRETARIA');
   });
 
   private readonly estadoTabsDocumentos = ['', 'NUEVO', 'DERIVADO', 'APROBADO', 'CERRADO'];
@@ -617,6 +640,10 @@ export class DocumentosListComponent implements OnInit {
         estadoFiltro = 'DERIVADO';
       } else if (this.modoVista() === 'impresion' && !estadoFiltro) {
         estadoFiltro = 'APROBADO,CERRADO';
+      } else if (this.modoVista() === 'en_curso' && !estadoFiltro) {
+        estadoFiltro = 'NUEVO';
+      } else if (this.modoVista() === 'aprobar_documento' && !estadoFiltro) {
+        estadoFiltro = 'DERIVADO';
       }
 
       this.documentosService
@@ -674,6 +701,20 @@ export class DocumentosListComponent implements OnInit {
       data: {
         titulo: `${doc.nombre} - ${doc.ref || 'Documento Oficial'}`,
         docCite: doc.nombre
+      }
+    });
+  }
+
+  verHistorial(doc: any): void {
+    if (!doc || !doc.id_documento) return;
+    this.dialog.open(HistorialDocumentoDialogComponent, {
+      width: '680px',
+      maxWidth: '95vw',
+      data: {
+        id_documento: doc.id_documento,
+        nombre: doc.nombre,
+        ref: doc.ref || doc.referencia,
+        nombre_plantilla: doc.nombre_plantilla
       }
     });
   }

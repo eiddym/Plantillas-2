@@ -24,6 +24,7 @@
     "@ngx-formly/core": "^6.3.12",
     "@ngx-formly/material": "^6.3.12",
     "@tinymce/tinymce-angular": "^7.0.0",
+    "echarts": "^6.1.0",
     "rxjs": "~7.8.0",
     "tinymce": "^8.10.0",
     "tslib": "^2.3.0",

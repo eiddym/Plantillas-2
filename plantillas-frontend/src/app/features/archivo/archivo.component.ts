@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -145,8 +146,49 @@ export interface UnidadArchivo {
         </button>
       </nav>
 
-      <!-- VISTA 1: ARCHIVO GENERAL (Agrupado por Unidades y Tipos Dinámicos) -->
-      @if (nivelActivo() === 'general') {
+      <!-- Layout Split Screen: Visor a la Izquierda, Catálogo a la Derecha -->
+      <div class="archivo-split-layout">
+        <!-- MITAD IZQUIERDA: VISOR EMBEBIDO -->
+        <aside class="visor-embebido-panel" [class.tiene-doc]="docSeleccionado() !== null">
+          <div class="visor-card">
+            @if (docSeleccionado()) {
+              <div class="visor-header">
+                <div class="visor-doc-info">
+                  <span class="visor-badge-cite">{{ docSeleccionado()?.nombre }}</span>
+                  <span class="visor-doc-titulo">{{ docSeleccionado()?.nombre_plantilla || 'Documento Oficial Custodiado' }}</span>
+                </div>
+                <div class="visor-actions">
+                  <button mat-icon-button class="btn-visor-act" (click)="descargarArchivoFisico(docSeleccionado())" matTooltip="Descargar Copia PDF">
+                    <mat-icon>download</mat-icon>
+                  </button>
+                  <button mat-icon-button class="btn-visor-act close" (click)="cerrarVisor()" matTooltip="Cerrar Previsualización">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+              </div>
+              <div class="visor-iframe-wrapper">
+                <iframe [src]="urlPdfSegura()" class="pdf-local-iframe" title="Visor Documental Embebido"></iframe>
+              </div>
+            } @else {
+              <div class="visor-empty-state">
+                <div class="empty-icon-circle">
+                  <mat-icon>picture_as_pdf</mat-icon>
+                </div>
+                <h3 class="empty-title">Visor Documental Embebido</h3>
+                <p class="empty-text">Haga clic en el icono PDF o en cualquier fila del listado para previsualizar el documento de inmediato sin abandonar el sistema.</p>
+                <div class="empty-hint-pill">
+                  <mat-icon>touch_app</mat-icon>
+                  <span>Seleccione un documento del catálogo</span>
+                </div>
+              </div>
+            }
+          </div>
+        </aside>
+
+        <!-- MITAD DERECHA: CATÁLOGO Y FILTROS -->
+        <main class="catalogo-panel">
+          <!-- VISTA 1: ARCHIVO GENERAL (Agrupado por Unidades y Tipos Dinámicos) -->
+          @if (nivelActivo() === 'general') {
         <section class="section-container fade-in">
           <!-- Filtros Dinámicos de Tipos (Solo los existentes en documentos reales) -->
           @if (tiposDisponiblesGeneral().length > 0) {
@@ -265,7 +307,7 @@ export interface UnidadArchivo {
                 </ng-container>
 
                 <tr mat-header-row *matHeaderRowDef="columnasGenerales"></tr>
-                <tr mat-row *matRowDef="let row; columns: columnasGenerales;" class="data-row"></tr>
+                <tr mat-row *matRowDef="let row; columns: columnasGenerales;" class="data-row clickable-row" [class.selected-row]="docSeleccionado()?.id_documento === row.id_documento" (click)="seleccionarDocumento(row)"></tr>
               </table>
             }
           </div>
@@ -442,7 +484,7 @@ export interface UnidadArchivo {
                 </ng-container>
 
                 <tr mat-header-row *matHeaderRowDef="['cite', 'tipo', 'ref', 'autor', 'acciones']"></tr>
-                <tr mat-row *matRowDef="let row; columns: ['cite', 'tipo', 'ref', 'autor', 'acciones'];" class="data-row"></tr>
+                <tr mat-row *matRowDef="let row; columns: ['cite', 'tipo', 'ref', 'autor', 'acciones'];" class="data-row clickable-row" [class.selected-row]="docSeleccionado()?.id_documento === row.id_documento" (click)="seleccionarDocumento(row)"></tr>
               </table>
             }
           </div>
@@ -608,12 +650,14 @@ export interface UnidadArchivo {
                 </ng-container>
 
                 <tr mat-header-row *matHeaderRowDef="columnasInstitucionales"></tr>
-                <tr mat-row *matRowDef="let row; columns: columnasInstitucionales;" class="data-row"></tr>
+                <tr mat-row *matRowDef="let row; columns: columnasInstitucionales;" class="data-row clickable-row" [class.selected-row]="docSeleccionado()?.id_documento === row.id_documento" (click)="seleccionarDocumento(row)"></tr>
               </table>
             }
           </div>
         </section>
       }
+        </main>
+      </div>
 
       <!-- MODAL: CARGAR DOCUMENTO INSTITUCIONAL (ADMIN / MAE) -->
       @if (mostrarModalCarga()) {
@@ -1645,6 +1689,192 @@ export interface UnidadArchivo {
       mat-icon { font-size: 40px; width: 40px; height: 40px; color: #cbd5e1; }
     }
 
+    /* Split Layout para Visor Documental Embebido */
+    .archivo-split-layout {
+      display: grid;
+      grid-template-columns: minmax(420px, 46%) 1fr;
+      gap: 24px;
+      align-items: start;
+      margin-top: 8px;
+    }
+
+    @media (max-width: 1100px) {
+      .archivo-split-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .visor-embebido-panel {
+      position: sticky;
+      top: 16px;
+      height: calc(100vh - 170px);
+      min-height: 600px;
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+    }
+
+    .visor-card {
+      height: 100%;
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: all 0.25s ease;
+    }
+
+    .visor-header {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    .visor-doc-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .visor-badge-cite {
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: #38bdf8;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .visor-doc-titulo {
+      font-size: 11px;
+      color: #94a3b8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .visor-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-visor-act {
+      width: 32px !important;
+      height: 32px !important;
+      line-height: 32px !important;
+      color: #e2e8f0 !important;
+      border-radius: 8px !important;
+      background: rgba(255, 255, 255, 0.08) !important;
+      transition: background 0.2s;
+      mat-icon { font-size: 18px; width: 18px; height: 18px; line-height: 18px; }
+      &:hover { background: rgba(56, 189, 248, 0.2) !important; color: #38bdf8 !important; }
+      &.close:hover { background: rgba(239, 68, 68, 0.2) !important; color: #f87171 !important; }
+    }
+
+    .visor-iframe-wrapper {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      background: #334155;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .pdf-local-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    .visor-empty-state {
+      height: 100%;
+      padding: 40px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    }
+
+    .empty-icon-circle {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 18px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+      mat-icon { font-size: 38px; width: 38px; height: 38px; }
+    }
+
+    .empty-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0 0 8px 0;
+    }
+
+    .empty-text {
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.5;
+      max-width: 320px;
+      margin: 0 0 20px 0;
+    }
+
+    .empty-hint-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      border: 1px dashed #cbd5e1;
+      padding: 8px 16px;
+      border-radius: 30px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; color: #2563eb; }
+    }
+
+    .catalogo-panel {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Filas clickeables y selección */
+    .clickable-row {
+      cursor: pointer;
+      transition: background-color 0.15s ease, transform 0.1s ease;
+      &:hover {
+        background-color: #f1f5f9 !important;
+      }
+    }
+
+    .selected-row {
+      background-color: #eff6ff !important;
+      border-left: 4px solid #2563eb !important;
+      td { font-weight: 500; }
+    }
+
     .fade-in { animation: fadeIn 0.25s ease-in-out; }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(4px); }
@@ -1657,6 +1887,11 @@ export class ArchivoComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly sanitizer = inject(DomSanitizer);
+
+  // Visor Local Embebido (Split Screen)
+  readonly docSeleccionado = signal<DocumentoArchivo | null>(null);
+  readonly urlPdfSegura = signal<SafeResourceUrl | null>(null);
 
   readonly nivelActivo = signal<'general' | 'unidad' | 'institucional'>('general');
   readonly cargando = signal<boolean>(false);
@@ -2093,9 +2328,31 @@ export class ArchivoComponent implements OnInit {
     this.verVersiones(doc);
   }
 
+  seleccionarDocumento(doc: DocumentoArchivo): void {
+    if (!doc || !doc.id_documento) return;
+    this.docSeleccionado.set(doc);
+    const rawUrl = `/api/v1/documento/${doc.id_documento}/pdf#toolbar=1&navpanes=0`;
+    this.urlPdfSegura.set(this.sanitizer.bypassSecurityTrustResourceUrl(rawUrl));
+  }
+
+  cerrarVisor(): void {
+    this.docSeleccionado.set(null);
+    this.urlPdfSegura.set(null);
+  }
+
   descargarPdf(doc: any): void {
     if (!doc || !doc.id_documento) return;
-    window.open(`/api/v1/documento/${doc.id_documento}/pdf`, '_blank');
+    // En lugar de salir a otra pestaña con pantalla negra, se previsualiza localmente en el visor embebido
+    this.seleccionarDocumento(doc);
+  }
+
+  descargarArchivoFisico(doc: any): void {
+    if (!doc || !doc.id_documento) return;
+    const a = document.createElement('a');
+    a.href = `/api/v1/documento/${doc.id_documento}/pdf`;
+    a.download = `${doc.nombre || 'documento'}.pdf`;
+    a.target = '_blank';
+    a.click();
   }
 
   obtenerReferencia(d: any): string {

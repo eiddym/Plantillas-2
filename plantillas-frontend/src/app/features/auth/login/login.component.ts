@@ -102,23 +102,30 @@ import { AuthService } from '../../../core/auth/auth.service';
             </button>
           </form>
 
-          <!-- Enlaces Públicos Destacados -->
+          <!-- Enlaces Públicos Destacados Institucionales -->
           <div class="enlaces-publicos">
-            <a routerLink="/ventanilla-virtual" class="ventanilla-virtual-btn">
-              <div class="vu-icon-wrap">
-                <mat-icon>inbox</mat-icon>
+            <!-- 1. Verifica tu documento (Arriba) -->
+            <a routerLink="/verificar" class="acceso-publico-card card-verificar">
+              <div class="card-icon-wrap icon-petroleo">
+                <mat-icon>verified_user</mat-icon>
               </div>
-              <div class="vu-text">
-                <strong class="vu-title">Ventanilla Única Virtual</strong>
-                <span class="vu-subtitle">Radicar notas externas o consultar trámite</span>
+              <div class="card-text">
+                <strong class="card-title">Verifica tu documento aquí</strong>
+                <span class="card-subtitle">Cotejo de autenticidad y fe pública digital</span>
               </div>
-              <mat-icon class="vu-arrow">arrow_forward</mat-icon>
+              <mat-icon class="card-arrow">arrow_forward</mat-icon>
             </a>
 
-            <!-- Enlace de Verificación Pública con Mano -->
-            <a routerLink="/verificar" class="verificar-enlace">
-              <span>Verifica tu documento aquí</span>
-              <span class="icono-mano">👆🏽</span>
+            <!-- 2. Ventanilla Única Virtual (Abajo) -->
+            <a routerLink="/ventanilla-virtual" class="acceso-publico-card card-ventanilla">
+              <div class="card-icon-wrap icon-petroleo-secundario">
+                <mat-icon>mark_email_read</mat-icon>
+              </div>
+              <div class="card-text">
+                <strong class="card-title">Ventanilla Única Virtual</strong>
+                <span class="card-subtitle">Radicar notas externas o consultar trámite</span>
+              </div>
+              <mat-icon class="card-arrow">arrow_forward</mat-icon>
             </a>
           </div>
         </div>
@@ -317,105 +324,103 @@ import { AuthService } from '../../../core/auth/auth.service';
       }
     }
 
-    /* --- ENLACES PÚBLICOS --- */
+    /* --- ENLACES PÚBLICOS DESTACADOS --- */
     .enlaces-publicos {
       display: flex;
       flex-direction: column;
       gap: 12px;
-      margin-top: 24px;
+      margin-top: 22px;
     }
 
-    .ventanilla-virtual-btn {
+    .acceso-publico-card {
       display: flex;
       align-items: center;
       gap: 14px;
       padding: 12px 16px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%);
-      border: 1px solid #bae6fd;
+      border-radius: 14px;
       text-decoration: none;
       color: #0f2027;
       transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 8px rgba(15, 32, 39, 0.04);
 
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 18px rgba(0, 180, 219, 0.15);
-        border-color: #00b4db;
+      &.card-verificar {
+        background: linear-gradient(135deg, #f0fdf9 0%, #e6f4f1 100%);
+        border: 1px solid #a7f3d0;
+        &:hover {
+          background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+          border-color: #10b981;
+          box-shadow: 0 8px 20px rgba(16, 185, 129, 0.18);
+          transform: translateY(-2px);
+        }
+      }
+
+      &.card-ventanilla {
+        background: linear-gradient(135deg, #f4fbfb 0%, #e8f5f5 100%);
+        border: 1px solid #b2dfdb;
+        &:hover {
+          background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%);
+          border-color: #00796b;
+          box-shadow: 0 8px 20px rgba(0, 121, 107, 0.18);
+          transform: translateY(-2px);
+        }
       }
     }
 
-    .vu-icon-wrap {
-      width: 40px;
-      height: 40px;
+    .card-icon-wrap {
+      width: 42px;
+      height: 42px;
       border-radius: 10px;
-      background: #0083b0;
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
+
       mat-icon {
-        color: #fff;
+        color: #ffffff;
         font-size: 22px;
         width: 22px;
         height: 22px;
       }
+
+      &.icon-petroleo {
+        background: linear-gradient(135deg, #0f383e 0%, #0d5c63 100%);
+        box-shadow: 0 3px 8px rgba(15, 56, 62, 0.35);
+      }
+
+      &.icon-petroleo-secundario {
+        background: linear-gradient(135deg, #005c53 0%, #042940 100%);
+        box-shadow: 0 3px 8px rgba(4, 41, 64, 0.35);
+      }
     }
 
-    .vu-text {
+    .card-text {
       flex: 1;
       display: flex;
       flex-direction: column;
+      gap: 2px;
     }
 
-    .vu-title {
+    .card-title {
       font-size: 13.5px;
       font-weight: 700;
       color: #0f2027;
     }
 
-    .vu-subtitle {
+    .card-subtitle {
       font-size: 11.5px;
-      color: #64748b;
+      color: #475569;
     }
 
-    .vu-arrow {
-      color: #0083b0;
+    .card-arrow {
+      color: #0d5c63;
       font-size: 20px;
       width: 20px;
       height: 20px;
       transition: transform 0.2s ease;
     }
 
-    .ventanilla-virtual-btn:hover .vu-arrow {
+    .acceso-publico-card:hover .card-arrow {
       transform: translateX(4px);
-    }
-
-    /* --- ENLACE VERIFICAR DOCUMENTOS --- */
-    .verificar-enlace {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-top: 4px;
-      cursor: pointer;
-      color: #0284c7;
-      font-weight: 600;
-      font-size: 14px;
-      text-decoration: none;
-      transition: color 0.2s ease;
-
-      &:hover {
-        color: #0369a1;
-        text-decoration: underline;
-      }
-
-      .icono-mano {
-        font-size: 18px;
-        margin-left: 6px;
-        transition: transform 0.2s ease;
-      }
-
-      &:hover .icono-mano {
-        transform: translateY(-2px);
-      }
     }
 
     .error-banner {

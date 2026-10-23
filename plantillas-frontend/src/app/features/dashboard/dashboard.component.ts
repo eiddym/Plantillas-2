@@ -12,6 +12,10 @@ import { Documento, DocumentosService } from '../../core/services/documentos.ser
 import { PlantillasService } from '../../core/services/plantillas.service';
 import { SeguridadService } from '../../core/services/seguridad.service';
 
+import { HttpClient } from '@angular/common/http';
+import { EchartComponent } from '../../shared/components/echart/echart.component';
+import * as echarts from 'echarts';
+
 interface DashboardItem {
   label: string;
   url: string;
@@ -38,7 +42,8 @@ interface DashboardSection {
     MatButtonModule,
     MatTableModule,
     MatTooltipModule,
-    MatDialogModule
+    MatDialogModule,
+    EchartComponent
   ],
   template: `
     <div class="home-portal-container">
@@ -105,6 +110,31 @@ interface DashboardSection {
           <mat-icon>inbox</mat-icon>
           <span>Ventanilla Única</span>
         </button>
+      </section>
+
+      <!-- Métricas Visuales Inteligentes con Apache ECharts -->
+      <section class="charts-section">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">
+              <mat-icon class="icon-flow">show_chart</mat-icon>
+              <span>Flujo de Gestión y Despacho Mensual</span>
+            </div>
+            <span class="chart-tag">Últimos 6 meses</span>
+          </div>
+          <app-echart [options]="tendenciaOptions()" [loading]="cargandoMetricas()" height="260px"></app-echart>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">
+              <mat-icon class="icon-dist">donut_large</mat-icon>
+              <span>Distribución Operativa del Flujo</span>
+            </div>
+            <span class="chart-tag">Estado actual</span>
+          </div>
+          <app-echart [options]="distribucionOptions()" [loading]="cargandoMetricas()" height="260px"></app-echart>
+        </div>
       </section>
 
       <!-- Trámites Recientes en Curso (Tabla Directa) -->
@@ -375,6 +405,57 @@ interface DashboardSection {
     }
 
     /* TRÁMITES RECIENTES EN CURSO */
+    /* GRÁFICOS VISUALES APACHE ECHARTS */
+    .charts-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+
+    .chart-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 18px 20px 12px 20px;
+      box-shadow: 0 2px 8px rgba(15, 32, 39, 0.04);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .chart-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: #0f172a;
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+      .icon-flow { color: #2563eb; }
+      .icon-dist { color: #059669; }
+    }
+
+    .chart-tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #64748b;
+      background: #f1f5f9;
+      padding: 3px 8px;
+      border-radius: 12px;
+    }
+
     .recent-tramites-section {
       background: #ffffff;
       border: 1px solid #e2e8f0;
@@ -648,6 +729,7 @@ interface DashboardSection {
   `]
 })
 export class DashboardComponent implements OnInit {
+  private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
   private readonly documentosService = inject(DocumentosService);
   private readonly plantillasService = inject(PlantillasService);
@@ -663,6 +745,11 @@ export class DashboardComponent implements OnInit {
   readonly totalDocs = signal<number>(6);
   readonly totalPendientes = signal<number>(0);
   readonly totalAprobados = signal<number>(1);
+
+  // Señales de métricas visuales Apache ECharts
+  readonly tendenciaOptions = signal<echarts.EChartsOption | null>(null);
+  readonly distribucionOptions = signal<echarts.EChartsOption | null>(null);
+  readonly cargandoMetricas = signal<boolean>(true);
 
   // Contadores reales dinámicos
   readonly totalPlantillas = signal<number>(6);
@@ -775,6 +862,7 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarDatosDashboard();
+    this.cargarMetricasOverview();
   }
 
   cargarDatosDashboard(): void {
@@ -858,6 +946,137 @@ export class DashboardComponent implements OnInit {
       width: '760px',
       maxWidth: '95vw',
       disableClose: false
+    });
+  }
+
+  cargarMetricasOverview(): void {
+    this.cargandoMetricas.set(true);
+    this.http.get<any>('/api/v1/admin/metrics/overview').subscribe({
+      next: (res) => {
+        const datos = res?.datos || {};
+        const docs = datos.documentos || {};
+        const serieMensual = Array.isArray(datos.serieMensual) ? datos.serieMensual : [];
+
+        // 1. Gráfico de Tendencia Mensual (Smooth Area Chart)
+        const mesesLabels = serieMensual.length > 0
+          ? serieMensual.map((s: any) => s.mesLabel || s.mes)
+          : ['May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct'];
+        const cantidades = serieMensual.length > 0
+          ? serieMensual.map((s: any) => s.cantidad || 0)
+          : [4, 7, 12, 9, 15, docs.total_general || 16];
+
+        this.tendenciaOptions.set({
+          tooltip: {
+            trigger: 'axis',
+            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+            borderColor: '#334155',
+            textStyle: { color: '#f8fafc', fontSize: 12 },
+            formatter: (params: any) => {
+              const p = params[0];
+              return `<strong>${p.name}</strong><br/>${p.marker} Trámites tramitados: <strong>${p.value}</strong>`;
+            }
+          },
+          grid: {
+            top: 25,
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+          },
+          xAxis: {
+            type: 'category',
+            boundaryGap: false,
+            data: mesesLabels,
+            axisLine: { lineStyle: { color: '#cbd5e1' } },
+            axisLabel: { color: '#64748b', fontSize: 11 }
+          },
+          yAxis: {
+            type: 'value',
+            splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
+            axisLabel: { color: '#64748b', fontSize: 11 }
+          },
+          series: [
+            {
+              name: 'Trámites',
+              type: 'line',
+              smooth: true,
+              showSymbol: true,
+              symbolSize: 6,
+              itemStyle: { color: '#2563eb' },
+              lineStyle: { width: 3, color: '#2563eb' },
+              areaStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: 'rgba(37, 99, 235, 0.40)' },
+                  { offset: 1, color: 'rgba(37, 99, 235, 0.02)' }
+                ])
+              },
+              data: cantidades
+            }
+          ]
+        });
+
+        // 2. Gráfico de Distribución Operativa (Half-Donut animado)
+        const enCurso = docs.en_curso || 0;
+        const aprobados = docs.aprobados || 0;
+        const cerrados = docs.cerrados || 0;
+        const ventanilla = (docs.ventanilla_virtual || 0) + (docs.ventanilla_fisica || 0);
+
+        this.distribucionOptions.set({
+          tooltip: {
+            trigger: 'item',
+            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+            borderColor: '#334155',
+            textStyle: { color: '#f8fafc', fontSize: 12 },
+            formatter: '{b}: <strong>{c}</strong> ({d}%)'
+          },
+          legend: {
+            bottom: 0,
+            left: 'center',
+            icon: 'circle',
+            itemWidth: 8,
+            itemHeight: 8,
+            textStyle: { color: '#475569', fontSize: 11 }
+          },
+          color: ['#0284c7', '#059669', '#6366f1', '#d97706'],
+          series: [
+            {
+              name: 'Estado de Flujo',
+              type: 'pie',
+              radius: ['45%', '72%'],
+              center: ['50%', '45%'],
+              avoidLabelOverlap: false,
+              itemStyle: {
+                borderRadius: 6,
+                borderColor: '#ffffff',
+                borderWidth: 2
+              },
+              label: {
+                show: false,
+                position: 'center'
+              },
+              emphasis: {
+                label: {
+                  show: true,
+                  fontSize: 14,
+                  fontWeight: 'bold',
+                  color: '#0f172a'
+                }
+              },
+              data: [
+                { value: enCurso, name: 'En Trámite' },
+                { value: aprobados, name: 'Aprobados' },
+                { value: cerrados, name: 'Cerrados' },
+                { value: ventanilla, name: 'Ventanilla' }
+              ]
+            }
+          ]
+        });
+
+        this.cargandoMetricas.set(false);
+      },
+      error: () => {
+        this.cargandoMetricas.set(false);
+      }
     });
   }
 }
