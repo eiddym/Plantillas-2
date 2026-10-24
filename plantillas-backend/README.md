@@ -1,85 +1,90 @@
-## Sistema de documentos administrativos (Plantillas)
+# Plantillas Backend - API REST
 
-1. Objetivos del sistema
+> **API REST de Gestión Documental, Motor de Plantillas Formly, Colas BullMQ y Firma Digital**  
+> Desarrollado en **Node.js 22 LTS**, **Express 4.18**, **Sequelize 6.37**, **PostgreSQL 16**, **Redis 7** y **Mosparo Anti-Bot**.
 
-    a. Objetivo Principal
-    El objetivo del sistema de documentos administrativos es tener una mejor administración de los documentos generados en la entidad, mediante el uso de tecnologías “open source” para la generación dinámica de documentos en base a plantillas configurables.
+---
 
-    b. Objetivos Secundarios
+## 1. Objetivos del Sistema
 
-        - Desarrollar un motor de plantillas que permita la configuración de documentos.
-        - Desarrollar un módulo de asignación y control de CITE’s, basados por unidad y tipo de documento
-        - Desarrollar módulo de historicos que permite obtener informacion sobre el flujo de un documento
-        - Desarrollar los medios que permitan a un documento seguir los flujos establecidos.
-        - Desarrollar módulo de presupuesto, para el control de las partidas presupuestarias
+* **Objetivo Principal**: Proveer una plataforma robusta, escalable y segura para la administración, redacción, emisión, derivación y validación jurídica de documentos administrativos institucionales mediante plantillas dinámicas configurables (Formly).
+* **Objetivos Secundarios**:
+  * Motor de plantillas JSONB con soporte de 79 formatos predefinidos.
+  * Módulo de asignación y control de CITEs por unidad y tipo de documento.
+  * Módulo de Hojas de Ruta y radicación externa (Ventanilla Única).
+  * Control de presupuesto (Caja Chica, afectación de partidas, compromisos y pagos).
+  * Procesamiento asíncrono de PDFs pesados y correos electrónicos con BullMQ + Redis.
+  * Protección soberana contra spam y bots con Mosparo.
+  * Autenticación multimodal: Local, Ciudadanía Digital (OIDC AGETIC), LDAP y Authentik.
 
-2. Tecnologías Utilizadas
+---
 
-    Las Tecnologías utilizadas en el desarrollo de sistema son :
-    - NodeJS como entorno base de desarrollo para ambos casos.
+## 2. Tecnologías y Arquitectura
 
-    BACKEND:
-    - ExpressJS como servidor de aplicaciones web.
-    - PostgreSQL como gestor de bases de datos.
-    - Sequelize como ORM(Object-Relational mapping).
-    - Passport JWT como mecanismos de autenticación.
-    - Babel compilador de ECMA6 a ECMA5
-    - MomentJS manejador de la generacion de datos tipo fecha,hora,segundos,etc.
-    - Uuid(v4) generador aleatorio de caracteres.
-    - helmet como herramienta de configuración de seguridad.
+* **Entorno de Ejecución**: Node.js 22 LTS.
+* **Framework**: Express 4.18 con Consign para carga automática de rutas, modelos y lógica de negocio (BL).
+* **Base de Datos**: PostgreSQL 16 con Sequelize 6.37 ORM.
+* **Colas y Tareas en Segundo Plano**: BullMQ 6.4 + Redis 7 (`ioredis`).
+* **Seguridad Anti-Bot**: `@mosparo/api-client` 2.0.
+* **Motor de PDF**: Puppeteer-core 25 (Chromium headless Warm Pool) + `pdf-lib` 1.17.
+* **Autenticación**: JSON Web Tokens (`jwt-simple`), `passport-jwt`, `passport-ldapauth`, `openid-client` (Ciudadanía Digital).
 
-    FRONTEND:
-    - Gulp como medio de automatización de tareas.
-    - Angular(v1.5) como entorno base
-    - Angular-Material como medio de desarrollo de la interfaz de usuario(maquetación)
-    - Angular-Formly como generador de componentes(Plantilla)
-    - html como herramienta de maquetación web
-    - css como herramienta de estilos
+---
 
-3. Autenticación
+## 3. Sincronización Declarativa de Datos (79 Plantillas)
 
-    La autenticación se puede configurar:
-    - Haciendo uso del servicio de autenticación de Ciudadanía Digital.
-    - Haciendo uso del servicio de autenticación LDAP.
-    - Haciendo uso de la autenticación del sistema.
+El backend incorpora un sistema de población declarativo e idempotente que sustituye a los seeders secuenciales de Sequelize CLI para evitar pérdida de datos o colisiones de secuencias:
 
-    Las tres opciones son excluyentes.
-
-4. Aprobación de documentos con ciudadanía digital
-
-    Para darle validez a toda la documentación generada en el sistema, la misma deberá ser aprobada por los actores de cada documento.
-
-5. Frontend
-
-    Este proyecto depende directamente de un frontend cuyo código se halla en este mismo repositorio (revise el proyecto_plantillas_frontend)
-
-  6. Instalación y despliegue
-
-  ### Prerrequisitos
-  - **Node.js** ≥ 16
-  - **Docker** y **docker‑compose** (para levantar la base de datos)
-  - **Git**
-
-  ### Instalación rápida (un solo comando)
+* **Directorio de Datos**: `src/data/seed/`
+  * `plantillas.json` (79 plantillas Formly oficiales)
+  * `unidades.json` (7 unidades, incluyendo la Unidad de Test `UTEST`)
+  * `usuarios.json` (usuario `sys_default`, usuario demo AGETIC `10794552-1J`, y usuarios de prueba)
+  * `roles.json`, `menus.json`, `rol_menus.json`, `usuario_roles.json`
+* **Ejecutar sincronización**:
   ```bash
-  git clone <repo‑url> && cd plantillas-backend && cp .env.example .env && npm ci && npm run docker:up && npm test && npm start
+  npm run seed:sync
   ```
 
-  ### Detalle de los pasos
-  - `cp .env.example .env` – crea el archivo de entorno con los valores por defecto (BD **postgres/postgres**, servicios externos desactivados).
-  - `npm ci` – instala las dependencias exactas del lockfile.
-  - `npm run docker:up` – levanta un contenedor PostgreSQL (`postgres:15‑alpine`).
-  - `npm test` – ejecuta la suite; debe terminar sin errores (código 0).
-  - `npm start` – arranca la API en el puerto configurado (`8000` por defecto).
+---
 
-  ### Personalizar
-  - Edite `.env` para cambiar credenciales de la base de datos o habilitar servicios externos (`APROBACION_CD_HABILITADO=true`, `CIUDADANIA_DIGITAL_HABILITADO=true`, etc.).
-  - Si prefiere iniciar la base de datos de forma manual, simplemente configure una instancia PostgreSQL y omita `npm run docker:up`.
+## 4. Usuarios Iniciales y de Prueba
 
-  7. Manual de usuario
+* **`sys_default`**: Usuario administrador local (Contraseña inicial: `Developer`, SHA-256).
+* **`10794552-1J` (FABIOLA SANCHEZ VACA)**: Usuario Demo oficial AGETIC para autenticación mediante **Ciudadanía Digital OIDC**. Sin cargo, sin MAE, sin unidad institucional asignada.
+* **Usuarios Institucionales**: `milena.pacheco` (DAF), `carlos.molina` (DOM), `ariel.ayaviri` (Sistemas).
 
-    El manual de usuario se encuentra en la carpeta ***docs*** del presente proyecto.
+---
 
-7. Manual de usuario
+## 5. Puesta en Marcha Local
 
-    El manual de usuario se encuentra en la carpeta ***docs*** del presente proyecto.
+### Prerrequisitos
+* **Node.js** 22 LTS
+* **PostgreSQL** 16 (puerto 5432 o 5433)
+* **Redis** 7 (puerto 6379)
+
+### Comandos Rápidos
+```bash
+# Instalar dependencias
+npm install --prefer-offline
+
+# Configurar variables de entorno
+cp .env.sample .env
+
+# Ejecutar migraciones
+npm run migrar
+
+# Sincronizar las 79 plantillas y datos base
+npm run seed:sync
+
+# Iniciar servidor en modo desarrollo
+npm run startdev
+```
+
+---
+
+## 6. Observabilidad y Monitoreo
+
+* `GET /health`: Liveness del proceso Node.js.
+* `GET /ready`: Estado de conexión con PostgreSQL.
+* `GET /health/queue`: Conexión con Redis y métricas de colas BullMQ (`pdf`, `correos`, `documentos`).
+* `GET /health/mosparo`: Estado de configuración del anti-bot Mosparo.

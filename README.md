@@ -1,23 +1,28 @@
 # Plantillas 2
 
 > **Sistema Integral de Gestión Documental, Diseñador Dinámico Formly, Ventanilla Única y Aprobación con Firma Digital**  
-> Arquitectura moderna y de alto rendimiento basada en **Node.js 22 LTS**, **Angular 17**, **PostgreSQL 16** y **Redis 7 (BullMQ)**.
+> Arquitectura moderna y de alto rendimiento basada en **Node.js 22 LTS**, **Angular 17 Standalone**, **PostgreSQL 16**, **Redis 7 (BullMQ)** y protección soberana **Mosparo**.
 
 ---
 
 ## ⚡ Implementación Principal con Docker Compose
 
-Este proyecto está diseñado para ejecutarse de manera integral y reproducible mediante **Docker Compose**. Todos los servicios (PostgreSQL 16, Redis 7, Backend API, Migrador automático y Frontend Nginx) están orquestados en [`docker-compose.yml`](docker-compose.yml). Con un solo comando se inicializa la plataforma completa:
+Este proyecto está diseñado para ejecutarse de manera integral, predecible y reproducible mediante **Docker Compose**. Todos los componentes de la infraestructura (PostgreSQL 16, Redis 7, Backend API escalable, Migrador/Sincronizador automático de 79 plantillas y Frontend Nginx) están orquestados en [`docker-compose.yml`](docker-compose.yml).
+
+Con un solo comando se inicializa la plataforma completa:
 
 ```bash
-# Levantar todo el stack con compilación en segundo plano
+# 1. Copiar variables de entorno si aún no existen
+cp .env.sample .env
+
+# 2. Levantar todo el stack con compilación en segundo plano
 docker compose up -d --build
 
-# Escalar el backend para alta concurrencia en caliente
+# 3. Escalar el backend para alta concurrencia en caliente (opcional)
 docker compose up -d --scale backend=4
 ```
 
-Consulte la sección [Puesta en Marcha Rápida con Docker Compose](#-puesta-en-marcha-rápida-con-docker-compose) para más detalles.
+Consulte la sección [Puesta en Marcha Rápida](#-puesta-en-marcha-rápida-con-docker-compose) para la guía paso a paso.
 
 [![Node.js Version](https://img.shields.io/badge/Node.js-22%20LTS-green.svg)](https://nodejs.org/)
 [![Angular Version](https://img.shields.io/badge/Angular-17%20Standalone-dd0031.svg)](https://angular.dev/)
@@ -33,7 +38,7 @@ Consulte la sección [Puesta en Marcha Rápida con Docker Compose](#-puesta-en-m
 
 **Plantillas 2** es una plataforma institucional diseñada para la emisión, redacción colaborativa, diseño de formularios interactivos (Formly), radicación de trámites externos y validación jurídica de documentos del Estado y entidades corporativas.
 
-El sistema fue modernizado para erradicar dependencias obsoletas (Node 6/12, AngularJS 1.5, Gulp, Bower y wrappers heredados de `pdftk`/PhantomJS), elevando el stack a estándares contemporáneos con **cero pérdida de datos** de las plantillas existentes, compatibilidad estricta con esquemas JSONB y alta velocidad de procesamiento en red.
+El sistema fue modernizado integralmente para erradicar dependencias obsoletas (Node 6/12, AngularJS 1.5, Gulp, Bower y wrappers heredados de `pdftk`/PhantomJS), elevando el stack a estándares contemporáneos con **cero pérdida de datos** de las **79 plantillas formly existentes**, preservación estricta de la **Unidad de Test (UTEST)**, compatibilidad nativa con esquemas JSONB, colas asíncronas de alto rendimiento y protección soberana contra bots.
 
 ---
 
@@ -41,61 +46,63 @@ El sistema fue modernizado para erradicar dependencias obsoletas (Node 6/12, Ang
 
 ### 1. Gestión Documental y Diseñador Formly
 * **Diseñador Visual de Plantillas**: Creación interactiva de esquemas con `@ngx-formly` basados en JSON dinámico. Soporta tipos de campo institucionales (`texto`, `cite`, `datosGenerales`, `editorTexto`, `vacio`).
+* **79 Plantillas Oficiales Integradas**: Catálogo exhaustivo de documentos institucionales (Informes Técnicos, Resoluciones Administrativas, Solicitudes, Hojas de Ruta, etc.) sincronizadas de forma declarativa e idempotente.
+* **Módulo de Presupuesto (Caja Chica y Partidas)**: Control de partidas presupuestarias con afectaciones iniciales, compromiso de presupuesto (simple y múltiple), pagos vinculados por CITE documental y reversiones automáticas.
 * **Editor Enriquecido**: TinyMCE 8 moderno integrado para la redacción de cuerpos documentales con estilos controlados.
 * **Trazabilidad Completa**: Bitácora de auditoría histórica y máquina de estados (`BORRADOR`, `REVISADO`, `APROBADO`, `DERIVADO`, `CERRADO`).
 
 ### 2. Firma Digital y Validez Legal
-* **Estampado Criptográfico**: Generación de códigos QR y hashes con CITE oficial y metadatos de validación criptográfica.
-* **Aprobación con Ciudadanía Digital**: Integración con el servicio estatal de Ciudadanía Digital (OIDC estatal) y la plataforma de interoperabilidad para la aprobación legal vinculante de documentos.
-* **Cotejo y Verificación Pública**: Portal público de verificación documental por CITE institucional y Código de Verificación, accesible para cualquier ciudadano.
+* **Estampado Criptográfico**: Generación de códigos QR y hashes SHA-256 con CITE oficial y metadatos de validación criptográfica conforme a normativa boliviana.
+* **Aprobación con Ciudadanía Digital**: Integración nativa con el servicio estatal de Ciudadanía Digital (OIDC estatal / AGETIC) y la plataforma de interoperabilidad para la aprobación legal vinculante de documentos.
+* **Cotejo y Verificación Pública**: Portal público en `/verificar` para comprobar autenticidad documental por CITE institucional y Código de Verificación, protegido con Mosparo anti-bot.
 
-### 3. Ventanilla Única y Usuarios Virtuales
-* **Ventanilla Virtual Ciudadana**: Formulario web público para el ingreso y radicación digital de correspondencia externa con validación estricta de solicitante y correo.
+### 3. Ventanilla Única y Trámites Externos
+* **Ventanilla Virtual Ciudadana**: Formulario web público en `/ventanilla-virtual` para el ingreso y radicación digital de correspondencia externa con validación estricta de solicitante, correo y documentación adjunta.
 * **Generación Automática de Hojas de Ruta**: Correlativo oficial consecutivo (`HR-YYYY-00001`) y CITE de Documentos Externos (`DE-A`).
 * **Seguimiento en Tiempo Real**: Consulta pública del estado y derivación de trámites mediante código de Hoja de Ruta.
-* **Usuarios Virtuales**: Soporte de cuentas virtuales compartidas para despachos, ventanillas y bandejas institucionales sin atarse a identidades individuales.
+* **Usuarios Virtuales**: Soporte de cuentas virtuales compartidas para despachos, ventanillas y bandejas institucionales sin atarse a identidades físicas individuales.
 
 ### 4. Seguridad Soberana y Anti-Bot (Mosparo)
-* **Protección Soberana Mosparo**: Integración nativa de **Mosparo** en Ventanilla Única y Verificación Pública de documentos. Funciona de manera auto-hospedada (self-hosted), protegiendo contra bots y scraping sin transferir metadatos ni IPs de ciudadanos a servidores extranjeros (con soporte de fallback para Google reCAPTCHA).
-* **Autenticación Unificada**:
-  * Autenticación local mediante base de datos (SHA-256).
-  * Directorio activo empresarial LDAP (`passport-ldapauth`, `activedirectory`).
-  * OIDC institucional (Authentik) con fallback automático a LDAP.
-  * Autenticación mediante **Ciudadanía Digital** estatal (`openid-client`, `jose`).
+* **Protección Soberana Mosparo**: Integración nativa de **Mosparo** en Ventanilla Única y Verificación Pública de documentos. Funciona de manera auto-hospedada (self-hosted / on-premise), protegiendo contra bots y scraping sin transferir metadatos ni IPs de ciudadanos a servidores extranjeros (con soporte de fallback a Google reCAPTCHA si se requiere).
+* **Autenticación Unificada Multimodal**:
+  * **Local**: Base de datos interna con hash SHA-256 (usuario de contingencia `sys_default`).
+  * **Ciudadanía Digital (OIDC AGETIC)**: Autenticación mediante credenciales ciudadanas oficiales (usuario de prueba demo AGETIC: `10794552-1J`).
+  * **Directorio Activo Empresarial LDAP**: Conexión a servidores institucionales (`passport-ldapauth`, `activedirectory`).
+  * **OIDC Institucional (Authentik)**: Conexión OAuth2/OIDC corporativa con fallback automático.
 
 ### 5. Arquitectura Asíncrona con BullMQ + Redis
 * **Colas de Trabajo en Segundo Plano**:
   * `generacion-pdf`: Encolado y compilación pesada de PDFs con Puppeteer Warm Pool, con límite de concurrencia para proteger el uso de CPU y memoria.
   * `envio-correos`: Despacho asíncrono de notificaciones por correo electrónico (SMTP) con reintentos exponenciales automáticos, evitando congelar las peticiones HTTP del usuario.
-  * `procesamiento-documentos`: Tareas de segundo plano y mantenimiento documental.
-* **Resiliencia y Modo Fallback**: Si Redis no está disponible, el sistema conmuta automáticamente a ejecución directa sin interrumpir el servicio.
-* **Monitoreo de Colas**: Endpoints `/health/queue` y `/health/mosparo` para supervisar el rendimiento y estado de tareas en tiempo real.
+  * `procesamiento-documentos`: Tareas de segundo plano, indexación y mantenimiento documental.
+* **Resiliencia y Modo Fallback**: Si Redis no estuviera disponible temporalmente, el backend conmuta automáticamente a ejecución directa sin interrumpir el servicio ni generar errores al usuario.
+* **Supervisión de Salud y Métricas**: Endpoints `/api/v1/health/queue` y `/api/v1/health/mosparo` para supervisar el rendimiento y estado de tareas en tiempo real.
 
 ---
 
 ## 🚀 Pila Tecnológica
 
 ### Backend (`plantillas-backend`)
-* **Runtime**: Node.js 22 LTS.
+* **Runtime**: Node.js 22 LTS (Bookworm / Alpine).
 * **Framework Web**: Express 4.18 con consign y arquitectura modular.
 * **Base de Datos**: PostgreSQL 16 con ORM Sequelize 6.37.
-* **Colas y Caché**: **BullMQ** + **Redis 7 Alpine** (`ioredis`).
-* **Anti-Bot Soberano**: **@mosparo/api-client** (Open Source / On-Premise).
+* **Colas y Caché**: **BullMQ 6.4** + **Redis 7 Alpine** (`ioredis` 5.10).
+* **Anti-Bot Soberano**: **@mosparo/api-client 2.0** (Open Source / On-Premise).
 * **Motor de PDF**: `puppeteer-core` 25.16 (Chromium headless) + `pdf-lib` 1.17 nativo.
-* **Warm Browser Pool**: Instancia singleton caliente de Chromium con reciclaje automático de memoria para renderizado veloz de documentos.
+* **Warm Browser Pool**: Instancia singleton caliente de Chromium con reciclaje automático de pestañas y memoria para renderizado veloz de documentos.
 * **Optimizaciones de Base de Datos**:
   * Índices **GIN** sobre campos JSONB (`idx_documento_plantilla_valor_gin`).
   * Índices compuestos para bandejas y flujos (`idx_documento_usuario_estado_fecha`).
   * Búsqueda de Texto Completo (**Full-Text Search**) en español con `tsvector`.
 * **Observabilidad y Healthchecks**:
-  * `/health`: Liveness del contenedor.
-  * `/ready`: Readiness de conexión a PostgreSQL.
-  * `/health/queue`: Estado de conexión a Redis y conteo de tareas en colas BullMQ.
-  * `/health/mosparo`: Estado de configuración del anti-bot Mosparo.
+  * `/health` y `/api/v1/health`: Liveness del contenedor backend.
+  * `/ready` y `/api/v1/ready`: Readiness de conexión a PostgreSQL.
+  * `/health/queue` y `/api/v1/health/queue`: Estado de conexión a Redis y conteo en tiempo real de tareas BullMQ.
+  * `/health/mosparo` y `/api/v1/health/mosparo`: Estado de configuración del anti-bot Mosparo.
 
 ### Frontend (`plantillas-frontend`)
 * **Framework**: Angular 17.3 con arquitectura 100% **Standalone Components**.
-* **Reactividad**: **Angular Signals** para un renderizado predecible y sin memory leaks.
+* **Reactividad**: **Angular Signals** para un renderizado predecible, óptimo y sin memory leaks.
 * **Formularios Dinámicos**: `@ngx-formly/core` 6.3 y `@ngx-formly/material` 6.3.
 * **Editor**: TinyMCE 8 (`@tinymce/tinymce-angular` 7.0).
 * **Gráficos**: ECharts 6.1 para estadísticas y analítica de documentos.
@@ -113,17 +120,28 @@ El sistema fue modernizado para erradicar dependencias obsoletas (Node 6/12, Ang
 │   ├── src/
 │   │   ├── bl/                    # Lógica de negocio (firma, documentos, seguridad)
 │   │   ├── config/                # Configuraciones de conexión y entorno
+│   │   ├── data/
+│   │   │   └── seed/              # Fixtures JSON declarativos oficiales
+│   │   │       ├── plantillas.json    # Las 79 plantillas Formly íntegras
+│   │   │       ├── unidades.json      # 7 unidades institucionales (incluye UTEST)
+│   │   │       ├── usuarios.json      # sys_default, 10794552-1J demo AGETIC y usuarios
+│   │   │       ├── roles.json         # 7 roles del sistema
+│   │   │       ├── menus.json         # 27 menús oficiales
+│   │   │       ├── rol_menus.json     # 82 asignaciones rol-menú
+│   │   │       └── usuario_roles.json # Asignaciones de roles
 │   │   ├── db.js                  # Inicialización de Sequelize y modelos
 │   │   ├── lib/
 │   │   │   ├── mosparo.js         # Cliente y validador de seguridad Mosparo
 │   │   │   ├── queue/             # Infraestructura BullMQ + Redis (connection, queues, workers)
 │   │   │   ├── util.js            # Generación de PDFs y Chromium Warm Pool
 │   │   │   ├── firma.js           # Utilidades criptográficas y sellos
-│   │   │   └── correo.js          # Despacho SMTP de notificaciones
+│   │   │   └── correo.js          # Despacho SMTP asíncrono
 │   │   ├── migrations/            # Migraciones de base de datos PostgreSQL
 │   │   ├── models/                # Modelos ORM Sequelize
-│   │   ├── routes/                # Rutas y endpoints Express (Ventanilla, Verificar, etc.)
-│   │   └── seeders/               # Semillas iniciales del sistema
+│   │   ├── routes/                # Rutas Express (Ventanilla, Verificar, Health, etc.)
+│   │   ├── scripts/
+│   │   │   └── sincronizar_datos.js # Sincronización declarativa e idempotente
+│   │   └── seeders/               # Semillas legacy compatibles
 │   ├── Dockerfile                 # Contenedor del backend
 │   └── package.json
 │
@@ -154,11 +172,47 @@ El sistema fue modernizado para erradicar dependencias obsoletas (Node 6/12, Ang
 
 ---
 
+## 💾 Población de Datos Declarativa (Idempotente)
+
+En lugar de recurrir a los seeders secuenciales frágiles de Sequelize CLI (que podían truncar datos accidentalmente o causar colisiones de claves primarias por secuencias descalibradas), el sistema implementa una **arquitectura declarativa de sincronización**:
+
+* **Ubicación de fixtures**: `plantillas-backend/src/data/seed/`.
+* **Script ejecutor**: `plantillas-backend/src/scripts/sincronizar_datos.js`.
+* **Comando manual**:
+  ```bash
+  # Desde el contenedor backend
+  docker exec plantillas-backend-1 npm run seed:sync
+
+  # O localmente en plantillas-backend
+  npm run seed:sync
+  ```
+* **Garantías del sistema**:
+  1. **Cero pérdida de plantillas**: Sincroniza y verifica las **79 plantillas Formly** oficiales mediante coincidencia por `abreviacion`.
+  2. **Preservación de unidades**: Mantiene intactas las 7 unidades institucionales, incluyendo la **Unidad de Test (`UTEST`, `id_unidad = 1`)**.
+  3. **Calibración de secuencias PostgreSQL**: Ejecuta automáticamente `SELECT setval(...)` en todas las secuencias seriales para evitar errores de `duplicate key value violates unique constraint`.
+  4. **Ejecución automática en Docker**: El contenedor `migrador` en `docker-compose.yml` corre las migraciones y la sincronización antes de arrancar los servicios web.
+
+---
+
+## 👥 Usuarios Iniciales del Sistema
+
+El sistema cuenta con usuarios predeterminados para contingencia, administración y pruebas de integración:
+
+| Usuario | Tipo Autenticación | Nombre Completo | Unidad | Cargo | Estado / Propósito |
+| :--- | :---: | :--- | :---: | :--- | :--- |
+| **`sys_default`** | `LOCAL` | System Default | Unidad de Test (`UTEST`) | *Default system user* | **Administrador local del sistema**. Contraseña inicial: `Developer` (SHA-256). |
+| **`10794552-1J`** | `CIUDADANIA` | FABIOLA SANCHEZ VACA | *Ninguna (NULL)* | *(Sin cargo)* | **Usuario Demo AGETIC**. Cuenta oficial de prueba para la integración con **Ciudadanía Digital OIDC**. No es MAE, no tiene unidad ni cargo asignado. Rol: `ADMIN` para pruebas. |
+| **`milena.pacheco`** | `AUTHENTIK` | Milena Pacheco | DAF (`id_unidad: 3`) | Jefe de Adm. y Finanzas | Usuario institucional de prueba. |
+| **`carlos.molina`** | `AUTHENTIK` | Carlos Molina | DOM (`id_unidad: 6`) | Jefe de Operaciones Mineras | Usuario institucional de prueba. |
+| **`ariel.ayaviri`** | `AUTHENTIK` | Ariel Ayaviri | UTEST (`id_unidad: 1`) | Jefe de Tecnologías y Sistemas | Usuario institucional de prueba. |
+
+---
+
 ## 🛠️ Requisitos del Sistema
 
 * **Docker Engine** $\ge$ 24.0.0
 * **Docker Compose** $\ge$ 2.20.0
-* *(Para desarrollo local sin Docker)*:
+* *(Para desarrollo local sin contenedores)*:
   * **Node.js** 22 LTS
   * **npm** 10+
   * **PostgreSQL** 16
@@ -190,20 +244,21 @@ El sistema fue modernizado para erradicar dependencias obsoletas (Node 6/12, Ang
    docker compose ps
    ```
 
-5. **Acceder a la plataforma**:
-   * **Frontend Web**: [http://localhost](http://localhost) (Puerto `80`)
-   * **API Backend**: [http://localhost:8000](http://localhost:8000) (Puerto `8000`)
-   * **Ventanilla Virtual**: [http://localhost/ventanilla-virtual](http://localhost/ventanilla-virtual)
-   * **Cotejo de Documentos**: [http://localhost/verificar](http://localhost/verificar)
-   * **Monitoreo de Salud**: [http://localhost/health](http://localhost/health)
-   * **Monitoreo de Colas**: [http://localhost/health/queue](http://localhost/health/queue)
-   * **Monitoreo Mosparo**: [http://localhost/health/mosparo](http://localhost/health/mosparo)
+5. **Acceder a la plataforma y endpoints**:
+   * **Frontend Web SPA**: [http://localhost](http://localhost) (Puerto `80`)
+   * **API Backend REST**: [http://localhost:8000](http://localhost:8000) o a través del proxy Nginx en [http://localhost/api/v1](http://localhost/api/v1)
+   * **Ventanilla Virtual Pública**: [http://localhost/ventanilla-virtual](http://localhost/ventanilla-virtual)
+   * **Cotejo y Verificación de Documentos**: [http://localhost/verificar](http://localhost/verificar)
+   * **Liveness Backend**: [http://localhost/api/v1/health](http://localhost/api/v1/health)
+   * **Readiness PostgreSQL**: [http://localhost/api/v1/ready](http://localhost/api/v1/ready)
+   * **Monitoreo Colas BullMQ + Redis**: [http://localhost/api/v1/health/queue](http://localhost/api/v1/health/queue)
+   * **Monitoreo Anti-Bot Mosparo**: [http://localhost/api/v1/health/mosparo](http://localhost/api/v1/health/mosparo)
 
 ---
 
 ## 🚀 Alta Concurrencia y Escalado Horizontal (+5,000 Usuarios)
 
-La arquitectura desacoplada permite escalar el backend horizontalmente en caliente mediante balanceo dinámico en Nginx y colas BullMQ en Redis:
+La arquitectura desacoplada permite escalar el backend horizontalmente en caliente mediante balanceo dinámico en Nginx y procesamiento asíncrono con Redis:
 
 ```bash
 # Modo Estándar (< 1,000 usuarios activos)
@@ -229,12 +284,12 @@ docker compose up -d --scale backend=8
 
 ## 🔐 Seguridad y Cumplimiento Normativo
 
-* **Soberanía Tecnológica**: Sin dependencias foráneas obligatorias para la protección anti-bot (Mosparo auto-hospedado).
+* **Soberanía Tecnológica**: Sin dependencias foráneas obligatorias para la protección anti-bot (Mosparo auto-hospedado sin fuga de datos biométricos ni de navegación).
 * **Validez Jurídica**: Documentos y certificados alineados a la normativa de firma digital y Ciudadanía Digital del Estado Plurinacional de Bolivia.
-* **Aislamiento de Permisos**: Contenedores ejecutados bajo usuarios de privilegios reducidos (`node:node`) y certificados SSL/TLS automáticos con **Traefik**.
+* **Aislamiento de Permisos**: Contenedores ejecutados bajo usuarios de privilegios reducidos (`node:node`) y certificados SSL/TLS automáticos con proxy reverso.
 
 ---
 
 ## 📄 Licencia
 
-Este proyecto ha sido reconstruido con arquitectura moderna para entidades públicas y privadas. Distribuido bajo lineamientos de código abierto y soberanía tecnológica institucional.
+Este proyecto ha sido modernizado con arquitectura contemporánea para entidades públicas y privadas. Distribuido bajo lineamientos de código abierto y soberanía tecnológica institucional.
