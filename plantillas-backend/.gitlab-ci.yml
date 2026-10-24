@@ -32,15 +32,15 @@ stages:
 #   only:
 #     - develop
 #   allow_failure: true
-# ejecutando tests:
-#   image: node:12-alpine
-#   stage: test
-#   script:
-#     - npm run test
-#   tags:
-#     - development
-#   only:
-#     - develop
+test:
+  image: node:12-alpine
+  stage: test
+  script:
+    - npm run test
+  tags:
+    - development
+  only:
+    - develop
 Generar imagen docker (Dev):
   image: gcr.io/kaniko-project/executor:debug-v0.23.0
   stage: deployment
