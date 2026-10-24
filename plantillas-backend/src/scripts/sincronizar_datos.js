@@ -117,7 +117,7 @@ async function sincronizar() {
     }
     console.log(`[Menús] Procesados: ${menusData.length} (Nuevos: ${mInsertados})`);
 
-    // 4. SINCRONIZAR USUARIOS BASE (sys_default y 10794552-1J MAE)
+    // 4. SINCRONIZAR USUARIOS BASE (sys_default y 10794552-1J Ciudadanía Digital Demo AGETIC)
     console.log('\n--- 4. Sincronizando Usuarios Institucionales Base ---');
     const usuariosData = JSON.parse(fs.readFileSync(path.join(seedDir, 'usuarios.json'), 'utf8'));
     let usrInsertados = 0, usrActualizados = 0;
@@ -129,14 +129,14 @@ async function sincronizar() {
       if (!existe) {
         await models.usuario.create({
           id_usuario: usr.id_usuario,
-          fid_unidad: usr.fid_unidad,
+          fid_unidad: usr.fid_unidad !== undefined ? usr.fid_unidad : null,
           usuario: usr.usuario,
           contrasena: usr.contrasena,
           numero_documento: usr.numero_documento,
           nombres: usr.nombres,
           apellidos: usr.apellidos,
-          cargo: usr.cargo,
-          email: usr.email,
+          cargo: usr.cargo !== undefined && usr.cargo !== null ? usr.cargo : '',
+          email: usr.email || 'fabiola.sanchez@agetic.gob.bo',
           virtual: usr.virtual || false,
           es_mae: usr.es_mae || false,
           tipo_autenticacion: usr.tipo_autenticacion || 'LOCAL',
@@ -147,10 +147,11 @@ async function sincronizar() {
         usrInsertados++;
       } else {
         await existe.update({
-          fid_unidad: usr.fid_unidad || existe.fid_unidad,
-          cargo: usr.cargo || existe.cargo,
-          email: usr.email || existe.email,
-          es_mae: usr.es_mae !== undefined ? usr.es_mae : existe.es_mae,
+          fid_unidad: usr.fid_unidad !== undefined ? usr.fid_unidad : null,
+          cargo: usr.cargo !== undefined && usr.cargo !== null ? usr.cargo : '',
+          email: usr.email !== undefined && usr.email !== null ? usr.email : existe.email,
+          es_mae: usr.es_mae !== undefined ? usr.es_mae : false,
+          tipo_autenticacion: usr.tipo_autenticacion || existe.tipo_autenticacion,
           estado: usr.estado || 'ACTIVO',
           _usuario_modificacion: 1
         });

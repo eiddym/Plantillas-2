@@ -102,6 +102,7 @@ async function obtenerEstadoColas() {
  */
 function iniciarSistemaColas() {
   try {
+    getRedisConnection();
     iniciarWorkers();
     logger.info('[BullMQ + Redis] Sistema de colas y workers inicializado.');
   } catch (err) {

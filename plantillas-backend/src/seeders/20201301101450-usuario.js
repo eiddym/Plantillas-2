@@ -17,14 +17,16 @@ module.exports = {
       _usuario_creacion: 1,
       _usuario_modificacion: 1
     }, {
-        fid_unidad: 2,
+        fid_unidad: null,
         usuario: '10794552-1J',
         contrasena: '3fb7b39416f1d067268747fc214494d759d2609f863ace1a8a76705618d5c80b', //Developer
         numero_documento: '10794552-1J',
         nombres: 'FABIOLA',
         apellidos: 'SANCHEZ VACA',
-        cargo: 'Directora General Ejecutiva (MAE)',
-        email: 'contacto@marabuntarl.com',
+        cargo: '',
+        email: 'fabiola.sanchez@agetic.gob.bo',
+        tipo_autenticacion: 'CIUDADANIA',
+        es_mae: false,
         estado: 'ACTIVO',
         _fecha_creacion: new Date(),
         _fecha_modificacion: new Date(),

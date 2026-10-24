@@ -13,7 +13,7 @@ function getRedisOptions() {
     port: REDIS_PORT,
     password: REDIS_PASSWORD,
     maxRetriesPerRequest: null, // Requerido por BullMQ
-    enableReadyCheck: false,
+    enableReadyCheck: true,
     lazyConnect: true,
     retryStrategy(times) {
       // En dev, detener reintentos continuos tras 3 intentos para no bloquear el event loop
@@ -66,7 +66,10 @@ function getRedisConnection() {
 }
 
 function checkRedisAvailable() {
-  return isRedisAvailable && redisConnection && redisConnection.status === 'ready';
+  if (!redisConnection) {
+    getRedisConnection();
+  }
+  return Boolean(isRedisAvailable && redisConnection && (redisConnection.status === 'ready' || redisConnection.status === 'connect'));
 }
 
 module.exports = {
