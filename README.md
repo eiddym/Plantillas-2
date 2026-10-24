@@ -201,15 +201,14 @@ En lugar de recurrir a los seeders secuenciales frágiles de Sequelize CLI (que 
 
 ## 👥 Usuarios Iniciales del Sistema
 
-El sistema cuenta con usuarios predeterminados para contingencia, administración y pruebas de integración:
+El sistema está restringido estricta y exclusivamente a **dos usuarios oficiales** por diseño:
 
 | Usuario | Tipo Autenticación | Nombre Completo | Unidad | Cargo | Estado / Propósito |
 | :--- | :---: | :--- | :---: | :--- | :--- |
-| **`sys_default`** | `LOCAL` | System Default | Unidad de Test (`UTEST`) | *Default system user* | **Administrador local del sistema**. Contraseña inicial: `Developer` (SHA-256). |
-| **`10794552-1J`** | `CIUDADANIA` | FABIOLA SANCHEZ VACA | *Ninguna (NULL)* | *(Sin cargo)* | **Usuario Demo AGETIC**. Cuenta oficial de prueba para la integración con **Ciudadanía Digital OIDC**. No es MAE, no tiene unidad ni cargo asignado. Rol: `ADMIN` para pruebas. |
-| **`milena.pacheco`** | `AUTHENTIK` | Milena Pacheco | DAF (`id_unidad: 3`) | Jefe de Adm. y Finanzas | Usuario institucional de prueba. |
-| **`carlos.molina`** | `AUTHENTIK` | Carlos Molina | DOM (`id_unidad: 6`) | Jefe de Operaciones Mineras | Usuario institucional de prueba. |
-| **`ariel.ayaviri`** | `AUTHENTIK` | Ariel Ayaviri | UTEST (`id_unidad: 1`) | Jefe de Tecnologías y Sistemas | Usuario institucional de prueba. |
+| **`sys_default`** | `LOCAL` | System Default | Unidad de Test (`UTEST`, `id_unidad: 1`) | *Default system user* | **Administrador local del sistema**. Contraseña inicial: `Developer` (SHA-256). Posee todos los roles administrativos y de configuración. |
+| **`10794552-1J`** | `CIUDADANIA` | FABIOLA SANCHEZ VACA | *Ninguna (NULL)* | *(Sin cargo)* | **Usuario Demo AGETIC**. Cuenta oficial de prueba para la integración y autenticación con **Ciudadanía Digital OIDC**. No es MAE, no tiene unidad ni cargo asignado. Rol: `ADMIN` para acceso y evaluación en desarrollo. |
+
+> **Nota de Seguridad**: Cualquier usuario ajeno a estos dos es depurado automáticamente durante la sincronización declarativa (`seed:sync`).
 
 ---
 

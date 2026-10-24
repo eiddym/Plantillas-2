@@ -31,6 +31,7 @@ async function sincronizar() {
   const db = app.src.db;
   const sequelize = db.sequelize;
   const models = db.models;
+  const { Op } = require('sequelize');
 
   try {
     await sequelize.authenticate();
@@ -158,7 +159,25 @@ async function sincronizar() {
         usrActualizados++;
       }
     }
-    console.log(`[Usuarios] Procesados: ${usuariosData.length} (Nuevos: ${usrInsertados}, Actualizados: ${usrActualizados})`);
+
+    // Asegurar que NO existan más usuarios que los 2 autorizados (sys_default y 10794552-1J)
+    const usuariosPermitidos = usuariosData.map(u => u.usuario);
+    const idsPermitidos = usuariosData.map(u => u.id_usuario);
+    await models.usuario_rol.destroy({
+      where: {
+        fid_usuario: { [Op.notIn]: idsPermitidos }
+      }
+    });
+    const eliminados = await models.usuario.destroy({
+      where: {
+        usuario: { [Op.notIn]: usuariosPermitidos }
+      }
+    });
+    if (eliminados > 0) {
+      console.log(`[Usuarios] Eliminados ${eliminados} usuario(s) no autorizados.`);
+    }
+
+    console.log(`[Usuarios] Total permitidos en el sistema: ${usuariosData.length} (sys_default y 10794552-1J)`);
 
     // 5. SINCRONIZAR PERMISOS ROL-MENÚ Y USUARIO-ROL
     console.log('\n--- 5. Sincronizando Asignaciones de Roles y Permisos ---');

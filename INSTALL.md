@@ -151,12 +151,11 @@ curl -s http://localhost/api/v1/health/mosparo | jq .
 
 ## Usuarios y Credenciales Iniciales
 
-El sistema se inicializa con los siguientes usuarios de contingencia y prueba:
+El sistema se inicializa única y exclusivamente con **dos usuarios oficiales**:
 
 | Usuario | Autenticación | Nombre | Cargo | Unidad | Propósito |
 | :--- | :---: | :--- | :--- | :---: | :--- |
-| **`sys_default`** | `LOCAL` | System Default | Default system user | `UTEST` (`id_unidad = 1`) | **Administrador local**. Contraseña inicial: `Developer` (SHA-256). |
-| **`10794552-1J`** | `CIUDADANIA` | FABIOLA SANCHEZ VACA | *(Sin cargo)* | *Ninguna (NULL)* | **Usuario Demo AGETIC**. Autenticación OIDC con Ciudadanía Digital. No es MAE, sin unidad. Rol: `ADMIN` para pruebas. |
-| **`milena.pacheco`** | `AUTHENTIK` | Milena Pacheco | Jefe DAF | `DAF` (`id_unidad = 3`) | Usuario institucional de prueba. |
-| **`carlos.molina`** | `AUTHENTIK` | Carlos Molina | Jefe DOM | `DOM` (`id_unidad = 6`) | Usuario institucional de prueba. |
-| **`ariel.ayaviri`** | `AUTHENTIK` | Ariel Ayaviri | Jefe Sistemas | `UTEST` (`id_unidad = 1`) | Usuario institucional de prueba. |
+| **`sys_default`** | `LOCAL` | System Default | Default system user | `UTEST` (`id_unidad = 1`) | **Administrador local**. Contraseña inicial: `Developer` (SHA-256). Posee todos los roles administrativos y de configuración. |
+| **`10794552-1J`** | `CIUDADANIA` | FABIOLA SANCHEZ VACA | *(Sin cargo)* | *Ninguna (NULL)* | **Usuario Demo AGETIC**. Autenticación OIDC con Ciudadanía Digital. No es MAE, sin unidad y sin cargo. Rol: `ADMIN` para acceso y evaluación en desarrollo. |
+
+> **Nota**: El script de sincronización `npm run seed:sync` depura automáticamente cualquier usuario ajeno a estos dos para mantener el entorno limpio y controlado.

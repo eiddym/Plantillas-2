@@ -150,7 +150,7 @@ npm run migrar
 El comando `seed:sync` realiza una carga declarativa e idempotente desde `src/data/seed/`:
 * Carga las **79 plantillas Formly** oficiales sin truncar ni sobreescribir configuraciones existentes.
 * Registra las 7 unidades institucionales, incluyendo la **Unidad de Test (`UTEST`, `id_unidad = 1`)**.
-* Crea los usuarios institucionales y de contingencia (`sys_default` y `10794552-1J` demo AGETIC).
+* Crea y mantiene exclusivamente los dos usuarios oficiales (`sys_default` y `10794552-1J` demo AGETIC), depurando automáticamente cualquier cuenta adicional no autorizada.
 * Calibra automáticamente las secuencias seriales de PostgreSQL (`SELECT setval`) para prevenir errores de clave duplicada.
 
 ```bash

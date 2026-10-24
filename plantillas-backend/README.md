@@ -38,7 +38,7 @@ El backend incorpora un sistema de población declarativo e idempotente que sust
 * **Directorio de Datos**: `src/data/seed/`
   * `plantillas.json` (79 plantillas Formly oficiales)
   * `unidades.json` (7 unidades, incluyendo la Unidad de Test `UTEST`)
-  * `usuarios.json` (usuario `sys_default`, usuario demo AGETIC `10794552-1J`, y usuarios de prueba)
+  * `usuarios.json` (única y exclusivamente los dos usuarios oficiales: `sys_default` y `10794552-1J`)
   * `roles.json`, `menus.json`, `rol_menus.json`, `usuario_roles.json`
 * **Ejecutar sincronización**:
   ```bash
@@ -47,11 +47,11 @@ El backend incorpora un sistema de población declarativo e idempotente que sust
 
 ---
 
-## 4. Usuarios Iniciales y de Prueba
+## 4. Usuarios Oficiales del Sistema
 
-* **`sys_default`**: Usuario administrador local (Contraseña inicial: `Developer`, SHA-256).
-* **`10794552-1J` (FABIOLA SANCHEZ VACA)**: Usuario Demo oficial AGETIC para autenticación mediante **Ciudadanía Digital OIDC**. Sin cargo, sin MAE, sin unidad institucional asignada.
-* **Usuarios Institucionales**: `milena.pacheco` (DAF), `carlos.molina` (DOM), `ariel.ayaviri` (Sistemas).
+El sistema opera exclusivamente con dos usuarios predeterminados:
+* **`sys_default`**: Usuario administrador local (Contraseña inicial: `Developer`, SHA-256). Posee todos los roles administrativos.
+* **`10794552-1J` (FABIOLA SANCHEZ VACA)**: Usuario Demo oficial AGETIC para autenticación mediante **Ciudadanía Digital OIDC**. Sin cargo, sin MAE, sin unidad institucional asignada. Rol: `ADMIN` para acceso y evaluación en desarrollo.
 
 ---
 
