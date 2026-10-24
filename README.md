@@ -3,6 +3,20 @@
 > **Sistema de Gestión, Diseñador y Aprobación Digital de Documentos**  
 > Arquitectura moderna y de alto rendimiento basada en **Node.js 22 LTS**, **Angular 17** y **PostgreSQL 16**.
 
+**Implementación principal con Docker Compose**
+
+Este proyecto está diseñado para ejecutarse íntegramente mediante **Docker Compose**. Todos los servicios (PostgreSQL, backend, frontend, etc.) se orquestan en el archivo [`docker‑compose.yml`](docker-compose.yml). Con un solo comando puedes levantar todo el stack y escalar según la carga esperada.
+
+```bash
+# Levantar todo el stack (modo estándar)
+docker compose up -d --build
+
+# Escalar el backend para alta concurrencia
+docker compose up -d --scale backend=4
+```
+
+Consulte la sección **⚡ Puesta en Marcha Rápida con Docker Compose** para más detalles.
+
 [![Node.js Version](https://img.shields.io/badge/Node.js-22%20LTS-green.svg)](https://nodejs.org/)
 [![Angular Version](https://img.shields.io/badge/Angular-17%20Standalone-dd0031.svg)](https://angular.dev/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20Alpine-336791.svg)](https://www.postgresql.org/)
