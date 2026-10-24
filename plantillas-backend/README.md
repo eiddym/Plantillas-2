@@ -53,10 +53,32 @@
 
     Este proyecto depende directamente de un frontend cuyo código se halla en este mismo repositorio (revise el proyecto_plantillas_frontend)
 
-6. Instalación del backend
+  6. Instalación y despliegue
 
-    Para la instalación del proyecto backend revise el archivo [INSTALL.md](INSTALL.md).
-    Es importante mencionar que el proyecto backend debe ser instalado antes que el frontend.
+  ### Prerrequisitos
+  - **Node.js** ≥ 16
+  - **Docker** y **docker‑compose** (para levantar la base de datos)
+  - **Git**
+
+  ### Instalación rápida (un solo comando)
+  ```bash
+  git clone <repo‑url> && cd plantillas-backend && cp .env.example .env && npm ci && npm run docker:up && npm test && npm start
+  ```
+
+  ### Detalle de los pasos
+  - `cp .env.example .env` – crea el archivo de entorno con los valores por defecto (BD **postgres/postgres**, servicios externos desactivados).
+  - `npm ci` – instala las dependencias exactas del lockfile.
+  - `npm run docker:up` – levanta un contenedor PostgreSQL (`postgres:15‑alpine`).
+  - `npm test` – ejecuta la suite; debe terminar sin errores (código 0).
+  - `npm start` – arranca la API en el puerto configurado (`8000` por defecto).
+
+  ### Personalizar
+  - Edite `.env` para cambiar credenciales de la base de datos o habilitar servicios externos (`APROBACION_CD_HABILITADO=true`, `CIUDADANIA_DIGITAL_HABILITADO=true`, etc.).
+  - Si prefiere iniciar la base de datos de forma manual, simplemente configure una instancia PostgreSQL y omita `npm run docker:up`.
+
+  7. Manual de usuario
+
+    El manual de usuario se encuentra en la carpeta ***docs*** del presente proyecto.
 
 7. Manual de usuario
 
