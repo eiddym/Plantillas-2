@@ -22,7 +22,11 @@ docker compose up -d --build
 docker compose up -d --scale backend=4
 ```
 
-Consulte la sección [Puesta en Marcha Rápida](#-puesta-en-marcha-rápida-con-docker-compose) para la guía paso a paso.
+Consulte la sección [Puesta en Marcha Rápida](#-puesta-en-marcha-rápida-con-docker-compose) o revise los manuales específicos:
+* 📖 [Manual de Instalación Integral (Docker y Bare-Metal)](INSTALL.md)
+* 🎨 [Documentación Técnica del Frontend (Angular 17 Standalone)](plantillas-frontend/README.md)
+* ⚙️ [Documentación Técnica del Backend API (Node 22 / BullMQ)](plantillas-backend/README.md)
+* 🛠️ [Guía de Instalación del Backend (Bare-Metal)](plantillas-backend/INSTALL.md)
 
 [![Node.js Version](https://img.shields.io/badge/Node.js-22%20LTS-green.svg)](https://nodejs.org/)
 [![Angular Version](https://img.shields.io/badge/Angular-17%20Standalone-dd0031.svg)](https://angular.dev/)
@@ -167,6 +171,7 @@ El sistema fue modernizado integralmente para erradicar dependencias obsoletas (
 ├── docker-compose.yml              # Orquestación de servicios (BD, Redis, Backend, Frontend)
 ├── detectar-ip-host.sh             # Autodetección dinámica de IP del host
 ├── .env.sample                     # Plantilla de variables de entorno
+├── INSTALL.md                      # Manual integral de instalación (Docker y Bare-Metal)
 └── README.md                       # Documentación principal del proyecto
 ```
 
