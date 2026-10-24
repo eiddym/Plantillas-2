@@ -39,11 +39,10 @@ El proyecto fue refactorizado y modernizado desde cero para eliminar por complet
 - **Configuración de PostgreSQL 16** optimizada para alta concurrencia (max_connections=300, shared_buffers=512 MB, etc.).
 - **Contenedor migrador** que ejecuta migraciones y seeders automáticamente al iniciar.
 - **Variables de entorno** definidas en `.env.example` con valores por defecto y flags de servicios externos desactivados.
-- **Autenticación flexible**: integración LDAP/Authentik con fallback a base de datos local y sincronización manual de usuarios.
+- **Autenticación**: soporte de autenticación local (base de datos), LDAP/Authentik y OIDC configurable (incluye ciudadanía digital).
 - **Seguridad**: reCAPTCHA integrado, gestión de roles y permisos granulares.
 - **Generación y visualización de PDFs** mediante `pdf-lib` y `puppeteer-core`, con soporte de QR y firmas.
 - **Firma digital y aprobación de documentos**: flujo de firma electrónica con validación legal (certificados, CITE/QR) para documentos de ciudadanía y otros actos administrativos.
-- **Autenticación por ciudadanía digital (OIDC estatal)**: integración OIDC compatible con proveedores de identidad gubernamentales (DNI electrónico) para login seguro y único.
 - **Ventanilla única**: portal centralizado que permite crear, revisar, firmar y descargar documentos sin necesidad de sistemas dispares.
 - **Verificación y trazabilidad de documentos**: auditoría completa (historial de acciones, hashes, QR) que garantiza la integridad y permite validación legal.
 - **Cache de memoria** (`MemoryCache`) con TTL y política LRU.
