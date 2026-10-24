@@ -190,7 +190,12 @@ module.exports={
             delete hijo.menu_padre;
             delete hijo.estado;
             delete hijo.fid_menu_padre;
-            padre.submenu.push(hijo);
+            
+            // Evitar duplicados en el submenu si el usuario tiene multiples roles
+            const yaExisteHijo = padre.submenu.some(s => (hijo.id_menu && s.id_menu === hijo.id_menu) || s.url === hijo.url);
+            if (!yaExisteHijo) {
+              padre.submenu.push(hijo);
+            }
 
             if(!menuEntrar){
               menuEntrar=`/${hijo.url}`;
@@ -229,7 +234,7 @@ module.exports={
       include:[{
         model:pModeloMenu,
         as:'menu',
-        attributes:[['nombre','label'],['ruta','url'],
+        attributes:['id_menu', ['nombre','label'],['ruta','url'],
         ['icono','icon'],'fid_menu_padre','estado'],
         where:{estado:'ACTIVO'},
         include:[{

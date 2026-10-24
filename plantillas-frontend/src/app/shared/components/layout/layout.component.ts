@@ -711,12 +711,78 @@ export class LayoutComponent implements OnInit, OnDestroy {
       'admin/firma': 'verified'
     };
 
-    return rawMenus.map((padre) => {
-      const label = padre.label.toUpperCase();
+    // Si la sesión guardada en localStorage es anterior a la migración de menús,
+    // garantizamos paridad total con todos los submódulos institucionales
+    const enrichedMenus = JSON.parse(JSON.stringify(rawMenus));
+    
+    // 1. Archivo: asegurar 3 niveles
+    const archivoGroup = enrichedMenus.find((m: any) => m.label?.toUpperCase() === 'ARCHIVO');
+    if (archivoGroup) {
+      if (!archivoGroup.submenu || archivoGroup.submenu.length <= 1) {
+        archivoGroup.submenu = [
+          { label: 'ARCHIVO GENERAL', url: 'archivo/general', icon: 'public' },
+          { label: 'ARCHIVO DE UNIDAD', url: 'archivo/unidad', icon: 'domain' },
+          { label: 'ARCHIVO INSTITUCIONAL', url: 'archivo/institucional', icon: 'verified' }
+        ];
+      }
+    } else {
+      enrichedMenus.push({
+        label: 'ARCHIVO',
+        icon: 'archive',
+        submenu: [
+          { label: 'ARCHIVO GENERAL', url: 'archivo/general', icon: 'public' },
+          { label: 'ARCHIVO DE UNIDAD', url: 'archivo/unidad', icon: 'domain' },
+          { label: 'ARCHIVO INSTITUCIONAL', url: 'archivo/institucional', icon: 'verified' }
+        ]
+      });
+    }
+
+    // 2. Ventanilla Única: asegurar Ventanilla Externa e Interna
+    const ventanillaGroup = enrichedMenus.find((m: any) => m.label?.toUpperCase() === 'VENTANILLA ÚNICA' || m.label?.toUpperCase() === 'VENTANILLA');
+    if (ventanillaGroup) {
+      if (!ventanillaGroup.submenu || ventanillaGroup.submenu.length === 0) {
+        ventanillaGroup.submenu = [
+          { label: 'VENTANILLA EXTERNA', url: 'ventanilla/externa', icon: 'cloud_download' },
+          { label: 'VENTANILLA INTERNA', url: 'ventanilla/interna', icon: 'edit_document' }
+        ];
+      }
+    } else {
+      enrichedMenus.push({
+        label: 'VENTANILLA ÚNICA',
+        icon: 'inbox',
+        submenu: [
+          { label: 'VENTANILLA EXTERNA', url: 'ventanilla/externa', icon: 'cloud_download' },
+          { label: 'VENTANILLA INTERNA', url: 'ventanilla/interna', icon: 'edit_document' }
+        ]
+      });
+    }
+
+    // 3. Administración: asegurar Método de Firma
+    const adminGroup = enrichedMenus.find((m: any) => m.label?.toUpperCase() === 'ADMINISTRACIÓN');
+    if (adminGroup && adminGroup.submenu) {
+      const tieneFirma = adminGroup.submenu.some((s: any) => s.url === 'admin/firma' || s.label?.toUpperCase().includes('FIRMA'));
+      if (!tieneFirma) {
+        adminGroup.submenu.push({ label: 'MÉTODO DE FIRMA', url: 'admin/firma', icon: 'verified' });
+      }
+    }
+
+    // 4. Documentos: asegurar En Curso y Aprobar con CD
+    const docsGroup = enrichedMenus.find((m: any) => m.label?.toUpperCase() === 'DOCUMENTOS');
+    if (docsGroup && docsGroup.submenu) {
+      if (!docsGroup.submenu.some((s: any) => s.url === 'en_curso')) {
+        docsGroup.submenu.push({ label: 'EN CURSO', url: 'en_curso', icon: 'autorenew' });
+      }
+      if (!docsGroup.submenu.some((s: any) => s.url === 'aprobar_documento')) {
+        docsGroup.submenu.push({ label: 'APROBAR CON CD', url: 'aprobar_documento', icon: 'fingerprint' });
+      }
+    }
+
+    return enrichedMenus.map((padre: any) => {
+      const label = (padre.label || '').toUpperCase();
       const parentIcon = iconMap[label] || padre.icon || 'folder';
 
       const items = (padre.submenu && padre.submenu.length > 0)
-        ? padre.submenu.map((s) => ({
+        ? padre.submenu.map((s: any) => ({
             label: s.label,
             url: s.url,
             icon: subIconMap[s.url] || s.icon || 'arrow_right'
