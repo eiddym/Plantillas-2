@@ -13,6 +13,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { nombreRealValidator, correoEstrictoValidator } from './ventanilla-validators';
+import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo/mosparo.component';
 
 @Component({
   selector: 'app-ventanilla-virtual',
@@ -30,7 +31,8 @@ import { nombreRealValidator, correoEstrictoValidator } from './ventanilla-valid
     MatSelectModule,
     MatTabsModule,
     MatProgressBarModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MosparoComponent
   ],
   template: `
     <div class="public-portal-container">
@@ -211,6 +213,14 @@ import { nombreRealValidator, correoEstrictoValidator } from './ventanilla-valid
                       <p class="sending-txt">Radicando correspondencia y generando Hoja de Ruta...</p>
                     </div>
                   }
+
+                  <!-- Protección Soberana Mosparo -->
+                  <div class="col-span-full">
+                    <app-mosparo 
+                      (verified)="onMosparoVerified($event)" 
+                      (tokensChanged)="onMosparoTokensChanged($event)"
+                    ></app-mosparo>
+                  </div>
 
                   <div class="form-actions-full col-span-full">
                     <button 
@@ -1070,13 +1080,24 @@ export class VentanillaVirtualComponent {
     }
   }
 
+  mosparoTokens = signal<MosparoTokens | null>(null);
+
+  onMosparoVerified(tokens: MosparoTokens): void {
+    this.mosparoTokens.set(tokens);
+  }
+
+  onMosparoTokensChanged(tokens: MosparoTokens | null): void {
+    this.mosparoTokens.set(tokens);
+  }
+
   enviarSolicitud(): void {
     if (this.solicitudForm.invalid) return;
 
     this.enviando.set(true);
     const v = this.solicitudForm.value;
 
-    const payload = {
+    const tokens = this.mosparoTokens();
+    const payload: any = {
       ci: v.ci,
       nombreCompleto: v.nombreCompleto,
       email: v.email,
@@ -1087,6 +1108,11 @@ export class VentanillaVirtualComponent {
       referencia: v.referencia,
       archivo_adjunto: this.archivoAdjuntoBase64
     };
+
+    if (tokens) {
+      payload._mosparo_submitToken = tokens.submitToken;
+      payload._mosparo_validationToken = tokens.validationToken;
+    }
 
     this.http.post<any>('/api/v1/ventanilla/radicar', payload).subscribe({
       next: (res) => {

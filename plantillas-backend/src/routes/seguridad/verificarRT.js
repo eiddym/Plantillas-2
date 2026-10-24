@@ -1,6 +1,7 @@
 const fs = require('fs');
 const blFirmado = require('../../bl/plantillasFormly/firmadoBL');
 const logger = require('../../lib/logger');
+const mosparo = require('../../lib/mosparo');
 
 module.exports = app => {
   const Modelos = app.src.db.models;
@@ -24,6 +25,24 @@ module.exports = app => {
     }
   };
 
+  /**
+   * GET /api/v1/seguridad/mosparo/config
+   * Retorna la configuración pública para el widget de Mosparo
+   */
+  app.get(['/api/v1/seguridad/mosparo/config', '/api/v1/mosparo/config'], (req, res) => {
+    const cfg = mosparo.getMosparoConfig();
+    res.status(200).json({
+      tipoMensaje: 'EXITO',
+      mensaje: 'Configuración Mosparo obtenida',
+      datos: {
+        host: cfg.host,
+        publicKey: cfg.publicKey,
+        uuid: cfg.uuid,
+        enabled: !cfg.disabled && !!cfg.host
+      }
+    });
+  });
+
   app.post(['/verificarDocumento', '/api/v1/seguridad/verificarDocumento'], async (req, res) => {
     const Documento = Modelos.documento;
     const Firma = Modelos.firma;
@@ -36,11 +55,20 @@ module.exports = app => {
 
       if (!citeLimpio) throw Error('No se puede realizar la búsqueda sin el CITE.');
       if (!codigoLimpio) throw Error('No se puede realizar la búsqueda sin el código de verificación.');
-      if (!req.body.recaptcha) throw Error('Complete la solución del reCaptcha.');
 
-      const respRecaptcha = await recaptcha.validar(req, res);
-      if (respRecaptcha.status !== 200 || respRecaptcha.data.success !== true) {
-        throw new Error('Error en la validación del reCaptcha.');
+      // Validación anti-bot: Soporta Mosparo (preferente) o reCAPTCHA (compatibilidad)
+      const tieneMosparo = req.body._mosparo_submitToken || req.headers['x-mosparo-submit-token'] || req.body.mosparoSubmitToken;
+      const tieneRecaptcha = req.body.recaptcha;
+
+      if (tieneMosparo) {
+        await mosparo.validar(req);
+      } else if (tieneRecaptcha) {
+        const respRecaptcha = await recaptcha.validar(req, res);
+        if (respRecaptcha.status !== 200 || respRecaptcha.data.success !== true) {
+          throw new Error('Error en la validación del reCaptcha.');
+        }
+      } else if (process.env.NODE_ENV === 'production') {
+        throw Error('Complete la verificación de seguridad (Mosparo / Captcha).');
       }
 
       // Buscar documento

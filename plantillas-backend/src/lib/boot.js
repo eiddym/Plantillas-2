@@ -57,6 +57,12 @@ module.exports = app => {
 
 	            `);
               console.log(`Iniciando servidor en el puerto ${app.get('port')} `);
+              try {
+                const queue = require('./queue');
+                queue.iniciarSistemaColas();
+              } catch (eQueue) {
+                console.warn('[BOOT] Advertencia al iniciar colas BullMQ:', eQueue.message);
+              }
           });
 
           // Graceful Shutdown
@@ -71,6 +77,14 @@ module.exports = app => {
                 await app.src.db.sequelize.close();
                 console.log('[SHUTDOWN] Conexión Sequelize / Postgres cerrada.');
               }
+              try {
+                const { getRedisConnection } = require('./queue/connection');
+                const redis = getRedisConnection();
+                if (redis && (redis.status === 'ready' || redis.status === 'connect')) {
+                  await redis.quit();
+                  console.log('[SHUTDOWN] Conexión Redis cerrada.');
+                }
+              } catch (eRedis) {}
               if (app.src && app.src.lib && app.src.lib.util && app.src.lib.util.closePuppeteerBrowser) {
                 await app.src.lib.util.closePuppeteerBrowser();
                 console.log('[SHUTDOWN] Instancia Chromium de Puppeteer cerrada.');

@@ -2,6 +2,8 @@
 
 const correo = require('../../lib/correo');
 const logger = require('../../lib/logger');
+const mosparo = require('../../lib/mosparo');
+const queue = require('../../lib/queue');
 
 module.exports = app => {
   const Documento = app.src.db.models.documento;
@@ -232,7 +234,7 @@ module.exports = app => {
     `;
 
     try {
-      await correo.enviar({
+      await queue.encolarCorreo({
         para: destinatario,
         titulo: asunto,
         mensaje: `Trámite radicado exitosamente. Hoja de Ruta: ${datos.codigo_hoja_ruta}. Referencia: ${datos.referencia}`,
@@ -246,11 +248,38 @@ module.exports = app => {
   }
 
   /**
+   * GET /api/v1/ventanilla/mosparo/config
+   * Configuración pública de Mosparo para Ventanilla Virtual
+   */
+  app.get('/api/v1/ventanilla/mosparo/config', (req, res) => {
+    const cfg = mosparo.getMosparoConfig();
+    res.status(200).json({
+      tipoMensaje: 'EXITO',
+      mensaje: 'Configuración Mosparo obtenida',
+      datos: {
+        host: cfg.host,
+        publicKey: cfg.publicKey,
+        uuid: cfg.uuid,
+        enabled: !cfg.disabled && !!cfg.host
+      }
+    });
+  });
+
+  /**
    * POST /api/v1/ventanilla/radicar
    * Radicación pública desde el portal ciudadano / ventanilla virtual.
    */
   app.post('/api/v1/ventanilla/radicar', async (req, res) => {
     try {
+      // 0. Validación de protección contra bots con Mosparo
+      const tieneMosparo = req.body._mosparo_submitToken || req.headers['x-mosparo-submit-token'] || req.body.mosparoSubmitToken;
+      if (tieneMosparo || process.env.NODE_ENV === 'production') {
+        try {
+          await mosparo.validar(req);
+        } catch (errMosparo) {
+          return res.status(400).send(util.formatearMensaje("ERROR", `Verificación de seguridad requerida: ${errMosparo.message}`));
+        }
+      }
       const {
         ci,
         nombreCompleto,

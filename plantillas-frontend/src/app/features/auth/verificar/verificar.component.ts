@@ -10,6 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MosparoComponent, MosparoTokens } from '../../../shared/components/mosparo/mosparo.component';
 
 export interface Firmante {
   nombres?: string;
@@ -44,7 +45,8 @@ export interface VerificacionResultado {
     MatInputModule,
     MatButtonModule,
     MatIconModule,
-    MatProgressBarModule
+    MatProgressBarModule,
+    MosparoComponent
   ],
   template: `
     <div class="verif-portal">
@@ -140,6 +142,12 @@ export interface VerificacionResultado {
                     <mat-error *ngIf="verifyForm.get('codigo')?.hasError('required')">El código es obligatorio</mat-error>
                   </mat-form-field>
                 </div>
+
+                <!-- Widget de Protección Soberana Mosparo -->
+                <app-mosparo 
+                  (verified)="onMosparoVerified($event)" 
+                  (tokensChanged)="onMosparoTokensChanged($event)"
+                ></app-mosparo>
 
                 <button 
                   type="submit" 
@@ -1149,6 +1157,16 @@ export class VerificarComponent implements OnInit {
     }
   }
 
+  mosparoTokens = signal<MosparoTokens | null>(null);
+
+  onMosparoVerified(tokens: MosparoTokens): void {
+    this.mosparoTokens.set(tokens);
+  }
+
+  onMosparoTokensChanged(tokens: MosparoTokens | null): void {
+    this.mosparoTokens.set(tokens);
+  }
+
   consultar(): void {
     if (this.verifyForm.invalid) return;
 
@@ -1158,11 +1176,17 @@ export class VerificarComponent implements OnInit {
     this.pdfUrl.set(null);
     this.pdfBlob = null;
 
-    const payload = {
+    const tokens = this.mosparoTokens();
+    const payload: any = {
       cite: this.verifyForm.value.cite.trim(),
       codigo: this.verifyForm.value.codigo.trim().toUpperCase(),
       recaptcha: 'bypass'
     };
+
+    if (tokens) {
+      payload._mosparo_submitToken = tokens.submitToken;
+      payload._mosparo_validationToken = tokens.validationToken;
+    }
 
     // Intentamos primero con /verificar (firma digital por token)
     this.http.post<any>('/api/v1/seguridad/verificar', payload).subscribe({

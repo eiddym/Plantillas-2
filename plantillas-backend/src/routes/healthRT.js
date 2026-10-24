@@ -25,4 +25,36 @@ module.exports = app => {
       });
     }
   });
+
+  app.get(['/health/queue', '/api/v1/health/queue'], async (req, res) => {
+    try {
+      const queue = require('../lib/queue');
+      const estado = await queue.obtenerEstadoColas();
+      res.status(200).json({
+        tipoMensaje: 'EXITO',
+        mensaje: 'Estado de colas BullMQ y conexión Redis',
+        datos: estado
+      });
+    } catch (err) {
+      res.status(500).json({
+        tipoMensaje: 'ERROR',
+        mensaje: err.message
+      });
+    }
+  });
+
+  app.get(['/health/mosparo', '/api/v1/health/mosparo'], (req, res) => {
+    const mosparo = require('../lib/mosparo');
+    const cfg = mosparo.getMosparoConfig();
+    res.status(200).json({
+      tipoMensaje: 'EXITO',
+      mensaje: 'Estado de configuración Mosparo',
+      datos: {
+        host: cfg.host,
+        publicKeyConfigurada: !!cfg.publicKey,
+        privateKeyConfigurada: !!cfg.privateKey,
+        habilitado: !cfg.disabled && !!cfg.host
+      }
+    });
+  });
 };

@@ -43,6 +43,23 @@ services:
     networks:
       - red-plantillas
 
+  # 1.1 Redis 7 Alpine (Caché en memoria y Colas de Tareas BullMQ)
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "${REDIS_PUERTO_HOST:-6379}:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy noeviction
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - red-plantillas
+
   # 2. Migrador e Inicializador (One-Shot: corre una vez antes de que arranquen las réplicas)
   migrador:
     build:
@@ -141,8 +158,17 @@ services:
       ISSUER: ${ISSUER:-}
       CLIENT_ID: ${CLIENT_ID:-}
       CLIENT_SECRET: ${CLIENT_SECRET:-}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      MOSPARO_HOST: ${MOSPARO_HOST:-}
+      MOSPARO_PUBLICKEY: ${MOSPARO_PUBLICKEY:-}
+      MOSPARO_PRIVATEKEY: ${MOSPARO_PRIVATEKEY:-}
+      MOSPARO_UUID: ${MOSPARO_UUID:-}
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       detector-ip:
         condition: service_started
@@ -192,6 +218,7 @@ volumes:
   backend_node_modules:
   pgdata:
   pgdata_v16:
+  redis_data:
   plantillas-documentos:
   shared-config:
   plantillas-runtime-config:
