@@ -3,7 +3,7 @@ const Uuid = require('../../lib/uuid');
 const { Issuer, TokenSet } = require('openid-client');
 Issuer.defaultHttpOptions = { timeout: 15000 };
 const config = require('./../../config/config')();
-const requestPromise = require('util').promisify(require('request'));
+const axios = require('axios');
 const logger = require('../../lib/logger');
 
 const crypto = require("crypto");
@@ -63,17 +63,16 @@ module.exports = {
       fid_documento,
     })
     try {
-      const configRequest = {
+
+      const resAprobacion = await axios({
         url: aprobacionCDConfig.url,
         method: 'POST',
         headers: {
           Authorization: `${aprobacionCDConfig.token}`,
-          'content-type': 'application/json',
+          'Content-Type': 'application/json',
         },
-        body: data,
-        json: true,
-      };
-      const resAprobacion = await requestPromise(configRequest);
+        data: data,
+      });
       return resAprobacion;
     } catch (error) {
       logger.error('error :>> ', error);

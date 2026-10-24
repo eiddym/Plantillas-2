@@ -33,7 +33,22 @@ El proyecto fue refactorizado y modernizado desde cero para eliminar por complet
 
 ---
 
-**Nuevas funcionalidades y mejoras**
+## Funcionalidades Principales
+
+- **Orquestación con Docker Compose**: despliegue completo de PostgreSQL, backend, frontend y opcionalmente Traefik.
+- **Configuración de PostgreSQL 16** optimizada para alta concurrencia (max_connections=300, shared_buffers=512 MB, etc.).
+- **Contenedor migrador** que ejecuta migraciones y seeders automáticamente al iniciar.
+- **Variables de entorno** definidas en `.env.example` con valores por defecto y flags de servicios externos desactivados.
+- **Autenticación flexible**: integración LDAP/Authentik con fallback a base de datos local y sincronización manual de usuarios.
+- **Seguridad**: reCAPTCHA integrado, gestión de roles y permisos granulares.
+- **Generación y visualización de PDFs** mediante `pdf-lib` y `puppeteer-core`, con soporte de QR y firmas.
+- **Cache de memoria** (`MemoryCache`) con TTL y política LRU.
+- **Escalado horizontal** del backend mediante `docker compose up -d --scale backend=N`.
+- **Diseño responsive y accesible** con Angular 17 Standalone Components, Angular Signals y carga diferida (`@defer`).
+- **Tema y paleta de colores** personalizados, incluyendo modos oscuro y soporte de fuentes.
+- **Paneles dinámicos** guiados por roles, barra lateral configurable y organigrama jerárquico de unidades.
+- **Integración de Traefik** opcional para TLS automático y balanceo de carga.
+
 - Implementación nativa con **Docker Compose** (orquestación completa de BD, backend, frontend y Traefik).
 - Archivo `.env.example` con variables por defecto y flags de servicios externos desactivados.
 - Script `detectar-ip-host.sh` para detección automática de la IP del host.
