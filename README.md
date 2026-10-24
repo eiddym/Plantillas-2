@@ -33,6 +33,17 @@ El proyecto fue refactorizado y modernizado desde cero para eliminar por complet
 
 ---
 
+**Nuevas funcionalidades y mejoras**
+- Implementación nativa con **Docker Compose** (orquestación completa de BD, backend, frontend y Traefik).
+- Archivo `.env.example` con variables por defecto y flags de servicios externos desactivados.
+- Script `detectar-ip-host.sh` para detección automática de la IP del host.
+- Configuración de **PostgreSQL 16** con parámetros de alta concurrencia (max_connections, shared_buffers, etc.).
+- Contenedor `migrador` one‑shot que ejecuta migraciones y seeders antes de iniciar réplicas del backend.
+- Integración opcional con **Traefik** para TLS automático y balanceo de carga.
+- Soporte para escalar el backend mediante `docker compose up -d --scale backend=N`.
+
+
+
 ## 🚀 Pila Tecnológica
 
 ### Backend (`plantillas-backend`)
@@ -48,6 +59,9 @@ El proyecto fue refactorizado y modernizado desde cero para eliminar por complet
   * Búsqueda de Texto Completo (**Full-Text Search**) en español con `tsvector` y triggers automáticos.
 * **Healthcheck & Observabilidad**: Endpoints nativos `/health` (liveness) y `/ready` (readiness de BD).
 * **Graceful Shutdown**: Manejo ordenado de señales `SIGTERM` y `SIGINT`.
+* **Orquestación**: Docker Compose (incluye contenedor `migrador` one‑shot, detección automática de IP y Traefik opcional para TLS).
+* **Configuración de PostgreSQL 16**: Parámetros de alta concurrencia (`max_connections=300`, `shared_buffers=512MB`, etc.).
+* **Variables de entorno**: `.env.example` con valores por defecto y flags de servicios externos desactivados.
 
 ### Frontend (`plantillas-frontend`)
 * **Framework**: Angular 17 con arquitectura 100% **Standalone Components**.
