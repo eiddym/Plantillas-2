@@ -9,11 +9,12 @@
     "test": "npm run docker:up && NODE_ENV=test mocha --exit --timeout 15000",
     "lint": "eslint *.js lib/*.js src/models/*/*.js src/routes/*/*.js test/*.js src/bl/*/*.js",
     "apidoc": "apidoc -i src/routes/ -o public/apidoc",
-    "setup": "sequelize db:seed:all --config src/config/sequelize-cli-config.js --seeders-path src/seeders",
+    "seed:sync": "node src/scripts/sincronizar_datos.js",
+    "setup": "node src/scripts/sincronizar_datos.js",
     "startdev": "nodemon --exec 'node index.js'",
     "generar": "node generarToken.js",
     "migrar": "sequelize db:migrate --config src/config/sequelize-cli-config.js --migrations-path src/migrations",
-    "setup:clean": "FORCE=true node index.js && sequelize db:seed:all --config src/config/sequelize-cli-config.js --seeders-path src/seeders"
+    "setup:clean": "FORCE=true node index.js && node src/scripts/sincronizar_datos.js"
   },
   "keywords": [
     "node",

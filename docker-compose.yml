@@ -74,13 +74,8 @@ services:
              done;
              echo '[migrador] Ejecutando migraciones pendientes...';
              npx sequelize-cli db:migrate;
-             echo '[migrador] Verificando seeders...';
-             if [ \"\$(echo \"SELECT COUNT(*) FROM usuario;\" | PGPASSWORD=${DB_PASSWORD:-postgres} psql -h db -U ${DB_USUARIO:-plantillas} -d ${DB_NOMBRE:-plantillas_db} -t -A 2>/dev/null)\" = \"0\" ]; then
-               echo '[migrador] Tabla usuario vacía: ejecutando seeders...';
-               npx sequelize-cli db:seed:all || echo '[migrador] Seeders fallaron, continuar de todos modos';
-             else
-               echo '[migrador] Tabla usuario ya tiene datos: saltando seeders';
-             fi;
+             echo '[migrador] Sincronizando datos maestros, roles, unidades y 79 plantillas (idempotente)...';
+             node src/scripts/sincronizar_datos.js || echo '[migrador] Advertencia en sincronización de datos, continuar...';
              echo '[migrador] Asegurando directorios de almacenamiento en /app/public...';
              mkdir -p /app/public/documentos /app/public/externos /app/public/aprobacion /app/public/adjuntos 2>/dev/null || true;
              chown -R node:node /app/public 2>/dev/null || true;
