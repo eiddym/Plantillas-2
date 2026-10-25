@@ -201,14 +201,15 @@ export interface BloqueDialogData {
           </div>
         }
 
-        <!-- 6. BLOQUE ÁREA DE TEXTO (TEXTAREA) -->
+        <!-- 6. BLOQUE ÁREA DE TEXTO (TEXTAREA - Presente en Informe Técnico y Nota Interna) -->
         @if (data.field.type === 'textarea') {
           <div class="prop-section">
-            <h4>Área de Texto Multilínea</h4>
+            <h4>Área de Texto Multilínea (Nota / Párrafo)</h4>
+            <p class="section-hint">Utilizado en Nota Interna e Informe Técnico para notas intermedias o párrafos editables.</p>
 
             <mat-form-field appearance="outline" class="w-full">
-              <mat-label>Etiqueta</mat-label>
-              <input matInput formControlName="label">
+              <mat-label>Etiqueta (puede dejarse vacía para notas directas)</mat-label>
+              <input matInput formControlName="label" placeholder="Ej. Observaciones o dejar vacío">
             </mat-form-field>
 
             <div class="grid-2">
@@ -219,17 +220,70 @@ export interface BloqueDialogData {
 
               <mat-form-field appearance="outline">
                 <mat-label>Identificador Clave (key)</mat-label>
-                <input matInput formControlName="key">
+                <input matInput formControlName="key" placeholder="inputTextArea">
               </mat-form-field>
             </div>
 
             <div class="checkbox-row">
+              <mat-checkbox formControlName="grow">Autoexpandir según contenido (grow)</mat-checkbox>
               <mat-checkbox formControlName="required">Campo Requerido</mat-checkbox>
             </div>
           </div>
         }
 
-        <!-- 7. BLOQUE SELECT / RADIO (OPCIONES DINÁMICAS) -->
+        <!-- 7. BLOQUE ADJUNTOS / ARCHIVO PDF (Presente en Nota Interna e Informe Técnico) -->
+        @if (data.field.type === 'archivo' || data.field.type === 'cargadorArchivos') {
+          <div class="prop-section">
+            <h4>Carga de Adjuntos y Archivos PDF</h4>
+            <p class="section-hint">Permite al redactor anexar documentos PDF y respaldos digitales al trámite oficial.</p>
+
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Texto del Botón / Etiqueta</mat-label>
+              <input matInput formControlName="label" placeholder="Ej. Elegir PDF, Anexo, Adjuntar Respaldo...">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Identificador Clave (key)</mat-label>
+              <input matInput formControlName="key" placeholder="archivo">
+            </mat-form-field>
+
+            <div class="checkbox-row">
+              <mat-checkbox formControlName="multiple">Permitir selección de múltiples archivos PDF</mat-checkbox>
+              <mat-checkbox formControlName="required">Adjunto Obligatorio</mat-checkbox>
+            </div>
+          </div>
+        }
+
+        <!-- 8. BLOQUE DOCUMENTOS RELACIONADOS Y CC/ARCHIVO -->
+        @if (data.field.type === 'documentosRelacionados' || data.field.type === 'ccArchivo') {
+          <div class="prop-section">
+            <h4>{{ data.field.type === 'documentosRelacionados' ? 'Referencias y CITEs Relacionados' : 'Con Copia a (CC:)' }}</h4>
+            <p class="section-hint">{{ data.field.type === 'documentosRelacionados' ? 'Vinculación de trámites y antecedentes anteriores.' : 'Distribución informativa de copias y archivo institucional.' }}</p>
+
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Etiqueta Oficial</mat-label>
+              <input matInput formControlName="label" placeholder="Ej. Referencias: o CC/Archivo:">
+            </mat-form-field>
+
+            <div class="grid-2">
+              <mat-form-field appearance="outline">
+                <mat-label>Identificador Clave (key)</mat-label>
+                <input matInput formControlName="key">
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Ancho de Etiqueta (labelw)</mat-label>
+                <input matInput type="number" formControlName="labelw" min="5" max="30">
+              </mat-form-field>
+            </div>
+
+            <div class="checkbox-row">
+              <mat-checkbox formControlName="showItem">Mostrar en visualización y PDF</mat-checkbox>
+            </div>
+          </div>
+        }
+
+        <!-- 9. BLOQUE SELECT / RADIO (OPCIONES DINÁMICAS) -->
         @if (data.field.type === 'select' || data.field.type === 'radio' || data.field.type === 'clasificacion') {
           <div class="prop-section">
             <h4>Selector de Opciones ({{ data.field.type }})</h4>
@@ -237,6 +291,11 @@ export interface BloqueDialogData {
             <mat-form-field appearance="outline" class="w-full">
               <mat-label>Etiqueta</mat-label>
               <input matInput formControlName="label">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Identificador Clave (key)</mat-label>
+              <input matInput formControlName="key" placeholder="inputSelect">
             </mat-form-field>
 
             <div class="checkbox-row mb-3">
@@ -269,21 +328,49 @@ export interface BloqueDialogData {
           </div>
         }
 
-        <!-- 8. BLOQUE ESPACIADOR (VACÍO) -->
+        <!-- 10. BLOQUE ESPACIADOR (VACÍO) -->
         @if (data.field.type === 'vacio') {
           <div class="prop-section">
             <h4>Espaciador en Blanco</h4>
 
-            <mat-form-field appearance="outline" class="w-full">
-              <mat-label>Altura del Espacio (px)</mat-label>
-              <input matInput type="number" formControlName="alto" min="5" max="200" step="5">
-              <span matSuffix>px</span>
-            </mat-form-field>
+            <div class="grid-2">
+              <mat-form-field appearance="outline">
+                <mat-label>Altura (px)</mat-label>
+                <input matInput type="number" formControlName="alto" min="5" max="200" step="5">
+                <span matSuffix>px</span>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>O Medida CSS (ej. 0.5cm)</mat-label>
+                <input matInput formControlName="heightStr" placeholder="0.5cm">
+              </mat-form-field>
+            </div>
           </div>
         }
 
-        <!-- 9. BLOQUES COMPLEMENTARIOS (FECHA, REFERENCIAS, ETC.) -->
-        @if (data.field.type === 'datepicker' || data.field.type === 'calendario' || data.field.type === 'documentosRelacionados' || data.field.type === 'ccArchivo' || data.field.type === 'cajachica' || data.field.type === 'certificacionComprometido' || data.field.type === 'checkbox') {
+        <!-- 11. BLOQUES DE ALMACÉN, ACTIVOS Y ESPECIALIZADOS -->
+        @if (data.field.type === 'consultaAlmacen' || data.field.type === 'recuperarEntregaAlmacen' || data.field.type === 'ingresoAlmacen' || data.field.type === 'tablaActivos' || data.field.type === 'ingresoActivos' || data.field.type === 'bajaActivos' || data.field.type === 'documentosAnular' || data.field.type === 'listaContactos' || data.field.type === 'aprobacionCD') {
+          <div class="prop-section">
+            <h4>Módulo Especializado ({{ data.field.type }})</h4>
+
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Etiqueta / Título</mat-label>
+              <input matInput formControlName="label">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Identificador Clave (key)</mat-label>
+              <input matInput formControlName="key">
+            </mat-form-field>
+
+            <div class="checkbox-row">
+              <mat-checkbox formControlName="required">Campo Requerido</mat-checkbox>
+            </div>
+          </div>
+        }
+
+        <!-- 12. BLOQUES COMPLEMENTARIOS (FECHA, PRESUPUESTO, CAJA CHICA, CHECKBOX) -->
+        @if (data.field.type === 'datepicker' || data.field.type === 'calendario' || data.field.type === 'cajachica' || data.field.type === 'certificacionComprometido' || data.field.type === 'checkbox' || data.field.type === 'lista') {
           <div class="prop-section">
             <h4>Configuración del Componente</h4>
 
@@ -469,19 +556,23 @@ export class BloquePropiedadesDialogComponent implements OnInit {
     if (to.options && Array.isArray(to.options)) {
       this.opcionesList = to.options.map((o: any) => typeof o === 'string' ? o : (o.value || o.id || ''));
     } else if (this.data.field.type === 'clasificacion') {
-      this.opcionesList = ['Reservado', 'Confidencial', 'Secreto', 'Público'];
+      this.opcionesList = ['Reservado', 'Confidencial', 'Secreto', 'Desclasificado'];
     }
 
     this.form = this.fb.group({
-      label: [to.label || to.labelx || ''],
+      label: [to.label !== undefined ? to.label : (to.labelx || '')],
       key: [key],
       required: [!!to.required],
       tipo: [to.tipo || 'h2'],
       className: [to.className || 'ap-text-center'],
       mTop: [to.mTop !== false],
       mBot: [to.mBot !== false],
-      rows: [to.rows || 3],
+      rows: [to.rows || 2],
+      grow: [to.grow === true],
+      multiple: [to.multiple !== false],
+      labelw: [to.labelw || 10],
       alto: [to.alto || 20],
+      heightStr: [to.height || '20px'],
       showItem: [to.showItem !== false],
       // Datos Generales específicos
       showPara: [true],
@@ -507,7 +598,8 @@ export class BloquePropiedadesDialogComponent implements OnInit {
       case 'datosGenerales':
       case 'encabezado': return 'assignment_ind';
       case 'editorTexto':
-      case 'editor': return 'edit_note';
+      case 'editor':
+      case 'editor-texto': return 'edit_note';
       case 'vacio': return 'space_bar';
       case 'inputt':
       case 'input': return 'short_text';
@@ -520,8 +612,20 @@ export class BloquePropiedadesDialogComponent implements OnInit {
       case 'calendario': return 'calendar_today';
       case 'documentosRelacionados': return 'link';
       case 'ccArchivo': return 'content_copy';
+      case 'archivo':
+      case 'cargadorArchivos': return 'attach_file';
+      case 'documentosAnular': return 'cancel';
+      case 'listaContactos': return 'contact_page';
       case 'cajachica': return 'account_balance_wallet';
       case 'certificacionComprometido': return 'receipt_long';
+      case 'aprobacionCD': return 'how_to_vote';
+      case 'consultaAlmacen': return 'inventory_2';
+      case 'recuperarEntregaAlmacen': return 'local_shipping';
+      case 'ingresoAlmacen': return 'archive';
+      case 'tablaActivos': return 'table_chart';
+      case 'ingresoActivos': return 'add_business';
+      case 'bajaActivos': return 'remove_shopping_cart';
+      case 'layout': return 'view_column';
       default: return 'widgets';
     }
   }
@@ -543,7 +647,7 @@ export class BloquePropiedadesDialogComponent implements OnInit {
     const field = this.data.field;
     field.templateOptions = field.templateOptions || {};
 
-    if (val.key) {
+    if (val.key !== undefined) {
       field.key = val.key;
     }
 
@@ -567,6 +671,19 @@ export class BloquePropiedadesDialogComponent implements OnInit {
       };
       field.templateOptions['labelRef'] = val.labelRef;
       field.templateOptions['aprobarPorDireccion'] = val.aprobarPorDireccion;
+    } else if (field.type === 'archivo' || field.type === 'cargadorArchivos') {
+      field.templateOptions.label = val.label;
+      field.templateOptions['multiple'] = val.multiple;
+      field.templateOptions['required'] = val.required;
+    } else if (field.type === 'textarea') {
+      field.templateOptions.label = val.label;
+      field.templateOptions['rows'] = val.rows;
+      field.templateOptions['grow'] = val.grow;
+      field.templateOptions['required'] = val.required;
+    } else if (field.type === 'documentosRelacionados' || field.type === 'ccArchivo') {
+      field.templateOptions.label = val.label;
+      field.templateOptions['labelw'] = val.labelw;
+      field.templateOptions['showItem'] = val.showItem;
     } else if (field.type === 'select' || field.type === 'radio' || field.type === 'clasificacion') {
       field.templateOptions.label = val.label;
       field.templateOptions['required'] = val.required;
@@ -574,7 +691,7 @@ export class BloquePropiedadesDialogComponent implements OnInit {
       field.templateOptions['options'] = this.opcionesList.map(op => ({ value: op, id: op }));
     } else if (field.type === 'vacio') {
       field.templateOptions['alto'] = val.alto;
-      field.templateOptions['height'] = `${val.alto}px`;
+      field.templateOptions['height'] = val.heightStr || `${val.alto}px`;
     } else {
       field.templateOptions.label = val.label;
       field.templateOptions['required'] = val.required;

@@ -194,6 +194,7 @@ export interface PaletteCategory {
                   </div>
                   <div class="canvas-item-info" (click)="editarCampo(field, i)">
                     <div class="info-top">
+                      <mat-icon class="canvas-type-icon">{{ getFieldIcon(field.type) }}</mat-icon>
                       <span class="type-badge">{{ field.type }}</span>
                       @if (field.templateOptions?.['required']) {
                         <span class="req-badge">Requerido</span>
@@ -608,6 +609,20 @@ export class PlantillaEditorComponent implements OnInit {
           }
         },
         {
+          name: 'Encabezado Alternativo',
+          type: 'encabezado',
+          icon: 'badge',
+          description: 'Encabezado formal institucional para circulares o notas',
+          defaultConfig: {
+            type: 'encabezado',
+            key: 'encabezado',
+            templateOptions: {
+              show: { para: true, via: false, de: true, ref: true },
+              labelRef: 'REF.:'
+            }
+          }
+        },
+        {
           name: 'Asunto Oficial',
           type: 'inputt',
           icon: 'short_text',
@@ -651,32 +666,65 @@ export class PlantillaEditorComponent implements OnInit {
           }
         },
         {
+          name: 'Adjuntos / Archivo PDF',
+          type: 'archivo',
+          icon: 'attach_file',
+          description: 'Carga de anexos digitales y documentos PDF de respaldo',
+          defaultConfig: {
+            type: 'archivo',
+            key: 'archivo',
+            templateOptions: { label: 'Elegir PDF', multiple: true, required: false }
+          }
+        },
+        {
           name: 'Referencias Relacionadas',
           type: 'documentosRelacionados',
           icon: 'link',
-          description: 'Vinculación de CITEs anteriores',
+          description: 'Vinculación de CITEs anteriores en el trámite',
           defaultConfig: {
             type: 'documentosRelacionados',
             key: 'documentosRelacionados',
-            templateOptions: { label: 'Referencias del Trámite' }
+            templateOptions: { label: 'Referencias:', labelw: 10, showItem: true }
           }
         },
         {
           name: 'Con Copia a (CC:)',
           type: 'ccArchivo',
           icon: 'content_copy',
-          description: 'Copia informativa y archivo',
+          description: 'Copia informativa y archivo institucional',
           defaultConfig: {
             type: 'ccArchivo',
-            key: 'cc_archivo',
-            templateOptions: { label: 'Con Copia a:' }
+            key: 'ccArchivo',
+            templateOptions: { label: 'CC/Archivo:', labelw: 10 }
+          }
+        },
+        {
+          name: 'Documentos a Anular',
+          type: 'documentosAnular',
+          icon: 'cancel',
+          description: 'Selección y anulación formal de CITEs previos',
+          defaultConfig: {
+            type: 'documentosAnular',
+            key: 'documentosAnular',
+            templateOptions: { label: 'Documentos a anular:' }
+          }
+        },
+        {
+          name: 'Lista de Contactos',
+          type: 'listaContactos',
+          icon: 'contact_page',
+          description: 'Directorio institucional de funcionarios o destinatarios',
+          defaultConfig: {
+            type: 'listaContactos',
+            key: 'listaContactos',
+            templateOptions: { label: 'Lista de Contactos' }
           }
         },
         {
           name: 'Certificación Presupuestaria',
           type: 'certificacionComprometido',
           icon: 'receipt_long',
-          description: 'Asignación POA y presupuesto',
+          description: 'Asignación POA y presupuesto institucional',
           defaultConfig: {
             type: 'certificacionComprometido',
             key: 'certificacion_poa',
@@ -687,11 +735,22 @@ export class PlantillaEditorComponent implements OnInit {
           name: 'Caja Chica',
           type: 'cajachica',
           icon: 'account_balance_wallet',
-          description: 'Imputación de caja chica',
+          description: 'Imputación y rendición de caja chica',
           defaultConfig: {
             type: 'cajachica',
             key: 'caja_chica',
             templateOptions: { label: 'Imputación Caja Chica' }
+          }
+        },
+        {
+          name: 'Aprobación Consejo Directivo',
+          type: 'aprobacionCD',
+          icon: 'how_to_vote',
+          description: 'Resolución y votación del Consejo Directivo',
+          defaultConfig: {
+            type: 'aprobacionCD',
+            key: 'aprobacionCD',
+            templateOptions: { label: 'Resolución de Consejo' }
           }
         }
       ]
@@ -705,7 +764,7 @@ export class PlantillaEditorComponent implements OnInit {
           name: 'Título Principal',
           type: 'texto',
           icon: 'title',
-          description: 'Encabezado editable (H1/H2)',
+          description: 'Encabezado editable principal (H1/H2)',
           defaultConfig: {
             type: 'texto',
             templateOptions: {
@@ -737,13 +796,29 @@ export class PlantillaEditorComponent implements OnInit {
           name: 'Párrafo Explicativo',
           type: 'parrafo',
           icon: 'format_align_left',
-          description: 'Texto estático o cláusula contractual',
+          description: 'Texto estático o consideraciones generales',
           defaultConfig: {
             type: 'texto',
             templateOptions: {
               label: 'En cumplimiento a las disposiciones vigentes y habiendo revisado los antecedentes...',
               tipo: 'p',
               className: 'ap-text-justify',
+              mTop: true,
+              mBot: true
+            }
+          }
+        },
+        {
+          name: 'Párrafo de Saludo / Despedida',
+          type: 'despedida',
+          icon: 'mark_email_read',
+          description: 'Cierre institucional estándar',
+          defaultConfig: {
+            type: 'texto',
+            templateOptions: {
+              label: 'Sin otro particular, saludo a usted atentamente.',
+              tipo: 'p',
+              className: 'ap-text-left',
               mTop: true,
               mBot: true
             }
@@ -758,10 +833,10 @@ export class PlantillaEditorComponent implements OnInit {
             type: 'lista',
             key: 'lista_items',
             templateOptions: {
-              label: 'Puntos tratadas en la sesión:',
+              label: 'Puntos tratados en la sesión:',
               tipo: 'ul',
               options: [
-                { value: 'Revisión de informe previo' },
+                { value: 'Revisión de antecedentes técnicos' },
                 { value: 'Conclusiones y recomendaciones' }
               ]
             }
@@ -770,10 +845,21 @@ export class PlantillaEditorComponent implements OnInit {
       ]
     },
     {
-      title: 'Campos de Formulario',
+      title: 'Formularios y Controles',
       icon: 'tune',
-      expanded: false,
+      expanded: true,
       items: [
+        {
+          name: 'Área de Texto Multilínea (Nota / Párrafo)',
+          type: 'textarea',
+          icon: 'notes',
+          description: 'Entrada de varias líneas o notas intermedias',
+          defaultConfig: {
+            type: 'textarea',
+            key: 'inputTextArea',
+            templateOptions: { label: '', rows: 2, grow: false, required: false }
+          }
+        },
         {
           name: 'Campo de Texto Simple',
           type: 'input',
@@ -782,16 +868,6 @@ export class PlantillaEditorComponent implements OnInit {
           defaultConfig: {
             type: 'input',
             templateOptions: { label: 'Nombre / Detalle', required: false }
-          }
-        },
-        {
-          name: 'Área de Texto Multilínea',
-          type: 'textarea',
-          icon: 'notes',
-          description: 'Entrada de varias líneas',
-          defaultConfig: {
-            type: 'textarea',
-            templateOptions: { label: 'Observaciones', rows: 3, required: false }
           }
         },
         {
@@ -842,10 +918,83 @@ export class PlantillaEditorComponent implements OnInit {
           name: 'Selector de Fecha',
           type: 'datepicker',
           icon: 'calendar_today',
-          description: 'Fecha calendario',
+          description: 'Fecha calendario institucional',
           defaultConfig: {
             type: 'datepicker',
             templateOptions: { label: 'Fecha Límite de Presentación' }
+          }
+        }
+      ]
+    },
+    {
+      title: 'Servicios Web e Inventarios',
+      icon: 'inventory_2',
+      expanded: false,
+      items: [
+        {
+          name: 'Consulta a Almacenes',
+          type: 'consultaAlmacen',
+          icon: 'inventory_2',
+          description: 'Verificación de existencias de materiales y suministros',
+          defaultConfig: {
+            type: 'consultaAlmacen',
+            key: 'consulta_almacen',
+            templateOptions: { label: 'Consulta a Almacenes' }
+          }
+        },
+        {
+          name: 'Recuperar Entrega Almacén',
+          type: 'recuperarEntregaAlmacen',
+          icon: 'local_shipping',
+          description: 'Comprobante y entrega de suministros registrados',
+          defaultConfig: {
+            type: 'recuperarEntregaAlmacen',
+            key: 'entrega_almacen',
+            templateOptions: { label: 'Recuperar Entrega de Almacén' }
+          }
+        },
+        {
+          name: 'Ingreso a Almacén',
+          type: 'ingresoAlmacen',
+          icon: 'archive',
+          description: 'Comprobante de ingreso de insumos y materiales',
+          defaultConfig: {
+            type: 'ingresoAlmacen',
+            key: 'ingreso_almacen',
+            templateOptions: { label: 'Ingreso de Suministros a Almacén' }
+          }
+        },
+        {
+          name: 'Tabla de Activos Fijos',
+          type: 'tablaActivos',
+          icon: 'table_chart',
+          description: 'Relación tabular de bienes de uso institucional',
+          defaultConfig: {
+            type: 'tablaActivos',
+            key: 'tabla_activos',
+            templateOptions: { label: 'Tabla de Activos Fijos' }
+          }
+        },
+        {
+          name: 'Ingreso de Activos Fijos',
+          type: 'ingresoActivos',
+          icon: 'add_business',
+          description: 'Incorporación formal de bienes patrimoniales',
+          defaultConfig: {
+            type: 'ingresoActivos',
+            key: 'ingreso_activos',
+            templateOptions: { label: 'Ingreso de Activos Fijos' }
+          }
+        },
+        {
+          name: 'Baja de Activos Fijos',
+          type: 'bajaActivos',
+          icon: 'remove_shopping_cart',
+          description: 'Disposición o desincorporación de activos',
+          defaultConfig: {
+            type: 'bajaActivos',
+            key: 'baja_activos',
+            templateOptions: { label: 'Baja de Activos Fijos' }
           }
         }
       ]
@@ -859,10 +1008,22 @@ export class PlantillaEditorComponent implements OnInit {
           name: 'Espaciador en Blanco',
           type: 'vacio',
           icon: 'space_bar',
-          description: 'Separación vertical (en px)',
+          description: 'Separación vertical (en px o cm)',
           defaultConfig: {
             type: 'vacio',
-            templateOptions: { alto: 20, height: '20px' }
+            key: '0',
+            templateOptions: { alto: 20, height: '0.5cm' }
+          }
+        },
+        {
+          name: 'Organizador de Columnas (Layout)',
+          type: 'layout',
+          icon: 'view_column',
+          description: 'Estructuración modular de componentes en columnas',
+          defaultConfig: {
+            type: 'layout',
+            key: 'layout_grid',
+            templateOptions: { cols: 2 }
           }
         }
       ]
@@ -939,7 +1100,7 @@ export class PlantillaEditorComponent implements OnInit {
 
   cargarPlantilla(id: number): void {
     this.plantillasService.getPlantilla(id).subscribe({
-      next: (res) => {
+      next: (res: any) => {
         const p = res.datos;
         try {
           let parsed = JSON.parse(p.plantilla || '[]');
@@ -1015,10 +1176,79 @@ export class PlantillaEditorComponent implements OnInit {
 
   getFieldDisplayName(field: FormlyFieldConfig): string {
     const to = field.templateOptions;
-    if (to?.label) return to.label;
-    if (to?.['labelx']) return to['labelx'];
+    if (to?.label && to.label.trim()) return to.label;
+    if (to?.['labelx'] && to['labelx'].trim()) return to['labelx'];
+    const t = typeof field.type === 'string' ? field.type : '';
+    switch (t) {
+      case 'textarea': return `Área de Texto${field.key ? ' (' + field.key + ')' : ''}`;
+      case 'archivo':
+      case 'cargadorArchivos': return `Adjunto PDF${to?.label ? ': ' + to.label : ''}`;
+      case 'documentosRelacionados': return 'Referencias Relacionadas';
+      case 'ccArchivo': return 'Con Copia a (CC/Archivo)';
+      case 'vacio': return `Espaciador (${to?.['alto'] ? to['alto'] + 'px' : (to?.['height'] || '20px')})`;
+      case 'editorTexto':
+      case 'editor':
+      case 'editor-texto': return 'Cuerpo de Texto Enriquecido';
+      case 'datosGenerales': return 'Datos Generales (PARA, DE, REF)';
+      case 'encabezado': return 'Encabezado Institucional';
+      case 'documentosAnular': return 'Documentos a Anular';
+      case 'listaContactos': return 'Lista de Contactos';
+      case 'cajachica': return 'Imputación Caja Chica';
+      case 'certificacionComprometido': return 'Certificación Presupuestaria';
+      case 'aprobacionCD': return 'Aprobación Consejo Directivo';
+      case 'consultaAlmacen': return 'Consulta a Almacenes';
+      case 'recuperarEntregaAlmacen': return 'Recuperar Entrega Almacén';
+      case 'ingresoAlmacen': return 'Ingreso a Almacén';
+      case 'tablaActivos': return 'Tabla de Activos Fijos';
+      case 'ingresoActivos': return 'Ingreso de Activos Fijos';
+      case 'bajaActivos': return 'Baja de Activos Fijos';
+      case 'layout': return 'Distribución en Columnas';
+    }
     if (field.key) return String(field.key);
     return String(field.type || 'Elemento sin etiqueta');
+  }
+
+  getFieldIcon(type?: any): string {
+    const t = typeof type === 'string' ? type : '';
+    switch (t) {
+      case 'cite': return 'tag';
+      case 'texto': return 'title';
+      case 'subtitulo': return 'text_fields';
+      case 'parrafo': return 'format_align_left';
+      case 'despedida': return 'mark_email_read';
+      case 'datosGenerales':
+      case 'encabezado': return 'assignment_ind';
+      case 'editorTexto':
+      case 'editor':
+      case 'editor-texto': return 'edit_note';
+      case 'vacio': return 'space_bar';
+      case 'inputt':
+      case 'input': return 'short_text';
+      case 'textarea': return 'notes';
+      case 'select':
+      case 'clasificacion': return 'arrow_drop_down_circle';
+      case 'radio': return 'radio_button_checked';
+      case 'checkbox': return 'check_box';
+      case 'datepicker':
+      case 'calendario': return 'calendar_today';
+      case 'documentosRelacionados': return 'link';
+      case 'ccArchivo': return 'content_copy';
+      case 'archivo':
+      case 'cargadorArchivos': return 'attach_file';
+      case 'documentosAnular': return 'cancel';
+      case 'listaContactos': return 'contact_page';
+      case 'cajachica': return 'account_balance_wallet';
+      case 'certificacionComprometido': return 'receipt_long';
+      case 'aprobacionCD': return 'how_to_vote';
+      case 'consultaAlmacen': return 'inventory_2';
+      case 'recuperarEntregaAlmacen': return 'local_shipping';
+      case 'ingresoAlmacen': return 'archive';
+      case 'tablaActivos': return 'table_chart';
+      case 'ingresoActivos': return 'add_business';
+      case 'bajaActivos': return 'remove_shopping_cart';
+      case 'layout': return 'view_column';
+      default: return 'widgets';
+    }
   }
 
   editarCampo(field: FormlyFieldConfig, index: number): void {
@@ -1094,7 +1324,7 @@ export class PlantillaEditorComponent implements OnInit {
           this.snackBar.open('Plantilla institucional actualizada con éxito', 'Cerrar', { duration: 3500 });
           this.router.navigate(['/plantillas']);
         },
-        error: (err) => {
+        error: (err: any) => {
           this.saving.set(false);
           this.snackBar.open(err.error?.mensaje || 'Error al actualizar la plantilla', 'Cerrar', { duration: 4000 });
         }
@@ -1106,7 +1336,7 @@ export class PlantillaEditorComponent implements OnInit {
           this.snackBar.open('Plantilla institucional creada exitosamente', 'Cerrar', { duration: 3500 });
           this.router.navigate(['/plantillas']);
         },
-        error: (err) => {
+        error: (err: any) => {
           this.saving.set(false);
           this.snackBar.open(err.error?.mensaje || 'Error al guardar la nueva plantilla', 'Cerrar', { duration: 4000 });
         }
