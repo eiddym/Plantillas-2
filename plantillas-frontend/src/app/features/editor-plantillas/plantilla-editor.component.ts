@@ -195,7 +195,7 @@ export interface PaletteCategory {
                   <div class="canvas-item-info" (click)="editarCampo(field, i)">
                     <div class="info-top">
                       <mat-icon class="canvas-type-icon">{{ getFieldIcon(field.type) }}</mat-icon>
-                      <span class="type-badge">{{ field.type }}</span>
+                      <span class="type-badge">{{ getFieldTypeString(field.type) }}</span>
                       @if (field.templateOptions?.['required']) {
                         <span class="req-badge">Requerido</span>
                       }
@@ -236,7 +236,7 @@ export interface PaletteCategory {
           <div class="preview-container">
             <div class="preview-sheet" [ngClass]="metaForm.get('tipoHoja')?.value === 'Oficio' ? 'sheet-oficio' : 'sheet-carta'">
               <!-- Membrete institucional si está activo -->
-              @if (canvasFields[0]?.templateOptions?.['tipoMembrete'] === 'externo') {
+              @if (canvasFields[0].templateOptions?.['tipoMembrete'] === 'externo') {
                 <div class="preview-header-img">
                   <img src="/assets/images/logo_cooperativa.png" alt="Membrete Oficial" class="img-header">
                 </div>
@@ -1251,13 +1251,45 @@ export class PlantillaEditorComponent implements OnInit {
     }
   }
 
+  getFieldTypeString(type: any): string {
+    if (!type) return '';
+    if (typeof type === 'string') return type;
+    if (typeof type === 'function' && type.name) {
+      const n: string = type.name;
+      if (n.includes('EditorTexto')) return 'editorTexto';
+      if (n.includes('Cite')) return 'cite';
+      if (n.includes('DatosGenerales')) return 'datosGenerales';
+      if (n.includes('CcArchivo')) return 'ccArchivo';
+      if (n.includes('Texto')) return 'texto';
+      if (n.includes('Vacio')) return 'vacio';
+      if (n.includes('Inputt') || n.includes('Input')) return 'inputt';
+      if (n.includes('Relacionados')) return 'documentosRelacionados';
+      if (n.includes('Archivo')) return 'archivo';
+      if (n.includes('Listas') || n.includes('Lista')) return 'select';
+      if (n.includes('Calendario')) return 'datepicker';
+      if (n.includes('Cajachica')) return 'cajachica';
+      if (n.includes('AprobacionCd')) return 'aprobacionCD';
+      if (n.includes('Anular')) return 'documentosAnular';
+      return n;
+    }
+    return String(type);
+  }
+
   editarCampo(field: FormlyFieldConfig, index: number): void {
     this.selectedFieldIndex.set(index);
+    const clonedField: FormlyFieldConfig = JSON.parse(JSON.stringify(field, (k, v) => {
+      if (k === 'type' && typeof v === 'function') {
+        return this.getFieldTypeString(v);
+      }
+      return v;
+    }));
+    clonedField.type = this.getFieldTypeString(clonedField.type || field.type);
+
     const dialogRef = this.dialog.open(BloquePropiedadesDialogComponent, {
       width: '560px',
       maxHeight: '90vh',
       data: {
-        field: JSON.parse(JSON.stringify(field)),
+        field: clonedField,
         index: index
       }
     });

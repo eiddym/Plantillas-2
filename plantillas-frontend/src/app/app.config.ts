@@ -15,13 +15,13 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([authInterceptor])),
     provideAnimationsAsync(),
     importProvidersFrom(
+      FormlyMaterialModule,
       FormlyModule.forRoot({
         types: CUSTOM_FORMLY_TYPES,
         validationMessages: [
           { name: 'required', message: 'Este campo es obligatorio' }
         ]
-      }),
-      FormlyMaterialModule
+      })
     )
   ]
 };
