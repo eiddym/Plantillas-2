@@ -192,26 +192,46 @@ export class FormlyFieldEditorTextoComponent extends FieldType<FieldTypeConfig> 
         color: #1e293b;
         margin: 16px 20px;
         background-color: #ffffff;
+        overflow-wrap: break-word !important;
+        word-wrap: break-word !important;
+        word-break: break-word !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+      }
+      p, div, span, h1, h2, h3, h4, h5, h6, li {
+        overflow-wrap: break-word !important;
+        word-wrap: break-word !important;
+        word-break: break-word !important;
       }
       p { margin: 0 0 10px 0; }
       img {
-        max-width: 100%;
-        height: auto;
+        max-width: 100% !important;
+        height: auto !important;
         cursor: pointer;
-        display: inline-block;
+        display: block;
+        margin: 10px auto;
+        box-sizing: border-box;
       }
       img[data-mce-selected] {
         outline: 2px solid #0284c7;
       }
+      figure {
+        max-width: 100% !important;
+        margin: 10px auto;
+      }
       table {
+        max-width: 100% !important;
         width: 100%;
         border-collapse: collapse;
         margin-bottom: 14px;
+        table-layout: auto;
       }
       td, th {
         border: 1px solid #cbd5e1;
         padding: 6px 10px;
         font-size: 10pt;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
       }
       th {
         background-color: #f1f5f9;
@@ -221,6 +241,11 @@ export class FormlyFieldEditorTextoComponent extends FieldType<FieldTypeConfig> 
         color: #0f172a;
         margin-top: 14px;
         margin-bottom: 6px;
+        overflow-wrap: break-word;
+      }
+      pre, code {
+        white-space: pre-wrap !important;
+        word-break: break-all !important;
       }
     `
   };

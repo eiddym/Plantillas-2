@@ -334,3 +334,51 @@ html, body {
     padding: 12px 10px !important;
   }
 }
+
+/* ==========================================================================
+   CONTENCIÓN DE MÁRGENES DOCUMENTALES (IMÁGENES, TABLAS Y TEXTO SIN DESBORDE)
+   ========================================================================== */
+
+.document-prose,
+.tox-editor-container,
+.editor-texto-container,
+.preview-mode-container {
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+  word-break: break-word !important;
+
+  p, div, span, h1, h2, h3, h4, h5, h6, blockquote, li {
+    overflow-wrap: break-word !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+  }
+
+  img {
+    max-width: 100% !important;
+    height: auto !important;
+    object-fit: contain;
+    box-sizing: border-box;
+    display: block;
+    margin: 12px auto;
+  }
+
+  table {
+    max-width: 100% !important;
+    width: 100%;
+    table-layout: auto;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    border-collapse: collapse;
+  }
+
+  td, th {
+    word-break: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+  }
+
+  pre, code {
+    white-space: pre-wrap !important;
+    word-break: break-all !important;
+  }
+}

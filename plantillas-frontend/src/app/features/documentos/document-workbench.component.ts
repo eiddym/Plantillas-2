@@ -623,6 +623,9 @@ import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
       flex-direction: column;
       position: relative;
       height: auto;
+      overflow: hidden;
+      word-break: break-word;
+      overflow-wrap: break-word;
     }
 
     .pagina-carta {
@@ -712,6 +715,9 @@ import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
 
     .formly-wrapper {
       margin-top: 0.5rem;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
     }
 
     .auto-save-bar {
@@ -763,6 +769,8 @@ import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
       }
       .meta-value {
         color: #334155;
+        overflow-wrap: break-word;
+        word-break: break-word;
       }
     }
 
@@ -777,12 +785,86 @@ import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
       font-size: 1.05rem;
       line-height: 1.75;
       color: #1e293b;
-      max-width: 75ch;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
       margin-bottom: 2rem;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+      word-break: break-word;
+
+      p, div, span, h1, h2, h3, h4, h5, h6, blockquote, li {
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        word-break: break-word;
+      }
 
       p {
         margin-bottom: 1.25rem;
         text-align: justify;
+        overflow-wrap: break-word;
+        word-break: break-word;
+      }
+
+      img {
+        max-width: 100% !important;
+        height: auto !important;
+        object-fit: contain;
+        display: block;
+        margin: 1.25rem auto;
+        box-sizing: border-box;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      }
+
+      figure {
+        max-width: 100% !important;
+        margin: 1.25rem auto;
+        img {
+          margin: 0 auto;
+        }
+        figcaption {
+          font-size: 0.85rem;
+          color: #64748b;
+          text-align: center;
+          margin-top: 0.5rem;
+        }
+      }
+
+      table {
+        max-width: 100% !important;
+        width: 100% !important;
+        border-collapse: collapse;
+        margin: 1.25rem 0;
+        table-layout: auto;
+        word-break: break-word;
+        overflow-wrap: break-word;
+      }
+
+      td, th {
+        border: 1px solid #cbd5e1;
+        padding: 8px 12px;
+        word-break: break-word;
+        overflow-wrap: break-word;
+        max-width: 100%;
+      }
+
+      th {
+        background-color: #f8fafc;
+        font-weight: 700;
+      }
+
+      pre, code {
+        white-space: pre-wrap;
+        word-break: break-all;
+        max-width: 100%;
+        background: #f1f5f9;
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+
+      iframe, video {
+        max-width: 100% !important;
       }
     }
 
