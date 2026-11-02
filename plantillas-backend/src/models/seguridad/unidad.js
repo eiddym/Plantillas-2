@@ -42,6 +42,11 @@ module.exports = (sequelize, DataType) => {
             allowNull: true,
             xlabel: 'Ruta Jerárquica',
         },
+        es_colectiva: {
+            type: DataType.BOOLEAN,
+            defaultValue: false,
+            xlabel: 'Es Unidad Colectiva (Socios)',
+        },
         _usuario_creacion: {
             type: DataType.INTEGER,
             allowNull: false,

@@ -693,13 +693,22 @@ export class FormlyFieldDatosGeneralesComponent extends FieldType<FieldTypeConfi
     }
 
     // EJE 5 - Si es OPERADOR o subordinado:
-    // Identificar Jefe Inmediato y Jefe de Unidad Mayor
-    const vias: any[] = [];
     const currUnidadId = curr.fid_unidad || curr.id_unidad;
     const destUnidadId = dest.fid_unidad;
 
     // Buscar la unidad del usuario actual
     const currUnidad = this.unidadesCache.find((u) => u.id_unidad === currUnidadId);
+
+    // NUEVA REGLA: Si la unidad es COLECTIVA (Socios / Asociados), NO se busca jefe interno ni VÍA
+    // El socio despacha directamente a la unidad / jefatura de destino
+    if (currUnidad?.es_colectiva) {
+      this.viasCalculadas.set([]);
+      this.emitirValores(false);
+      return;
+    }
+
+    // Identificar Jefe Inmediato y Jefe de Unidad Mayor
+    const vias: any[] = [];
     
     // 1. Jefe Inmediato (Jefe de su misma unidad)
     let jefeInmediato = this.usuariosCache.find(

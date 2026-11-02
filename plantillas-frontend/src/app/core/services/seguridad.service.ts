@@ -19,6 +19,7 @@ export interface Unidad {
   abreviacion?: string;
   fid_unidad_padre?: number | null;
   estado: string;
+  es_colectiva?: boolean;
 }
 
 export interface UsuarioAdmin {

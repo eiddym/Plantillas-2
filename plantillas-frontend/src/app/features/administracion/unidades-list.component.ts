@@ -97,6 +97,7 @@ import { SeguridadService, Unidad } from '../../core/services/seguridad.service'
                 <span class="level-pill" [class.level-padre]="!u.fid_unidad_padre">
                   {{ !u.fid_unidad_padre ? 'Unidad Principal (Padre)' : 'Subunidad' }}
                 </span>
+                <span *ngIf="u.es_colectiva" class="badge-tag badge-colectiva" style="margin-left: 6px;">COLECTIVA</span>
               </td>
             </ng-container>
 
@@ -152,6 +153,15 @@ import { SeguridadService, Unidad } from '../../core/services/seguridad.service'
                   </select>
                 </div>
               }
+
+              <div class="checkbox-group" style="margin-top: 6px;">
+                <mat-checkbox formControlName="es_colectiva" color="primary">
+                  <strong>Es Unidad Colectiva (Socios / Asociados)</strong>
+                </mat-checkbox>
+                <span class="input-hint" style="display: block; margin-left: 28px; margin-top: 2px;">
+                  Despacho directo sin VÍA interno; los jefes pueden redactarles correspondencia directa.
+                </span>
+              </div>
 
               <div class="form-group">
                 <label>Estado</label>
@@ -266,6 +276,9 @@ import { SeguridadService, Unidad } from '../../core/services/seguridad.service'
     .badge-sigla {
       background: #eff6ff; color: #1d4ed8; font-family: monospace; font-weight: 700;
     }
+    .badge-colectiva {
+      background: #ede9fe; color: #6d28d9; font-weight: 700;
+    }
     .level-pill {
       font-size: 11.5px; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569;
       &.level-padre { background: #dcfce7; color: #15803d; font-weight: 700; }
@@ -353,6 +366,7 @@ export class UnidadesListComponent implements OnInit {
     abreviacion: new FormControl('', [Validators.required]),
     es_padre: new FormControl<boolean>(true),
     fid_unidad_padre: new FormControl<number | null>(null),
+    es_colectiva: new FormControl<boolean>(false),
     estado: new FormControl<'ACTIVO' | 'INACTIVO'>('ACTIVO', [Validators.required])
   });
 
@@ -426,6 +440,7 @@ export class UnidadesListComponent implements OnInit {
       abreviacion: '',
       es_padre: true,
       fid_unidad_padre: null,
+      es_colectiva: false,
       estado: 'ACTIVO'
     });
     this.modalUnidadVisible.set(true);
@@ -440,6 +455,7 @@ export class UnidadesListComponent implements OnInit {
       abreviacion: u.abreviacion || u.sigla || this.generarSiglaSinConectores(u.nombre),
       es_padre: esPadre,
       fid_unidad_padre: u.fid_unidad_padre || null,
+      es_colectiva: u.es_colectiva ?? false,
       estado: u.estado === 'INACTIVO' ? 'INACTIVO' : 'ACTIVO'
     });
     this.modalUnidadVisible.set(true);
@@ -459,6 +475,7 @@ export class UnidadesListComponent implements OnInit {
       nombre: v.nombre?.trim(),
       abreviacion: v.abreviacion || this.generarSiglaSinConectores(v.nombre || ''),
       fid_unidad_padre: v.es_padre ? null : (v.fid_unidad_padre ? Number(v.fid_unidad_padre) : null),
+      es_colectiva: v.es_colectiva ?? false,
       estado: v.estado || 'ACTIVO'
     };
 

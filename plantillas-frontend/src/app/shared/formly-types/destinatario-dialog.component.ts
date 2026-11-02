@@ -471,34 +471,53 @@ export class DestinatarioDialogComponent implements OnInit {
     const currUnidad = curr.fid_unidad || curr.id_unidad;
     const isJefe = this.isCurrentUserJefeOrMae();
 
+    // Identificar si la unidad del usuario actual es colectiva
+    const currUnidadObj = (this.data.unidades || []).find((un: any) => un.id_unidad === currUnidad);
+    const esUnidadColectiva = currUnidadObj?.es_colectiva === true;
+
     let list = (this.data.usuarios || []).filter((u) => u.id_usuario !== currId);
 
     if (this.data.mode === 'PARA') {
-      if (isJefe) {
-        // EJE 5 - Regla para Rol JEFE / MAE:
-        // Solo lista a otros Jefes de igual jerarquía o Jefes de subunidades dependientes de su propia unidad.
-        // Se excluyen totalmente funcionarios de menor rango.
+      if (esUnidadColectiva) {
+        // REGLA UNIDAD COLECTIVA:
+        // Los miembros (socios) pueden despachar directamente a cualquier Jefatura de Destino
+        // (Consejo de Administración, Tribunal de Honor, MAE, etc.)
+        list = list.filter((u) => {
+          return this.esJefe(u) || this.esMae(u);
+        });
+      } else if (isJefe) {
+        // REGLA PARA ROL JEFE / MAE:
+        // Puede elegir a otros Jefes/MAE, a dependientes de su propia unidad,
+        // Y TAMBIÉN a miembros pertenecientes a unidades colectivas (Socios / Asociados)
         list = list.filter((u) => {
           const uEsJefeOMae = this.esJefe(u) || this.esMae(u);
-          if (!uEsJefeOMae) return false;
+          if (uEsJefeOMae) return true;
 
-          // Si es MAE o Jefe de otra unidad o Jefe de subunidad dependiente
-          return true;
+          // Dependiente de su misma unidad
+          if (u.fid_unidad === currUnidad) return true;
+
+          // Pertenece a una unidad colectiva
+          const uUnidad = (this.data.unidades || []).find((un: any) => un.id_unidad === u.fid_unidad);
+          if (uUnidad?.es_colectiva === true) return true;
+
+          return false;
         });
       } else {
-        // EJE 5 - Regla para Rol OPERADOR o dependiente menor a Jefe:
-        // Puede elegir a su Jefe Inmediato o a otros Jefes / MAE.
+        // REGLA PARA OPERADOR O SUBORDINADO DE UNIDAD ESTÁNDAR:
+        // Puede elegir a su Jefe Inmediato o a otros Jefes / MAE (con VÍA obligatorio hacia arriba)
         list = list.filter((u) => {
           const uEsJefeOMae = this.esJefe(u) || this.esMae(u);
           return uEsJefeOMae;
         });
       }
     } else if (this.data.mode === 'CO_REMITENTE') {
-      // EJE 5 - Regla para DE (Trámites Conjuntos):
-      // Restringido estrictamente a funcionarios de su misma unidad y de igual rango
+      // Regla para DE (Trámites Conjuntos):
+      // Restringido estrictamente a funcionarios de su misma unidad
       list = list.filter((u) => {
         const mismaUnidad = u.fid_unidad === currUnidad;
         if (!mismaUnidad) return false;
+
+        if (esUnidadColectiva) return true;
 
         // Mismo rango (si curr es operador, u debe ser operador; si curr es jefe, u jefe)
         const uEsJefe = this.esJefe(u);
