@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = app => {
-  app.get('/health', (req, res) => {
+  app.get(['/health', '/api/v1/health'], (req, res) => {
     res.status(200).json({
       status: 'UP',
       uptime: process.uptime(),
@@ -9,7 +9,7 @@ module.exports = app => {
     });
   });
 
-  app.get('/ready', async (req, res) => {
+  app.get(['/ready', '/api/v1/ready'], async (req, res) => {
     try {
       await app.src.db.sequelize.authenticate();
       res.status(200).json({

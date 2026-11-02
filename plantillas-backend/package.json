@@ -4,7 +4,7 @@
   "description": "Creador de plantillas formly",
   "main": "index.js",
   "scripts": {
-    "docker:up": "docker compose up -d postgres",
+    "docker:up": "docker compose up -d db",
     "start": "node index.js",
     "test": "npm run docker:up && NODE_ENV=test mocha --exit --timeout 15000",
     "lint": "eslint *.js lib/*.js src/models/*/*.js src/routes/*/*.js test/*.js src/bl/*/*.js",
