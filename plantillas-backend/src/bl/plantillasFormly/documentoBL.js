@@ -1474,41 +1474,58 @@ module.exports = {
     }),
 
   obtenerCrearCite: (modelos, documento, idUsuario) => {
-    const citeGuia = config.sistema.cite_principal;
+    const entidad = process.env.ENTIDAD_SIGLA || (config.sistema && config.sistema.cite_principal && config.sistema.cite_principal !== 'PLANTILLAS' ? config.sistema.cite_principal : 'MARABUNTA');
     const plantilla = JSON.parse(documento.plantilla);
     const datosPlantilla = JSON.parse(documento.plantilla_valor);
     const fechaActual = moment().tz('America/La_Paz').format();
+    const anioActual = `${moment(fechaActual).year()}`;
     let citeSinNumero = null;
     let tieneCite = false;
+
+    if (documento.fecha !== undefined && documento.fecha !== null && documento.nombre && documento.nombre.includes('/')) {
+      tieneCite = true;
+      return Promise.resolve({
+        cite: documento.nombre,
+        datosPlantilla
+      });
+    }
+
     return modelos.usuario.findOne({
       where: { id_usuario: documento._usuario_creacion },
-      include: { model: modelos.unidad, as: 'unidad' },
+      include: {
+        model: modelos.unidad,
+        as: 'unidad',
+        include: [{ model: modelos.unidad, as: 'unidad_padre' }]
+      },
     })
-    .then(usuarioResp => {
-      const compCite = _.find(plantilla, ['type', 'cite']) || { templateOptions: { tipo: 'general' } };
-      const tipoCite = (compCite.templateOptions && compCite.templateOptions.tipo) || 'general';
-      const esCiteGeneral = (tipoCite == 'general');
+    .then(async (usuarioResp) => {
       const unidad = usuarioResp ? usuarioResp.unidad : null;
-      const abrevDoc = (documento.abreviacion && documento.abreviacion.trim())
-        ? documento.abreviacion.trim()
-        : ((documento.nombre_plantilla || 'NI')
-            .split(/\s+/)
-            .filter(Boolean)
-            .map(w => w[0].toUpperCase())
-            .join('') || 'NI');
-      if (documento.fecha !== undefined && documento.fecha !== null) {
-        tieneCite = true;
-        return documento.nombre;
+      let estructuraUnidad = 'GEN';
+
+      if (unidad) {
+        if (unidad.fid_unidad_padre && unidad.unidad_padre) {
+          estructuraUnidad = `${unidad.unidad_padre.abreviacion}-${unidad.abreviacion}`;
+        } else if (unidad.fid_unidad_padre) {
+          const uPadre = await modelos.unidad.findByPk(unidad.fid_unidad_padre);
+          if (uPadre && uPadre.abreviacion) {
+            estructuraUnidad = `${uPadre.abreviacion}-${unidad.abreviacion}`;
+          } else {
+            estructuraUnidad = unidad.abreviacion;
+          }
+        } else {
+          estructuraUnidad = unidad.abreviacion;
+        }
       }
-      if (esCiteGeneral || !unidad) return (`${citeGuia}/${abrevDoc}`);
-      return `${citeGuia}-${unidad.abreviacion}/${abrevDoc}`;
+
+      // Formato oficial: entidad/unidad o entidad/unidad-subunidad
+      return `${entidad}/${estructuraUnidad}`;
     })
     .then(citeResp => {
       citeSinNumero = citeResp;
       return modelos.correlativo.findOne({
         where: {
           abreviacion: citeResp,
-          anio: `${moment(fechaActual).year()}`,
+          anio: anioActual,
         },
       });
     })
@@ -1516,32 +1533,26 @@ module.exports = {
       if(correlativoResp) return correlativoResp;
       return modelos.correlativo.create({
         abreviacion: citeSinNumero,
-        anio: `${moment(fechaActual).year()}`,
+        anio: anioActual,
         valor: 1,
         _usuario_creacion: idUsuario,
       });
     })
     .then(correlativoResp => {
-      const cantCeros = config.sistema.cite_ceros - parseInt((`${correlativoResp.valor}`).length);
-      let correlativoCeros = '';
-      for(let i =0; i< cantCeros; i++) correlativoCeros += '0';
-      correlativoCeros += correlativoResp.valor;
+      const numDigitos = Number(config.sistema?.cite_ceros || config.sistema?.correlativo_longitud || 5);
+      const correlativoCeros = String(correlativoResp.valor).padStart(numDigitos, '0');
+      const citeGenerado = `${citeSinNumero}/${correlativoCeros}/${anioActual}`;
       datosPlantilla['cite-0'] = {
-        cite: (tieneCite == true) ? citeSinNumero : `${citeSinNumero}/${correlativoCeros}/${correlativoResp.anio}`,
+        cite: citeGenerado,
       };
       if (datosPlantilla['cite-0'].fecha == undefined) datosPlantilla['cite-0'].fecha = fechaActual;
       return correlativoResp.update({
         valor: correlativoResp.valor + 1,
         _usuario_modificacion: idUsuario,
-      });
-    })
-    .then(correlativoAct => {
-      const respuesta = {
-        cite: datosPlantilla['cite-0'].cite,
-        datosPlantilla,
-      };
-      if(tieneCite === true) respuesta.cite = citeSinNumero;
-      return respuesta;
+      }).then(() => ({
+        cite: citeGenerado,
+        datosPlantilla
+      }));
     })
     .catch(error => {
       logger.error(error);

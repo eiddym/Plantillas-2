@@ -258,6 +258,112 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
         >
         </mat-paginator>
       </mat-card>
+
+      <!-- BLOQUE DEDICADO: DOCUMENTOS EN COPIA (C.C.) -->
+      <mat-card *ngIf="modoVista() === 'documentos'" class="table-card card-copia">
+        <div class="copia-header-banner">
+          <div class="copia-header-title">
+            <div class="copia-icon-circle">
+              <mat-icon>forward_to_inbox</mat-icon>
+            </div>
+            <div>
+              <h2>Documentos en Copia (C.C.)</h2>
+              <p class="subtitle">Documentos oficiales con CITE remitidos en copia informativa a su unidad administrativa</p>
+            </div>
+          </div>
+          <span class="copia-count-badge" *ngIf="totalCopia() > 0">
+            {{ totalCopia() }} {{ totalCopia() === 1 ? 'documento oficial' : 'documentos oficiales' }}
+          </span>
+        </div>
+
+        <mat-progress-bar *ngIf="loadingCopia()" mode="indeterminate"></mat-progress-bar>
+
+        <div class="table-responsive">
+          <table mat-table [dataSource]="documentosCopia()" class="w-full">
+            <!-- CITE / Documento Column -->
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>CITE / DOCUMENTO</th>
+              <td mat-cell *matCellDef="let d">
+                <span class="doc-cite" style="cursor: pointer;" (click)="verPdf(d)">{{ d.nombre }}</span>
+                <span class="doc-meta">{{ getReferencia(d) }}</span>
+              </td>
+            </ng-container>
+
+            <!-- Participantes Column -->
+            <ng-container matColumnDef="participantes">
+              <th mat-header-cell *matHeaderCellDef>PARTICIPANTES</th>
+              <td mat-cell *matCellDef="let d">
+                <div class="participantes-col">
+                  <span><strong>De:</strong> {{ getParticipanteTexto(d, 'de') }}</span>
+                  <span><strong>Para:</strong> {{ getParticipanteTexto(d, 'para') }}</span>
+                  <span *ngIf="getCopiaTexto(d)"><strong>CC:</strong> {{ getCopiaTexto(d) }}</span>
+                </div>
+              </td>
+            </ng-container>
+
+            <!-- Clasificación Column -->
+            <ng-container matColumnDef="clasificacion">
+              <th mat-header-cell *matHeaderCellDef>CLASIFICACIÓN</th>
+              <td mat-cell *matCellDef="let d">
+                <span class="badge-tag" [ngClass]="getClasificacionClass(d.clasificacion)">
+                  {{ d.clasificacion || 'ORDINARIO' }}
+                </span>
+              </td>
+            </ng-container>
+
+            <!-- Estado Column -->
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>ESTADO</th>
+              <td mat-cell *matCellDef="let d">
+                <span class="badge-tag" [ngClass]="getEstadoClass(d.estado)">
+                  {{ d.estado }}
+                </span>
+              </td>
+            </ng-container>
+
+            <!-- Fecha Column -->
+            <ng-container matColumnDef="fecha">
+              <th mat-header-cell *matHeaderCellDef>FECHA</th>
+              <td mat-cell *matCellDef="let d">
+                {{ d.fecha || (d._fecha_creacion | date:'dd/MM/yyyy') }}
+              </td>
+            </ng-container>
+
+            <!-- Acciones Column -->
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef class="text-right">ACCIONES</th>
+              <td mat-cell *matCellDef="let d" class="text-right">
+                <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+                <button mat-icon-button (click)="verHistorial(d)" matTooltip="Trazabilidad y Flujo" class="btn-history-action">
+                  <mat-icon>history</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+            <!-- Fila Vacía -->
+            <tr class="mat-row" *matNoDataRow>
+              <td class="mat-cell empty-cell" [attr.colspan]="displayedColumns.length">
+                <mat-icon class="empty-icon">forward_to_inbox</mat-icon>
+                <p>No se encontraron documentos oficiales remitidos en copia a su unidad administrativa.</p>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <mat-paginator
+          [length]="totalCopia()"
+          [pageSize]="pageSizeCopia()"
+          [pageSizeOptions]="[5, 10, 20]"
+          (page)="onPageChangeCopia($event)"
+          showFirstLastButtons
+        >
+        </mat-paginator>
+      </mat-card>
     </div>
   `,
   styles: [`
@@ -309,6 +415,70 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
       background: #ffffff;
       border: 1px solid #e2e8f0;
       box-shadow: 0 2px 8px rgba(15, 32, 39, 0.04);
+    }
+
+    .card-copia {
+      margin-top: 28px;
+      border: 1px solid #cbd5e1;
+      border-top: 4px solid #0d5c63;
+    }
+
+    .copia-header-banner {
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .copia-header-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      h2 {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: #0f2027;
+        letter-spacing: -0.2px;
+      }
+
+      .subtitle {
+        margin: 2px 0 0 0;
+        font-size: 0.8rem;
+        color: #64748b;
+      }
+    }
+
+    .copia-icon-circle {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: rgba(13, 92, 99, 0.12);
+      color: #0d5c63;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    .copia-count-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: #e6fffa;
+      color: #0d5c63;
+      border: 1px solid #b2f5ea;
+      padding: 4px 12px;
+      border-radius: 14px;
     }
 
     .toolbar-filter {
@@ -569,6 +739,12 @@ export class DocumentosListComponent implements OnInit {
   readonly pageIndex = signal(0);
   readonly loading = signal(false);
 
+  readonly documentosCopia = signal<Documento[]>([]);
+  readonly totalCopia = signal(0);
+  readonly pageSizeCopia = signal(10);
+  readonly pageIndexCopia = signal(0);
+  readonly loadingCopia = signal(false);
+
   puedePromover(): boolean {
     return this.authService.hasRole('JEFE') || 
            this.authService.hasRole('MAE') || 
@@ -653,6 +829,10 @@ export class DocumentosListComponent implements OnInit {
   }
 
   cargarDocumentos(): void {
+    if (this.modoVista() === 'documentos') {
+      this.cargarDocumentosCopia();
+    }
+
     this.loading.set(true);
 
     if (this.modoVista() === 'firmar') {
@@ -697,6 +877,24 @@ export class DocumentosListComponent implements OnInit {
     }
   }
 
+  cargarDocumentosCopia(): void {
+    if (this.modoVista() !== 'documentos') return;
+    this.loadingCopia.set(true);
+    this.documentosService
+      .getDocumentos(this.pageSizeCopia(), this.pageIndexCopia() + 1, 'APROBADO,CERRADO', this.searchFilter, 'copia')
+      .subscribe({
+        next: (res) => {
+          this.loadingCopia.set(false);
+          const data = res.datos;
+          this.documentosCopia.set(data?.resultado || []);
+          this.totalCopia.set(data?.total || 0);
+        },
+        error: () => {
+          this.loadingCopia.set(false);
+        }
+      });
+  }
+
   onTabChange(tabIndex: number): void {
     if (this.modoVista() === 'documentos') {
       this.currentEstado = this.estadoTabsDocumentos[tabIndex] || '';
@@ -719,10 +917,17 @@ export class DocumentosListComponent implements OnInit {
     this.cargarDocumentos();
   }
 
+  onPageChangeCopia(event: PageEvent): void {
+    this.pageSizeCopia.set(event.pageSize);
+    this.pageIndexCopia.set(event.pageIndex);
+    this.cargarDocumentosCopia();
+  }
+
   onFilterChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.searchFilter = input.value.trim();
     this.pageIndex.set(0);
+    this.pageIndexCopia.set(0);
     this.cargarDocumentos();
   }
 

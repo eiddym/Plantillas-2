@@ -576,16 +576,26 @@ module.exports = app => {
                 { aprobador_cd_actual: idUs },
               ]
         });
+      } else if (bandeja === 'copia' || bandeja === 'cc') {
+        let uIds = fidUnidad > 0 ? [fidUnidad] : [];
+        if (fidUnidad > 0) {
+          try {
+            const subs = await unidad.findAll({ where: { fid_unidad_padre: fidUnidad }, attributes: ['id_unidad'] });
+            if (subs && subs.length > 0) {
+              uIds.push(...subs.map(s => Number(s.id_unidad)));
+            }
+          } catch (_) {}
+        }
+        if (uIds.length > 0) {
+          const matchCopia = uIds.flatMap(uId => matchJsonUnidad('copia', uId));
+          andConds.push({
+            estado: { [Op.in]: ['APROBADO', 'CERRADO'] },
+            [Op.or]: matchCopia
+          });
+        } else {
+          andConds.push({ id_documento: -1 });
+        }
       } else if (bandeja !== 'impresion') {
-        const ccCond = (fidUnidad > 0) ? [
-          {
-            [Op.and]: [
-              { estado: { [Op.in]: ['APROBADO', 'CERRADO'] } },
-              { [Op.or]: matchJsonUnidad('copia', fidUnidad) }
-            ]
-          }
-        ] : [];
-
         andConds.push({
           [Op.or]: [
             { _usuario_creacion: idUs },
@@ -601,8 +611,7 @@ module.exports = app => {
                   ]
                 }
               ]
-            },
-            ...ccCond
+            }
           ]
         });
       }
