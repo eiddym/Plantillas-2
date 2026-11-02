@@ -24,7 +24,8 @@ let renderCount = 0;
 const MAX_RENDERS_BEFORE_RECYCLE = 100;
 
 async function getPuppeteerBrowser() {
-  if (puppeteerBrowser && puppeteerBrowser.isConnected()) {
+  const isAlive = puppeteerBrowser && (typeof puppeteerBrowser.isConnected === 'function' ? puppeteerBrowser.isConnected() : Boolean(puppeteerBrowser.connected));
+  if (isAlive) {
     if (renderCount >= MAX_RENDERS_BEFORE_RECYCLE) {
       console.log('[PUPPETEER] Reciclando proceso de Chromium tras ' + renderCount + ' renders para liberar memoria...');
       try { await puppeteerBrowser.close(); } catch (e) {}
@@ -128,7 +129,10 @@ async function renderPdfPuppeteer({ html, headerHtml, footerHtml, format, output
     };
 
     console.log('[PUPPETEER STEP 5] Sending Page.printToPDF via CDP...');
-    const pdfResult = await page._client.send('Page.printToPDF', cdpOptions);
+    const cdpClient = (page._client && typeof page._client.send === 'function')
+      ? page._client
+      : await page.createCDPSession();
+    const pdfResult = await cdpClient.send('Page.printToPDF', cdpOptions);
     const pdfBuffer = Buffer.from(pdfResult.data, 'base64');
 
     if (outputPath) {
@@ -1045,6 +1049,7 @@ const generarDocumento = (pDatos, firma = false) => new Promise((resolve, reject
         return reject(pError || new Error('No se pudo renderizar el HTML.'));
       }
 
+      fs.writeFileSync('/tmp/debug_doc.html', pHtml);
       crearPdfConPartes(
         pHtml,
         pDatos,

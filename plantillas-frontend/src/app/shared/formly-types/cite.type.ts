@@ -9,17 +9,17 @@ import { FieldType, FieldTypeConfig } from '@ngx-formly/core';
   template: `
     <div class="cite-container" [class.cite-externo]="to['tipoMembrete'] === 'externo'">
       <div class="cite-left">
-        @if (formControl.value?.cite) {
+        @if (formControl?.value && formControl.value.cite) {
           <span class="cite-text">{{ formControl.value.cite }}</span>
         } @else {
-          <span class="cite-placeholder">{{ to['labelCite'] || 'CITE: [Autogenerado]' }}</span>
+          <span class="cite-placeholder">{{ to['labelCite'] || 'CITE: [Autogenerado al aprobar]' }}</span>
         }
       </div>
       <div class="cite-right">
-        @if (formControl.value?.fecha) {
+        @if (formControl?.value && formControl.value.fecha) {
           <span class="fecha-text">{{ formControl.value.fecha }}</span>
         } @else {
-          <span class="fecha-placeholder">{{ to['labelFecha'] || 'FECHA: [Fecha actual]' }}</span>
+          <span class="fecha-placeholder">{{ to['labelFecha'] || 'FECHA: [Fecha oficial]' }}</span>
         }
       </div>
     </div>

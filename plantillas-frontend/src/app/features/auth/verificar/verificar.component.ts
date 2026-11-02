@@ -1116,6 +1116,44 @@ export interface VerificacionResultado {
         color: #64748b;
       }
     }
+
+    @media (max-width: 640px) {
+      .verif-header {
+        padding: 10px 14px;
+      }
+      .header-inner {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+      .brand-block {
+        justify-content: flex-start;
+      }
+      .header-actions {
+        width: 100%;
+        .login-link {
+          width: 100%;
+          justify-content: center;
+          box-sizing: border-box;
+        }
+      }
+      .system-title {
+        font-size: 0.82rem;
+        letter-spacing: 0.2px;
+      }
+      .system-sub {
+        font-size: 0.68rem;
+      }
+      .verif-hero {
+        padding: 24px 14px;
+      }
+      .hero-title {
+        font-size: 1.35rem;
+      }
+      .verif-main {
+        padding: 14px 10px;
+      }
+    }
   `]
 })
 export class VerificarComponent implements OnInit {

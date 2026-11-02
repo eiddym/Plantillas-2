@@ -19,14 +19,24 @@ import { FieldType, FieldTypeConfig, FormlyModule } from '@ngx-formly/core';
         <span>{{ to['labelx'] || to.label || 'CAMPO:' }}</span>
       </div>
       <div class="inputt-cuerpo">
-        <textarea
-          [formControl]="formControl"
-          [formlyAttributes]="field"
-          class="inputt-textarea"
-          [placeholder]="to.placeholder || ''"
-          rows="1"
-          [required]="to.required || false"
-        ></textarea>
+        @if (formControl) {
+          <textarea
+            [formControl]="formControl"
+            [formlyAttributes]="field"
+            class="inputt-textarea"
+            [placeholder]="to.placeholder || ''"
+            rows="1"
+            [required]="to.required || false"
+            [disabled]="to.disabled || false"
+          ></textarea>
+        } @else {
+          <textarea
+            class="inputt-textarea"
+            [placeholder]="to.placeholder || ''"
+            rows="1"
+            [disabled]="to.disabled || false"
+          ></textarea>
+        }
         @if (showError) {
           <div class="inputt-error">Debe llenar este campo obligatorio</div>
         }
@@ -73,6 +83,11 @@ import { FieldType, FieldTypeConfig, FormlyModule } from '@ngx-formly/core';
         outline: none;
         border-color: #00838f;
         box-shadow: 0 0 0 1px #00838f;
+      }
+      &:disabled {
+        background-color: #f5f5f5;
+        color: #90a4ae;
+        cursor: not-allowed;
       }
     }
     .inputt-error {

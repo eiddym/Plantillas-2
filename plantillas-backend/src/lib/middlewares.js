@@ -28,6 +28,8 @@ module.exports = app => {
   app.set("secretBJA", configuracion.jwtSecret);
   // Establece la sesion.
   app.set("sesion", {});
+  // Establece el registro de tokens invalidados / cerrados.
+  app.set("sesionesCerradas", {});
   // Establece la sesion de usuarios virtuales.
   app.set("virtual", {});
 
@@ -56,9 +58,10 @@ module.exports = app => {
   if (rateLimit) {
     const generalLimiter = rateLimit({
       windowMs: 15 * 60 * 1000,
-      max: 1500,
+      max: 15000,
       standardHeaders: true,
       legacyHeaders: false,
+      skip: (req) => req.path.includes('/client-log') || req.path.includes('/refrescar'),
       message: { tipoMensaje: 'ERROR', mensaje: 'Demasiadas solicitudes desde esta IP, por favor intente más tarde.' }
     });
 
@@ -258,18 +261,54 @@ module.exports = app => {
             if(tokenDecodificado){
 
               const sesion = app.get("sesion");
+              const sesionesCerradas = app.get("sesionesCerradas") || {};
               const idUsuario = tokenDecodificado.id_usuario;
-              const sesionUsuario = sesion[idUsuario];
+              let sesionUsuario = sesion[idUsuario];
 
-              if(!sesionUsuario) {
+              if (sesionesCerradas[token]) {
                 return res.status(403).send({
-                  success:false,
-                  message:'La sesion finalizo.',
+                  success: false,
+                  codigo: 'SESION_CERRADA',
+                  message: 'La sesión finalizó.',
                 });
               }
 
+              if(!sesionUsuario) {
+                try {
+                  if (tokenDecodificado.secret) {
+                    const secreto = jwt.decode(tokenDecodificado.secret, app.get('secretBJA'));
+                    if (moment().tz('America/La_Paz').format() <= secreto.fecha) {
+                      sesion[idUsuario] = {
+                        createdAt: Date.now(),
+                        lastActivity: Date.now(),
+                        token: token,
+                        fecha: moment(moment().tz('America/La_Paz').format()).add(configuracion.tiempo_token || 60, 'minutes'),
+                        backup: null
+                      };
+                      sesionUsuario = sesion[idUsuario];
+                      app.set("sesion", sesion);
+                    } else {
+                      return res.status(403).send({
+                        success:false,
+                        message:'La sesion finalizo.',
+                      });
+                    }
+                  } else {
+                    return res.status(403).send({
+                      success:false,
+                      message:'La sesion finalizo.',
+                    });
+                  }
+                } catch(e) {
+                  return res.status(403).send({
+                    success:false,
+                    message:'La sesion finalizo.',
+                  });
+                }
+              }
+
               const ahora = Date.now();
-              const tiempoInactividad = Number(configuracion.tiempo_inactividad || 15) * 60 * 1000;
+              const tiempoInactividad = Number(configuracion.tiempo_inactividad || 120) * 60 * 1000;
               const tiempoSesionAbsoluto = Number(configuracion.tiempo_sesion_absoluto || 480) * 60 * 1000;
 
               // Compatibilidad con sesiones creadas antes de este cambio.
@@ -302,11 +341,21 @@ module.exports = app => {
               }
 
               if(token !== sesionUsuario.token){
-                if(sesion[tokenDecodificado.id_usuario].backup !== null){
-                  if(token == sesion[tokenDecodificado.id_usuario].backup){
-                    const fechaActual = moment().tz('America/La_Paz').format();
-                    if(sesion[tokenDecodificado.id_usuario].fecha.format() < fechaActual) return res.status(403).send({success:false,message:'Sesión invalida.'})
-                  } else return res.status(403).send({success:false,message:'Sesión invalida.'})
+                if(sesion[tokenDecodificado.id_usuario].backup !== null && token === sesion[tokenDecodificado.id_usuario].backup){
+                  const fechaActual = moment().tz('America/La_Paz').format();
+                  if(sesion[tokenDecodificado.id_usuario].fecha.format() < fechaActual) {
+                    return res.status(403).send({
+                      success: false,
+                      codigo: 'SESION_DUPLICADA',
+                      message: 'Sesión inválida. Se ha iniciado sesión en otro dispositivo o navegador.',
+                    });
+                  }
+                } else {
+                  return res.status(403).send({
+                    success: false,
+                    codigo: 'SESION_DUPLICADA',
+                    message: 'Sesión inválida. Se ha iniciado sesión en otro dispositivo o navegador.',
+                  });
                 }
               }
               // Busca al usuario con su estado 'ACTIVO'.
@@ -330,11 +379,13 @@ module.exports = app => {
                       app.set("sesion", sesion);
 
                       // otorga el acceso al sistema.
+                      req.body = req.body || {};
                       req.body.audit_usuario={
                         id_usuario: tokenDecodificado.id_usuario,
                         usuario: tokenDecodificado.usuario,
                         roles:tokenDecodificado.roles,
                       };
+                      req.user = req.body.audit_usuario;
 
                       return next();
 

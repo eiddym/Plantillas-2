@@ -26,7 +26,7 @@ module.exports = {
       timeout: 3000,
     })
     .then(resp => {
-      if (resp.status !== 200) throw Error('Estado diferente al de exito.');
+      if (resp.status < 200 || resp.status >= 300) throw Error('Estado diferente al de exito.');
       if (resp.data.finalizado === false) throw Error('La peticion no fue procesada completamente.');
       return resolve(resp.data);
     })
@@ -43,8 +43,11 @@ module.exports = {
       return Promise.resolve([]);
     }
     let url = config.almacen.url_consulta;
-    if (textoBuscar) url = `${url}?descripcion=${textoBuscar}`;
-    if (todos && todos == 1) url += '&todos=1';
+    const params = new URLSearchParams();
+    if (textoBuscar) params.append('descripcion', textoBuscar);
+    if (todos && (todos == 1 || todos === '1' || todos === true)) params.append('todos', '1');
+    const qs = params.toString();
+    if (qs) url += (url.includes('?') ? '&' : '?') + qs;
     return new Promise((resolve, reject) => axios({
       method: 'get',
       url,
@@ -130,7 +133,7 @@ module.exports = {
     data: datos,
   })
   .then(resp => {
-    if (resp.status !== 200) throw Error('Estado diferente al de exito.');
+    if (resp.status < 200 || resp.status >= 300) throw Error('Estado diferente al de exito.');
     if (resp.data.finalizado === false) throw Error('La peticion no fue procesada completamente.');
     return resolve(resp.data);
   })

@@ -18,8 +18,20 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authReq).pipe(
     catchError((err: HttpErrorResponse) => {
-      if (err.status === 401 || err.status === 403) {
-        authService.logout();
+      const msg = (err.error?.message || err.error?.mensaje || '').toLowerCase();
+      const codigo = err.error?.codigo || '';
+      if (
+        err.status === 401 ||
+        (err.status === 403 && (
+          codigo === 'SESION_DUPLICADA' ||
+          codigo === 'SESION_CERRADA' ||
+          msg.includes('sesion') ||
+          msg.includes('sesión') ||
+          msg.includes('participando') ||
+          req.url.includes('/refrescar')
+        ))
+      ) {
+        authService.logout(false);
       }
       return throwError(() => err);
     })

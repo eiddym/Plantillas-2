@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,7 +10,10 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MenuAdmin, SeguridadService } from '../../core/services/seguridad.service';
+import { MatSelectModule } from '@angular/material/select';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MenuAdmin, Rol, SeguridadService } from '../../core/services/seguridad.service';
 
 @Component({
   selector: 'app-menus-list',
@@ -18,6 +21,7 @@ import { MenuAdmin, SeguridadService } from '../../core/services/seguridad.servi
   imports: [
     CommonModule,
     FormsModule,
+    ReactiveFormsModule,
     MatCardModule,
     MatTableModule,
     MatIconModule,
@@ -26,7 +30,10 @@ import { MenuAdmin, SeguridadService } from '../../core/services/seguridad.servi
     MatInputModule,
     MatFormFieldModule,
     MatChipsModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatSelectModule,
+    MatCheckboxModule,
+    MatSnackBarModule
   ],
   template: `
     <div class="page-container">
@@ -35,8 +42,12 @@ import { MenuAdmin, SeguridadService } from '../../core/services/seguridad.servi
           <h1>Administración de Menús</h1>
           <p class="subtitle">Estructura jerárquica de módulos, accesos y rutas del sistema</p>
         </div>
-        <div class="header-stats">
+        <div class="header-actions">
           <span class="stat-badge">Total Menús: <strong>{{ menus().length }}</strong></span>
+          <button mat-flat-button color="primary" class="btn-crear" (click)="abrirModalCrear()">
+            <mat-icon>add</mat-icon>
+            Nuevo Menú
+          </button>
         </div>
       </div>
 
@@ -140,16 +151,178 @@ import { MenuAdmin, SeguridadService } from '../../core/services/seguridad.servi
               </td>
             </ng-container>
 
+            <!-- Acciones Column -->
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef class="text-right">Acciones</th>
+              <td mat-cell *matCellDef="let m" class="text-right actions-cell">
+                <button 
+                  mat-stroked-button 
+                  color="primary"
+                  class="btn-roles"
+                  (click)="abrirModalAsignarRoles(m)"
+                  matTooltip="Reasignar roles que tienen acceso a este menú"
+                >
+                  <mat-icon>admin_panel_settings</mat-icon>
+                  Roles
+                </button>
+                <button 
+                  mat-icon-button 
+                  color="accent" 
+                  (click)="abrirModalEditar(m)"
+                  matTooltip="Editar menú"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button 
+                  mat-icon-button 
+                  color="warn" 
+                  (click)="confirmarEliminar(m)"
+                  matTooltip="Eliminar menú"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumns;" [class.parent-row]="!row.fid_menu_padre"></tr>
           </table>
         </div>
       </mat-card>
+
+      <!-- Modal Reasignar Roles al Menú -->
+      <div class="modal-backdrop" *ngIf="modalRolesVisible()">
+        <div class="modal-container modal-roles">
+          <div class="modal-header">
+            <div class="modal-title-with-icon">
+              <div class="modal-icon-badge">
+                <mat-icon>{{ menuSeleccionado()?.icono || 'menu' }}</mat-icon>
+              </div>
+              <div>
+                <h2>Reasignar Roles al Menú</h2>
+                <p class="modal-subtitle">
+                  Configura qué roles de usuario pueden ver y acceder al menú <strong>{{ menuSeleccionado()?.nombre }}</strong>
+                </p>
+              </div>
+            </div>
+            <button mat-icon-button (click)="cerrarModalRoles()" class="close-btn">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+
+          <div class="modal-body">
+            <div class="roles-quick-actions">
+              <span>Roles disponibles en el sistema:</span>
+              <div class="quick-btns">
+                <button mat-button class="quick-btn" (click)="seleccionarTodosRoles()">Seleccionar todos</button>
+                <button mat-button class="quick-btn" (click)="deseleccionarTodosRoles()">Deseleccionar todos</button>
+              </div>
+            </div>
+
+            <div class="roles-selection-grid">
+              <div 
+                *ngFor="let rol of listaRoles()" 
+                class="role-checkbox-card"
+                [class.selected]="esRolSeleccionado(rol.id_rol)"
+                (click)="toggleRol(rol.id_rol)"
+              >
+                <mat-checkbox 
+                  [checked]="esRolSeleccionado(rol.id_rol)"
+                  (click)="$event.stopPropagation()"
+                  (change)="toggleRol(rol.id_rol)"
+                  color="primary"
+                >
+                </mat-checkbox>
+                <div class="role-info">
+                  <div class="role-name">{{ rol.nombre }}</div>
+                  <div class="role-desc">{{ rol.descripcion || 'Sin descripción' }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button mat-button (click)="cerrarModalRoles()">Cancelar</button>
+            <button mat-flat-button color="primary" [disabled]="guardandoRoles()" (click)="guardarRolesMenu()">
+              <mat-icon *ngIf="!guardandoRoles()">check</mat-icon>
+              {{ guardandoRoles() ? 'Guardando...' : 'Guardar Asignación' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Crear / Editar Menú -->
+      <div class="modal-backdrop" *ngIf="modalMenuVisible()">
+        <div class="modal-container">
+          <div class="modal-header">
+            <h2>{{ modoEdicion() ? 'Editar Menú' : 'Nuevo Menú' }}</h2>
+            <button mat-icon-button (click)="cerrarModalMenu()" class="close-btn">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+
+          <form [formGroup]="menuForm" (ngSubmit)="guardarMenu()">
+            <div class="modal-body form-grid">
+              <mat-form-field appearance="outline" class="col-span-2">
+                <mat-label>Nombre del Menú</mat-label>
+                <input matInput formControlName="nombre" placeholder="Ej: Documentos, Reportes, etc.">
+                <mat-error *ngIf="menuForm.get('nombre')?.hasError('required')">El nombre es obligatorio</mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Ruta (URL relativa)</mat-label>
+                <input matInput formControlName="ruta" placeholder="Ej: documentos/bandeja">
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Icono Material</mat-label>
+                <input matInput formControlName="icono" placeholder="Ej: folder, description, people">
+                <mat-icon matSuffix>{{ menuForm.get('icono')?.value || 'folder' }}</mat-icon>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Menú Padre (Módulo contenedor)</mat-label>
+                <mat-select formControlName="fid_menu_padre">
+                  <mat-option [value]="null">-- Ninguno (Módulo Principal) --</mat-option>
+                  <mat-option *ngFor="let p of listaModulosPrincipales()" [value]="p.id_menu">
+                    {{ p.nombre }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Orden de visualización</mat-label>
+                <input matInput type="number" formControlName="orden">
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="col-span-2">
+                <mat-label>Descripción</mat-label>
+                <textarea matInput formControlName="descripcion" rows="2" placeholder="Detalle o función del módulo..."></textarea>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Estado</mat-label>
+                <mat-select formControlName="estado">
+                  <mat-option value="ACTIVO">ACTIVO</mat-option>
+                  <mat-option value="INACTIVO">INACTIVO</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" mat-button (click)="cerrarModalMenu()">Cancelar</button>
+              <button type="submit" mat-flat-button color="primary" [disabled]="menuForm.invalid || guardandoMenu()">
+                {{ guardandoMenu() ? 'Guardando...' : (modoEdicion() ? 'Actualizar Menú' : 'Crear Menú') }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   `,
   styles: [`
     .page-container {
-      max-width: 1200px;
+      max-width: 1250px;
       margin: 0 auto;
       font-family: 'Plus Jakarta Sans', 'Poppins', sans-serif;
     }
@@ -177,6 +350,19 @@ import { MenuAdmin, SeguridadService } from '../../core/services/seguridad.servi
       }
     }
 
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .btn-crear {
+      font-weight: 600;
+      border-radius: 8px;
+      padding: 0 18px;
+      height: 40px;
+    }
+
     .stat-badge {
       background: #ffffff;
       border: 1px solid #cbd5e1;
@@ -201,83 +387,95 @@ import { MenuAdmin, SeguridadService } from '../../core/services/seguridad.servi
     }
 
     .card-toolbar {
-      padding: 16px 20px;
       display: flex;
       align-items: center;
+      padding: 16px 20px;
       gap: 16px;
+      background: #f8fafc;
       border-bottom: 1px solid #e2e8f0;
       flex-wrap: wrap;
     }
 
     .search-field {
-      width: 340px;
+      width: 320px;
       font-size: 0.88rem;
     }
 
     .toolbar-spacer {
-      flex: 1 1 auto;
+      flex: 1;
     }
 
     .filter-toggles {
       display: flex;
-      gap: 4px;
-      background: #f1f5f9;
-      padding: 4px;
+      background: #e2e8f0;
       border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
 
       button {
         font-size: 0.8rem;
         font-weight: 600;
-        border-radius: 6px;
         color: #64748b;
-        padding: 0 12px;
+        border-radius: 6px;
+        min-width: unset;
+        padding: 4px 12px;
+        line-height: 24px;
         height: 32px;
-        line-height: 32px;
-      }
+        transition: all 0.2s ease;
 
-      .active-filter {
-        background: #ffffff !important;
-        color: #0284c7 !important;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        &.active-filter {
+          background: #ffffff;
+          color: #0f172a;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
       }
     }
 
     .table-responsive {
-      width: 100%;
       overflow-x: auto;
     }
 
     .menus-table {
       width: 100%;
 
-      th.mat-mdc-header-cell {
-        background-color: #0f2027 !important;
-        color: #ffffff !important;
-        font-size: 12px;
+      th {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #64748b;
         font-weight: 700;
-        letter-spacing: 0.6px;
-        padding: 14px 16px;
-      }
-
-      td.mat-mdc-cell {
-        font-size: 0.85rem;
+        background: #f8fafc;
         padding: 12px 16px;
+        border-bottom: 1px solid #e2e8f0;
       }
-    }
 
-    .parent-row {
-      background: #f8fafc;
+      td {
+        padding: 12px 16px;
+        font-size: 0.88rem;
+        color: #334155;
+        border-bottom: 1px solid #f1f5f9;
+      }
+
+      tr.parent-row {
+        background-color: #fafbfc;
+      }
+
+      tr:hover {
+        background-color: #f1f5f9;
+      }
     }
 
     .id-cell {
       font-weight: 700;
       color: #94a3b8;
+      font-size: 0.8rem;
+      width: 50px;
     }
 
     .icon-avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 6px;
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
       background: #e0f2fe;
       color: #0284c7;
       display: flex;
@@ -295,90 +493,310 @@ import { MenuAdmin, SeguridadService } from '../../core/services/seguridad.servi
       display: flex;
       align-items: center;
       gap: 8px;
-    }
+      flex-wrap: wrap;
 
-    .tree-bullet {
-      color: #94a3b8;
-      font-size: 1.2rem;
-    }
+      .tree-bullet {
+        color: #94a3b8;
+        font-size: 1.2rem;
+        line-height: 0;
+      }
 
-    .parent-text {
-      color: #0f172a;
-      font-weight: 800;
-    }
+      strong {
+        color: #1e293b;
+        font-size: 0.92rem;
 
-    .parent-chip {
-      font-size: 0.7rem;
-      background: #f1f5f9;
-      color: #475569;
-      padding: 2px 6px;
-      border-radius: 4px;
-      border: 1px solid #e2e8f0;
-      font-weight: 600;
+        &.parent-text {
+          font-weight: 700;
+          color: #0f172a;
+        }
+      }
+
+      .parent-chip {
+        font-size: 0.72rem;
+        padding: 2px 8px;
+        background: #f1f5f9;
+        color: #64748b;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+      }
     }
 
     .route-code {
+      font-family: 'Fira Code', 'Roboto Mono', monospace;
+      font-size: 0.82rem;
       background: #f1f5f9;
-      color: #2563eb;
-      padding: 3px 6px;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      font-family: monospace;
+      color: #0369a1;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
     }
 
     .no-route {
-      color: #cbd5e1;
+      color: #94a3b8;
     }
 
     .desc-cell {
+      max-width: 220px;
       color: #64748b;
-      max-width: 280px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .badge-tag {
       display: inline-block;
       padding: 3px 10px;
-      border-radius: 12px;
-      font-size: 0.72rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
       font-weight: 700;
-      letter-spacing: 0.4px;
-      text-transform: uppercase;
+      letter-spacing: 0.3px;
+
+      &.badge-activo {
+        background: #dcfce7;
+        color: #15803d;
+      }
+
+      &.badge-inactivo {
+        background: #fee2e2;
+        color: #b91c1c;
+      }
     }
 
-    .badge-activo {
-      background: #ecfdf5;
-      color: #059669;
+    .actions-cell {
+      white-space: nowrap;
+
+      .btn-roles {
+        margin-right: 6px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        height: 32px;
+        line-height: 30px;
+        padding: 0 10px;
+
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+          margin-right: 4px;
+        }
+      }
     }
 
-    .badge-inactivo {
-      background: #fef2f2;
-      color: #dc2626;
+    .text-right {
+      text-align: right;
     }
 
-    @media (max-width: 768px) {
-      .card-toolbar {
-        flex-direction: column;
-        align-items: stretch;
+    /* Modales */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-container {
+      background: #ffffff;
+      border-radius: 14px;
+      width: 100%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2), 0 10px 10px -5px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+
+      &.modal-roles {
+        max-width: 700px;
       }
-      .search-field {
-        width: 100%;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 20px 24px;
+      border-bottom: 1px solid #e2e8f0;
+
+      h2 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #0f172a;
       }
-      .filter-toggles {
-        width: 100%;
-        justify-content: space-around;
+
+      .modal-subtitle {
+        margin: 4px 0 0 0;
+        font-size: 0.85rem;
+        color: #64748b;
       }
+    }
+
+    .modal-title-with-icon {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .modal-icon-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: #e0f2fe;
+      color: #0284c7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      mat-icon {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+      }
+    }
+
+    .modal-body {
+      padding: 20px 24px;
+      flex: 1;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+
+      .col-span-2 {
+        grid-column: span 2;
+      }
+    }
+
+    .roles-quick-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      font-size: 0.85rem;
+      color: #475569;
+      font-weight: 600;
+
+      .quick-btns {
+        display: flex;
+        gap: 8px;
+
+        .quick-btn {
+          font-size: 0.78rem;
+          color: #0284c7;
+          height: 28px;
+          line-height: 28px;
+          padding: 0 8px;
+        }
+      }
+    }
+
+    .roles-selection-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      max-height: 380px;
+      overflow-y: auto;
+      padding: 4px;
+    }
+
+    .role-checkbox-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: #cbd5e1;
+        background: #f1f5f9;
+      }
+
+      &.selected {
+        border-color: #0284c7;
+        background: #f0f9ff;
+      }
+
+      .role-info {
+        flex: 1;
+
+        .role-name {
+          font-weight: 700;
+          font-size: 0.88rem;
+          color: #0f172a;
+        }
+
+        .role-desc {
+          font-size: 0.75rem;
+          color: #64748b;
+          margin-top: 2px;
+          line-height: 1.25;
+        }
+      }
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 16px 24px;
+      border-top: 1px solid #e2e8f0;
+      background: #f8fafc;
+      border-radius: 0 0 14px 14px;
     }
   `]
 })
 export class MenusListComponent implements OnInit {
   private readonly seguridadService = inject(SeguridadService);
+  private readonly fb = inject(FormBuilder);
+  private readonly snackBar = inject(MatSnackBar);
 
   readonly menus = signal<MenuAdmin[]>([]);
-  readonly loading = signal(true);
+  readonly loading = signal(false);
   readonly searchQuery = signal('');
   readonly filtroPadre = signal<'TODOS' | 'PRINCIPALES' | 'SUBMENUS'>('TODOS');
 
-  readonly displayedColumns = ['id', 'icono', 'nombre', 'ruta', 'orden', 'descripcion', 'estado'];
+  readonly displayedColumns = ['id', 'icono', 'nombre', 'ruta', 'orden', 'descripcion', 'estado', 'acciones'];
+
+  // Asignar roles modal state
+  readonly modalRolesVisible = signal(false);
+  readonly menuSeleccionado = signal<MenuAdmin | null>(null);
+  readonly listaRoles = signal<Rol[]>([]);
+  readonly rolesSeleccionados = signal<Set<number>>(new Set());
+  readonly guardandoRoles = signal(false);
+
+  // Crear/Editar modal state
+  readonly modalMenuVisible = signal(false);
+  readonly modoEdicion = signal(false);
+  readonly menuEditandoId = signal<number | null>(null);
+  readonly guardandoMenu = signal(false);
+
+  menuForm: FormGroup = this.fb.group({
+    nombre: ['', [Validators.required]],
+    ruta: [''],
+    icono: ['folder'],
+    fid_menu_padre: [null],
+    orden: [1, [Validators.required]],
+    descripcion: [''],
+    estado: ['ACTIVO', [Validators.required]]
+  });
+
+  readonly listaModulosPrincipales = computed(() => {
+    return this.menus().filter((m) => !m.fid_menu_padre);
+  });
 
   readonly filteredMenus = computed(() => {
     const query = this.searchQuery().toLowerCase().trim();
@@ -405,6 +823,7 @@ export class MenusListComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarMenus();
+    this.cargarRoles();
   }
 
   cargarMenus(): void {
@@ -412,7 +831,6 @@ export class MenusListComponent implements OnInit {
     this.seguridadService.getMenus().subscribe({
       next: (res) => {
         const resultado = res.datos.resultado || [];
-        // Ordenar por menú padre y orden
         resultado.sort((a, b) => {
           const padreA = a.fid_menu_padre ?? a.id_menu ?? 0;
           const padreB = b.fid_menu_padre ?? b.id_menu ?? 0;
@@ -428,9 +846,186 @@ export class MenusListComponent implements OnInit {
     });
   }
 
+  cargarRoles(): void {
+    this.seguridadService.getRoles().subscribe({
+      next: (res) => {
+        const roles = res.datos.resultado || [];
+        this.listaRoles.set(roles);
+      }
+    });
+  }
+
   obtenerNombrePadre(fidPadre?: number | null): string | null {
     if (!fidPadre) return null;
     const padre = this.menus().find((m) => m.id_menu === fidPadre);
     return padre ? padre.nombre : `#${fidPadre}`;
+  }
+
+  // --- Reasignar Roles al Menú ---
+  abrirModalAsignarRoles(m: MenuAdmin): void {
+    this.menuSeleccionado.set(m);
+    this.rolesSeleccionados.set(new Set());
+    this.modalRolesVisible.set(true);
+
+    if (m.id_menu) {
+      this.seguridadService.getMenuRoles(m.id_menu).subscribe({
+        next: (res) => {
+          const asignaciones = res.datos || [];
+          const ids = new Set<number>();
+          asignaciones.forEach((item: any) => {
+            if (item.estado === 'ACTIVO' && item.fid_rol) {
+              ids.add(item.fid_rol);
+            }
+          });
+          this.rolesSeleccionados.set(ids);
+        }
+      });
+    }
+  }
+
+  cerrarModalRoles(): void {
+    this.modalRolesVisible.set(false);
+    this.menuSeleccionado.set(null);
+  }
+
+  esRolSeleccionado(idRol?: number): boolean {
+    return !!idRol && this.rolesSeleccionados().has(idRol);
+  }
+
+  toggleRol(idRol?: number): void {
+    if (!idRol) return;
+    const set = new Set(this.rolesSeleccionados());
+    if (set.has(idRol)) {
+      set.delete(idRol);
+    } else {
+      set.add(idRol);
+    }
+    this.rolesSeleccionados.set(set);
+  }
+
+  seleccionarTodosRoles(): void {
+    const ids = new Set<number>();
+    this.listaRoles().forEach((r) => {
+      if (r.id_rol) ids.add(r.id_rol);
+    });
+    this.rolesSeleccionados.set(ids);
+  }
+
+  deseleccionarTodosRoles(): void {
+    this.rolesSeleccionados.set(new Set());
+  }
+
+  guardarRolesMenu(): void {
+    const m = this.menuSeleccionado();
+    if (!m || !m.id_menu) return;
+
+    this.guardandoRoles.set(true);
+    const rolesArray = Array.from(this.rolesSeleccionados());
+
+    this.seguridadService.actualizarMenuRoles(m.id_menu, rolesArray).subscribe({
+      next: () => {
+        this.guardandoRoles.set(false);
+        this.snackBar.open(`Roles reasignados al menú "${m.nombre}" con éxito`, 'Cerrar', { duration: 3500 });
+        this.cerrarModalRoles();
+      },
+      error: () => {
+        this.guardandoRoles.set(false);
+        this.snackBar.open('Error al reasignar roles al menú', 'Cerrar', { duration: 4000 });
+      }
+    });
+  }
+
+  // --- Crear / Editar Menú ---
+  abrirModalCrear(): void {
+    this.modoEdicion.set(false);
+    this.menuEditandoId.set(null);
+    this.menuForm.reset({
+      nombre: '',
+      ruta: '',
+      icono: 'folder',
+      fid_menu_padre: null,
+      orden: (this.menus().length || 0) + 1,
+      descripcion: '',
+      estado: 'ACTIVO'
+    });
+    this.modalMenuVisible.set(true);
+  }
+
+  abrirModalEditar(m: MenuAdmin): void {
+    this.modoEdicion.set(true);
+    this.menuEditandoId.set(m.id_menu ?? null);
+    this.menuForm.patchValue({
+      nombre: m.nombre,
+      ruta: m.ruta || '',
+      icono: m.icono || 'folder',
+      fid_menu_padre: m.fid_menu_padre || null,
+      orden: m.orden || 1,
+      descripcion: m.descripcion || '',
+      estado: m.estado || 'ACTIVO'
+    });
+    this.modalMenuVisible.set(true);
+  }
+
+  cerrarModalMenu(): void {
+    this.modalMenuVisible.set(false);
+  }
+
+  guardarMenu(): void {
+    if (this.menuForm.invalid) return;
+    this.guardandoMenu.set(true);
+
+    const val = this.menuForm.value;
+    const payload: Partial<MenuAdmin> = {
+      nombre: val.nombre,
+      ruta: val.ruta || null,
+      icono: val.icono || 'folder',
+      fid_menu_padre: val.fid_menu_padre || null,
+      orden: Number(val.orden || 1),
+      descripcion: val.descripcion || null,
+      estado: val.estado || 'ACTIVO'
+    };
+
+    if (this.modoEdicion() && this.menuEditandoId()) {
+      this.seguridadService.actualizarMenu(this.menuEditandoId()!, payload).subscribe({
+        next: () => {
+          this.guardandoMenu.set(false);
+          this.snackBar.open('Menú actualizado correctamente', 'Cerrar', { duration: 3000 });
+          this.cerrarModalMenu();
+          this.cargarMenus();
+        },
+        error: () => {
+          this.guardandoMenu.set(false);
+          this.snackBar.open('Error al actualizar el menú', 'Cerrar', { duration: 4000 });
+        }
+      });
+    } else {
+      this.seguridadService.crearMenu(payload as MenuAdmin).subscribe({
+        next: () => {
+          this.guardandoMenu.set(false);
+          this.snackBar.open('Menú creado correctamente', 'Cerrar', { duration: 3000 });
+          this.cerrarModalMenu();
+          this.cargarMenus();
+        },
+        error: () => {
+          this.guardandoMenu.set(false);
+          this.snackBar.open('Error al crear el menú', 'Cerrar', { duration: 4000 });
+        }
+      });
+    }
+  }
+
+  confirmarEliminar(m: MenuAdmin): void {
+    if (!m.id_menu) return;
+    if (confirm(`¿Está seguro de eliminar el menú "${m.nombre}"?`)) {
+      this.seguridadService.eliminarMenu(m.id_menu).subscribe({
+        next: () => {
+          this.snackBar.open('Menú eliminado correctamente', 'Cerrar', { duration: 3000 });
+          this.cargarMenus();
+        },
+        error: () => {
+          this.snackBar.open('No se pudo eliminar el menú (puede tener submenús o roles asignados)', 'Cerrar', { duration: 4000 });
+        }
+      });
+    }
   }
 }

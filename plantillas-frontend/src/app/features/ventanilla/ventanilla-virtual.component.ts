@@ -44,7 +44,7 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
           </div>
           <div class="brand-text">
             <span class="system-title">Ventanilla Única Virtual</span>
-            <span class="system-sub">Portal Oficial de Radicación de Trámites y Correspondencia</span>
+            <span class="system-sub">Portal Oficial de Radicación de Documentos y Correspondencia</span>
           </div>
         </div>
 
@@ -88,7 +88,7 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
               (click)="tabActiva.set('consultar')"
             >
               <mat-icon>travel_explore</mat-icon>
-              <span>Consultar Estado de Trámite</span>
+              <span>Consultar Estado de Documento</span>
             </button>
           </div>
 
@@ -141,7 +141,7 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
                   </mat-form-field>
 
                   <mat-form-field appearance="outline">
-                    <mat-label>Correo Electrónico (Para envío de Hoja de Ruta) *</mat-label>
+                    <mat-label>Correo Electrónico *</mat-label>
                     <input matInput type="email" formControlName="email" placeholder="usuario@empresa.com">
                     <mat-icon matSuffix>email</mat-icon>
                     <mat-hint>No use correos temporales ni ficticios (ej: 123&#64;123.com)</mat-hint>
@@ -172,7 +172,7 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
                   </div>
 
                   <mat-form-field appearance="outline">
-                    <mat-label>Tipo de Trámite</mat-label>
+                    <mat-label>Tipo de Documento</mat-label>
                     <mat-select formControlName="tipoTramite">
                       <mat-option value="NOTA_OFICIAL">Nota Oficial Externa</mat-option>
                       <mat-option value="SOLICITUD">Solicitud Ciudadana</mat-option>
@@ -188,7 +188,7 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
 
                   <mat-form-field appearance="outline" class="col-span-full">
                     <mat-label>Referencia o Asunto Concreto</mat-label>
-                    <input matInput formControlName="referencia" placeholder="Describa el objeto de su trámite de manera clara">
+                    <input matInput formControlName="referencia" placeholder="Describa el objeto de su documento de manera clara">
                   </mat-form-field>
 
                   <!-- Carga de Archivo -->
@@ -240,7 +240,7 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
               <div class="receipt-card fade-in">
                 <div class="receipt-success-badge">
                   <mat-icon>check_circle</mat-icon>
-                  <span>¡Trámite Radicado Exitosamente con Validez Oficial!</span>
+                  <span>¡Documento Radicado Exitosamente con Validez Oficial!</span>
                 </div>
 
                 <!-- Notificación por Correo Electrónico -->
@@ -303,7 +303,7 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
                   </button>
                   <button mat-stroked-button (click)="reiniciarFormulario()">
                     <mat-icon>add</mat-icon>
-                    <span>Radicar Otro Trámite</span>
+                    <span>Radicar Otro Documento</span>
                   </button>
                 </div>
               </div>
@@ -1040,6 +1040,134 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
       from { opacity: 0; transform: translateY(6px); }
       to { opacity: 1; transform: translateY(0); }
     }
+
+    @media (max-width: 640px) {
+      .public-nav {
+        padding: 12px 16px;
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+      }
+      .nav-brand {
+        justify-content: center;
+      }
+      .btn-login-nav {
+        width: 100%;
+        justify-content: center;
+      }
+      .hero-section {
+        padding: 30px 14px 24px;
+      }
+      .hero-title {
+        font-size: 21px;
+        letter-spacing: -0.4px;
+      }
+      .hero-subtitle {
+        font-size: 13.5px;
+      }
+      .main-content {
+        padding: 0 10px;
+        margin: -15px auto 25px;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+      .portal-tabs-header {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .p-tab-btn {
+        padding: 12px 8px;
+        font-size: 12.5px;
+        flex-direction: column;
+        gap: 4px;
+        text-align: center;
+        min-width: 130px;
+      }
+      .tab-body {
+        padding: 16px 12px;
+      }
+      .public-form-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+      .col-span-full {
+        grid-column: span 1;
+      }
+      mat-form-field {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      .file-upload-card {
+        flex-direction: column;
+        text-align: center;
+        padding: 16px 12px;
+        gap: 12px;
+      }
+      .btn-browse-file {
+        width: 100%;
+      }
+      .form-actions-full {
+        justify-content: stretch;
+      }
+      .btn-radicar-public {
+        width: 100%;
+      }
+      .receipt-card {
+        padding: 16px 10px;
+      }
+      .receipt-body {
+        flex-direction: column;
+        padding: 14px 10px;
+        gap: 16px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .qr-verification-box {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+      }
+      .qr-img-wrapper {
+        width: 160px;
+        height: 160px;
+      }
+      .receipt-actions {
+        flex-direction: column;
+        width: 100%;
+        button, a {
+          width: 100%;
+          justify-content: center;
+        }
+      }
+      .search-tracking-box {
+        flex-direction: column;
+        width: 100%;
+      }
+      .btn-track {
+        width: 100%;
+      }
+      .tracking-result-card {
+        padding: 16px 10px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .tr-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .status-badge-active {
+        margin-left: 0;
+      }
+      .tr-badges {
+        align-items: flex-start;
+      }
+      .public-footer {
+        padding: 18px 12px;
+        font-size: 12px;
+      }
+    }
   `]
 })
 export class VentanillaVirtualComponent {
@@ -1127,7 +1255,7 @@ export class VentanillaVirtualComponent {
           email_notificado: d.email_notificado
         });
 
-        this.snackBar.open(`¡Trámite radicado exitosamente! Hoja de Ruta: ${d.codigo_hoja_ruta}`, 'Aceptar', {
+        this.snackBar.open(`¡Documento radicado exitosamente! Hoja de Ruta: ${d.codigo_hoja_ruta}`, 'Aceptar', {
           duration: 6000
         });
       },
@@ -1155,7 +1283,7 @@ export class VentanillaVirtualComponent {
       error: (err) => {
         this.buscando.set(false);
         this.resultadoTracking.set(null);
-        const msg = err.error?.mensaje || 'No se encontró ningún trámite con ese código.';
+        const msg = err.error?.mensaje || 'No se encontró ningún documento con ese código.';
         this.snackBar.open(msg, 'Entendido', { duration: 4000 });
       }
     });

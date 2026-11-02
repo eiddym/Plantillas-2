@@ -24,7 +24,7 @@ import { FieldType, FieldTypeConfig } from '@ngx-formly/core';
         <mat-icon class="warn-icon">warning_amber</mat-icon>
         <div class="anular-info">
           <span class="anular-title">{{ to.label || 'Documentos a Anular' }}</span>
-          <span class="anular-desc">Seleccione los CITEs o documentos que quedarán formalmente anulados al aprobar este trámite.</span>
+          <span class="anular-desc">Seleccione los CITEs o documentos que quedarán formalmente anulados al aprobar este documento.</span>
         </div>
       </div>
 
@@ -141,7 +141,7 @@ export class FormlyFieldDocumentosAnularComponent extends FieldType<FieldTypeCon
   seleccionados = signal<any[]>([]);
 
   ngOnInit(): void {
-    const val = this.formControl.value;
+    const val = this.formControl?.value;
     if (Array.isArray(val)) {
       this.seleccionados.set(val);
     }
@@ -166,7 +166,7 @@ export class FormlyFieldDocumentosAnularComponent extends FieldType<FieldTypeCon
   agregar(doc: any): void {
     const nuevos = [...this.seleccionados(), doc];
     this.seleccionados.set(nuevos);
-    this.formControl.setValue(nuevos);
+    if (this.formControl) this.formControl.setValue(nuevos);
     this.busqueda = '';
     this.resultados.set([]);
   }
@@ -175,6 +175,6 @@ export class FormlyFieldDocumentosAnularComponent extends FieldType<FieldTypeCon
     const nuevos = [...this.seleccionados()];
     nuevos.splice(index, 1);
     this.seleccionados.set(nuevos);
-    this.formControl.setValue(nuevos);
+    if (this.formControl) this.formControl.setValue(nuevos);
   }
 }

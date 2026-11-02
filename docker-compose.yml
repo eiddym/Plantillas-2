@@ -160,6 +160,13 @@ services:
       MOSPARO_PUBLICKEY: ${MOSPARO_PUBLICKEY:-}
       MOSPARO_PRIVATEKEY: ${MOSPARO_PRIVATEKEY:-}
       MOSPARO_UUID: ${MOSPARO_UUID:-}
+      CITE_GUIA: ${CITE_GUIA:-PLANTILLAS}
+      CITE_DIGITOS: ${CITE_DIGITOS:-5}
+      SYS_DEFAULT_USER: ${SYS_DEFAULT_USER:-sys_default}
+      SYS_DEFAULT_PASSWORD: ${SYS_DEFAULT_PASSWORD:-Developer}
+      DEMO_CD_USER: ${DEMO_CD_USER:-10794552-1J}
+      IDENTIFICADOR_DIRECTOR: ${IDENTIFICADOR_DIRECTOR:-2}
+      IDENTIFICADOR_DIRECTOR_UNIDAD: ${IDENTIFICADOR_DIRECTOR_UNIDAD:-2}
     depends_on:
       db:
         condition: service_healthy
@@ -171,6 +178,7 @@ services:
         condition: service_completed_successfully
     networks:
       - red-plantillas
+      - nsiaf_v2_network
 
   # 4. Servidor Frontend Angular 17 (Nginx Alpine con caché estático directo y balanceo)
   frontend:
@@ -182,6 +190,7 @@ services:
       - "${FRONTEND_PUERTO:-80}:80"
     volumes:
       - ./plantillas-frontend/docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./plantillas-frontend/dist/plantillas-frontend/browser:/usr/share/nginx/html
       - ./plantillas-frontend/src/assets/images:/usr/share/nginx/html/assets/images:ro
       - plantillas-documentos:/usr/share/nginx/html/public:ro
     depends_on:
@@ -208,6 +217,9 @@ networks:
   traefik-public:
     external: true
     name: traefik-public
+  nsiaf_v2_network:
+    external: true
+    name: nsiaf_v2_network
 
 volumes:
   backend_node_modules:

@@ -116,7 +116,7 @@ export class FormlyFieldAprobacionCdComponent extends FieldType<FieldTypeConfig>
   archivos = signal<any[]>([]);
 
   ngOnInit(): void {
-    const val = this.formControl.value;
+    const val = this.formControl?.value;
     if (Array.isArray(val)) {
       this.archivos.set(val);
     }
@@ -139,7 +139,7 @@ export class FormlyFieldAprobacionCdComponent extends FieldType<FieldTypeConfig>
         };
         const nuevos = [...this.archivos(), adjunto];
         this.archivos.set(nuevos);
-        this.formControl.setValue(nuevos);
+        if (this.formControl) this.formControl.setValue(nuevos);
       };
       reader.readAsDataURL(file);
     });
@@ -150,6 +150,6 @@ export class FormlyFieldAprobacionCdComponent extends FieldType<FieldTypeConfig>
     const nuevos = [...this.archivos()];
     nuevos.splice(index, 1);
     this.archivos.set(nuevos);
-    this.formControl.setValue(nuevos);
+    if (this.formControl) this.formControl.setValue(nuevos);
   }
 }

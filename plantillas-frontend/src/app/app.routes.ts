@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard } from './core/guards/auth.guard';
+import { authGuard, guestGuard, ventanillaGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -149,11 +149,13 @@ export const routes: Routes = [
       },
       {
         path: 'ventanilla',
+        canActivate: [ventanillaGuard],
         redirectTo: 'ventanilla/externa',
         pathMatch: 'full'
       },
       {
         path: 'ventanilla/:tipo',
+        canActivate: [ventanillaGuard],
         loadComponent: () =>
           import('./features/ventanilla/ventanilla-unica.component').then(
             (m) => m.VentanillaUnicaComponent
@@ -161,6 +163,7 @@ export const routes: Routes = [
       },
       {
         path: 'ventanilla-unica',
+        canActivate: [ventanillaGuard],
         redirectTo: 'ventanilla/externa',
         pathMatch: 'full'
       },

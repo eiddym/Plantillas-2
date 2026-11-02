@@ -17,6 +17,7 @@ export interface Unidad {
   descripcion?: string;
   sigla?: string;
   abreviacion?: string;
+  fid_unidad_padre?: number | null;
   estado: string;
 }
 
@@ -117,6 +118,54 @@ export class SeguridadService {
 
   verificarUsuarioVirtual(): Observable<ApiResponse<{ esVirtual: boolean; nroDocumento?: string }>> {
     return this.http.get<ApiResponse<{ esVirtual: boolean; nroDocumento?: string }>>(`${this.baseUrl}/virtual/verificar`);
+  }
+
+  crearRol(rol: Partial<Rol>): Observable<ApiResponse<Rol>> {
+    return this.http.post<ApiResponse<Rol>>(`${this.baseUrl}/rol`, rol);
+  }
+
+  actualizarRol(id: number, rol: Partial<Rol>): Observable<ApiResponse<Rol>> {
+    return this.http.put<ApiResponse<Rol>>(`${this.baseUrl}/rol/${id}`, rol);
+  }
+
+  eliminarRol(id: number): Observable<ApiResponse<any>> {
+    return this.http.delete<ApiResponse<any>>(`${this.baseUrl}/rol/${id}`);
+  }
+
+  getRolMenus(idRol: number): Observable<ApiResponse<any[]>> {
+    return this.http.get<ApiResponse<any[]>>(`${this.baseUrl}/rol/${idRol}/menu`);
+  }
+
+  actualizarRolMenus(idRol: number, payload: { rol: any; menus: any[]; menus_nuevos: number[] }): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.baseUrl}/rol/${idRol}/menu`, payload);
+  }
+
+  crearUnidad(unidad: Partial<Unidad>): Observable<ApiResponse<Unidad>> {
+    return this.http.post<ApiResponse<Unidad>>(`${this.baseUrl}/unidad`, unidad);
+  }
+
+  actualizarUnidad(id: number, unidad: Partial<Unidad>): Observable<ApiResponse<Unidad>> {
+    return this.http.put<ApiResponse<Unidad>>(`${this.baseUrl}/unidad/${id}`, unidad);
+  }
+
+  eliminarUnidad(id: number): Observable<ApiResponse<any>> {
+    return this.http.delete<ApiResponse<any>>(`${this.baseUrl}/unidad/${id}`);
+  }
+
+  fusionarUnidades(origenId: number, destinoId: number): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/unidad/fusionar`, { origen_id: origenId, destino_id: destinoId });
+  }
+
+  getMenuRoles(idMenu: number): Observable<ApiResponse<any[]>> {
+    return this.http.get<ApiResponse<any[]>>(`${this.baseUrl}/menu/${idMenu}/roles`);
+  }
+
+  actualizarMenuRoles(idMenu: number, roles: number[]): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.baseUrl}/menu/${idMenu}/roles`, { roles });
+  }
+
+  eliminarMenu(id: number): Observable<ApiResponse<any>> {
+    return this.http.delete<ApiResponse<any>>(`${this.baseUrl}/menu/${id}`);
   }
 }
 

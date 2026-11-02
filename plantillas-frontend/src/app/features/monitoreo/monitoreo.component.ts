@@ -57,7 +57,7 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
         <div class="header-titles">
           <div class="title-row">
             <mat-icon class="title-icon">speed</mat-icon>
-            <h1>Monitoreo de Flujos y Trámites</h1>
+            <h1>Monitoreo de Flujos y Documentos</h1>
           </div>
           <p class="subtitle">Tablero de Control de Gestión, Cuellos de Botella y Productividad Institucional</p>
         </div>
@@ -165,7 +165,7 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
             <div class="panel-header">
               <div class="panel-title">
                 <mat-icon class="icon-bars">bar_chart</mat-icon>
-                <span>Carga de Trámites por Unidad Organizacional</span>
+                <span>Carga de Documentos por Unidad Organizacional</span>
               </div>
               <span class="panel-tag">Pendientes vs Atendidos</span>
             </div>
@@ -263,7 +263,7 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
           <div class="panel-header">
             <div class="panel-title">
               <mat-icon class="icon-semaforo">traffic</mat-icon>
-              <span>Semáforo de Antigüedad de Trámites en Bandeja de Funcionarios</span>
+              <span>Semáforo de Antigüedad de Documentos en Bandeja de Funcionarios</span>
             </div>
             <div class="semaforo-legend">
               <span class="leg-item"><span class="dot bg-green"></span> &lt; 24h</span>
@@ -407,7 +407,7 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
         <!-- Lista de Mis Pendientes en Bandeja -->
         <mat-card class="table-card mt-4">
           <div class="table-header-box">
-            <h3>Mis Trámites Pendientes en Bandeja</h3>
+            <h3>Mis Documentos Pendientes en Bandeja</h3>
           </div>
           <div class="table-responsive">
             <table class="w-full data-table">
@@ -427,7 +427,7 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
                   <td class="text-center">
                     <span class="status-pill status-nuevo" *ngIf="p.estado === 'NUEVO'">NUEVO</span>
                     <span class="status-pill status-derivado" *ngIf="p.estado === 'DERIVADO'">DERIVADO</span>
-                    <span class="status-pill status-enviado" *ngIf="p.estado === 'ENVIADO'">EN TRÁMITE</span>
+                    <span class="status-pill status-enviado" *ngIf="p.estado === 'ENVIADO'">EN CURSO</span>
                   </td>
                   <td class="text-center">
                     <span class="dias-badge" [class.dias-alerta]="p.dias_espera > 2">
@@ -443,7 +443,7 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
                 <tr *ngIf="personalPendientes().length === 0">
                   <td colspan="5" class="text-center py-4 text-green">
                     <mat-icon class="inline-icon">check_circle</mat-icon>
-                    ¡Felicidades! No tienes trámites pendientes por resolver en tu bandeja.
+                    ¡Felicidades! No tienes documentos pendientes por resolver en tu bandeja.
                   </td>
                 </tr>
               </tbody>
@@ -1290,7 +1290,7 @@ export class MonitoreoComponent implements OnInit {
               anchor: { show: true, showAbove: true, size: 14, itemStyle: { borderWidth: 4 } },
               title: { show: true, offsetCenter: [0, '70%'], fontSize: 13, fontWeight: 'bold', color: '#0f172a' },
               detail: { valueAnimation: true, fontSize: 24, fontWeight: 'bolder', offsetCenter: [0, '35%'], formatter: '{value}%' },
-              data: [{ value: tasa, name: 'Resolución de Trámites' }]
+              data: [{ value: tasa, name: 'Resolución de Documentos' }]
             }
           ]
         });

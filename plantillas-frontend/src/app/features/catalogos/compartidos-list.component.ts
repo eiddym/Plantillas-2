@@ -139,7 +139,7 @@ import { CatalogoDialogComponent } from './catalogo-dialog.component';
       border-bottom: 1px solid #e2e8f0;
     }
 
-    .search-field { width: 340px; }
+    .search-field { width: 100%; max-width: 340px; }
 
     .table-responsive { width: 100%; overflow-x: auto; }
 
@@ -203,6 +203,21 @@ import { CatalogoDialogComponent } from './catalogo-dialog.component';
       color: #94a3b8;
       mat-icon { font-size: 40px; width: 40px; height: 40px; color: #cbd5e1; margin-bottom: 8px; }
       p { margin: 0; font-size: 0.88rem; }
+    }
+
+    @media (max-width: 640px) {
+      .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .card-toolbar {
+        padding: 12px;
+      }
+      .search-field {
+        width: 100%;
+        max-width: 100%;
+      }
     }
   `]
 })

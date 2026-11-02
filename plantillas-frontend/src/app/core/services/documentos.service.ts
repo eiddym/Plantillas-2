@@ -17,11 +17,13 @@ export interface Documento {
   clasificacion_mae?: boolean;
   contenido?: any;
   plantilla?: any;
+  nombre_plantilla?: string;
   plantilla_valor?: string;
   fid_plantilla?: number;
   sw?: any;
   firmaron?: any[];
   firmante_actual?: number;
+  [key: string]: any;
   _usuario_creacion?: number;
   _usuario_modificacion?: number;
   _fecha_creacion?: string;
@@ -35,7 +37,7 @@ export class DocumentosService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = '/api/v1/plantillasFormly';
 
-  getDocumentos(limit = 10, page = 1, estado = '', filter = ''): Observable<ApiResponse<PaginatedResult<Documento>>> {
+  getDocumentos(limit = 10, page = 1, estado = '', filter = '', bandeja = ''): Observable<ApiResponse<PaginatedResult<Documento>>> {
     let params = new HttpParams()
       .set('limit', limit.toString())
       .set('page', page.toString())
@@ -46,6 +48,9 @@ export class DocumentosService {
     }
     if (filter) {
       params = params.set('filter', filter);
+    }
+    if (bandeja) {
+      params = params.set('bandeja', bandeja);
     }
 
     return this.http.get<ApiResponse<PaginatedResult<Documento>>>(
@@ -64,6 +69,30 @@ export class DocumentosService {
 
   actualizarDocumento(id: number, doc: Partial<Documento>): Observable<ApiResponse<Documento>> {
     return this.http.put<ApiResponse<Documento>>(`${this.baseUrl}/documento/${id}`, doc);
+  }
+
+  eliminarDocumento(id: number): Observable<ApiResponse<any>> {
+    return this.http.delete<ApiResponse<any>>(`${this.baseUrl}/documento/${id}`);
+  }
+
+  enviarDocumento(id: number, doc: Partial<Documento>): Observable<ApiResponse<Documento>> {
+    const payload = {
+      ...doc,
+      sw: { enviado: false, enviar: true }
+    };
+    return this.http.put<ApiResponse<Documento>>(`${this.baseUrl}/documento/${id}`, payload);
+  }
+
+  aprobarDocumento(id: number, payload: { derivar?: boolean; usuario_derivar?: number; observaciones?: string } = {}): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.baseUrl}/documento/${id}/aprobar`, payload);
+  }
+
+  derivarDocumento(id: number, payload: { destino: number; observaciones: string }): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.baseUrl}/documento/${id}/derivar`, payload);
+  }
+
+  rechazarDocumento(id: number, payload: { observaciones: string; observado_por: string }): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.baseUrl}/documento/${id}/rechazar`, payload);
   }
 
   obtenerVistaPreviaHtml(idDocumento: number): Observable<ApiResponse<{ html: string; nombre: string }>> {

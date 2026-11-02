@@ -302,8 +302,51 @@ module.exports = app => {
   app.get('/api/v1/admin/metrics/overview', async (req, res) => {
     try {
       const anioActual = `${moment().tz('America/La_Paz').year()}`;
+      const auditUser = req.body?.audit_usuario || req.user || {};
+      const idUsuario = Number(auditUser.id_usuario || auditUser.id || 0);
+      if (!idUsuario) {
+        return res.status(401).send(util.formatearMensaje('ERROR', 'Usuario no autenticado'));
+      }
 
-      // 1. Conteo de documentos por estado
+      // Obtener unidad del usuario autenticado para filtrar las métricas exclusivamente por su unidad / bandeja
+      const [usrRow] = await sequelize.query(
+        `SELECT id_usuario, fid_unidad FROM usuario WHERE id_usuario = :idUsuario LIMIT 1`,
+        { replacements: { idUsuario }, type: sequelize.QueryTypes.SELECT }
+      );
+      const fidUnidad = usrRow?.fid_unidad || null;
+
+      let unitUserIds = [idUsuario];
+      if (fidUnidad) {
+        const unitRows = await sequelize.query(
+          `SELECT id_usuario FROM usuario WHERE fid_unidad = :fidUnidad AND estado = 'ACTIVO'`,
+          { replacements: { fidUnidad }, type: sequelize.QueryTypes.SELECT }
+        );
+        if (unitRows.length > 0) {
+          unitUserIds = unitRows.map(r => Number(r.id_usuario)).filter(n => n > 0);
+        }
+      }
+
+      const idsSql = unitUserIds.join(',');
+      const jsonLikesSql = unitUserIds.map(uid => `
+        de LIKE '[${uid}]' OR de LIKE '[${uid},%' OR de LIKE '%,${uid},%' OR de LIKE '%,${uid}]' OR
+        para LIKE '[${uid}]' OR para LIKE '[${uid},%' OR para LIKE '%,${uid},%' OR para LIKE '%,${uid}]' OR
+        via LIKE '[${uid}]' OR via LIKE '[${uid},%' OR via LIKE '%,${uid},%' OR via LIKE '%,${uid}]'
+      `).join(' OR ');
+
+      const scopeWhere = `
+        estado != 'ELIMINADO' AND (
+          _usuario_creacion = ${idUsuario}
+          OR (
+            estado != 'NUEVO' AND (
+              _usuario_creacion IN (${idsSql})
+              OR via_actual IN (${idsSql})
+              OR (${jsonLikesSql})
+            )
+          )
+        )
+      `;
+
+      // 1. Conteo de documentos por estado de la unidad / usuario
       const qryDocs = `
         SELECT 
           COUNT(*) FILTER (WHERE estado IN ('NUEVO', 'ENVIADO', 'DERIVADO')) AS en_curso,
@@ -313,7 +356,7 @@ module.exports = app => {
           COUNT(*) FILTER (WHERE origen_radicacion = 'FISICO') AS ventanilla_fisica,
           COUNT(*) AS total_general
         FROM documento
-        WHERE estado != 'ELIMINADO';
+        WHERE ${scopeWhere};
       `;
       const [docsStats] = await sequelize.query(qryDocs, { type: sequelize.QueryTypes.SELECT });
 
@@ -349,13 +392,13 @@ module.exports = app => {
         logger.warn('[METRICAS OVERVIEW] No se pudieron calcular saldos:', presErr.message);
       }
 
-      // 3. Historial de los últimos 6 meses para gráfica
+      // 3. Historial de los últimos 6 meses para gráfica de la unidad / usuario
       const qryMeses = `
         SELECT 
           TO_CHAR(_fecha_creacion, 'YYYY-MM') AS mes,
           COUNT(*) AS cantidad
         FROM documento
-        WHERE _fecha_creacion >= (NOW() - INTERVAL '6 months') AND estado != 'ELIMINADO'
+        WHERE _fecha_creacion >= (NOW() - INTERVAL '6 months') AND ${scopeWhere}
         GROUP BY TO_CHAR(_fecha_creacion, 'YYYY-MM')
         ORDER BY mes ASC;
       `;

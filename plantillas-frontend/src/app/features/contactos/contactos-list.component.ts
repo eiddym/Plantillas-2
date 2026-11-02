@@ -253,9 +253,11 @@ export interface Contacto {
       align-items: center;
       gap: 16px;
       border-bottom: 1px solid #e2e8f0;
+      flex-wrap: wrap;
     }
     .search-field {
-      width: 360px;
+      width: 100%;
+      max-width: 360px;
     }
     .spacer { flex: 1; }
     .count-badge {
@@ -393,6 +395,29 @@ export interface Contacto {
       padding: 16px 24px;
       border-top: 1px solid #e2e8f0;
       background: #f8fafc;
+    }
+    @media (max-width: 640px) {
+      .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .btn-nuevo {
+        width: 100%;
+        justify-content: center;
+      }
+      .toolbar-filter {
+        padding: 12px;
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .search-field {
+        width: 100%;
+        max-width: 100%;
+      }
+      .form-row {
+        grid-template-columns: 1fr;
+      }
     }
   `]
 })

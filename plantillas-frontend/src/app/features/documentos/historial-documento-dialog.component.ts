@@ -7,6 +7,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatChipsModule } from '@angular/material/chips';
 
+import { AuthService } from '../../core/auth/auth.service';
+
 export interface HitoHistorial {
   id_historial_flujo?: number;
   id_documento?: number;
@@ -19,6 +21,8 @@ export interface HitoHistorial {
   cite?: string;
   nombres?: string;
   usuario?: string;
+  foto?: string | null;
+  _usuario_creacion?: number;
 }
 
 @Component({
@@ -41,7 +45,7 @@ export interface HitoHistorial {
             <mat-icon>history_edu</mat-icon>
           </div>
           <div class="header-titles">
-            <h2>Trazabilidad y Flujo del Trámite</h2>
+            <h2>Trazabilidad y Flujo del Documento</h2>
             <div class="cite-meta">
               <span class="badge-cite">{{ data.nombre || 'Sin CITE Oficial' }}</span>
               <span class="doc-tipo" *ngIf="data.nombre_plantilla">{{ data.nombre_plantilla }}</span>
@@ -112,7 +116,12 @@ export interface HitoHistorial {
 
                   <div class="timeline-card-body">
                     <div class="actor-row">
-                      <mat-icon>person</mat-icon>
+                      <div class="actor-avatar">
+                        <img *ngIf="getActorFoto(h)" [src]="getActorFoto(h)" alt="Avatar" class="actor-avatar-img">
+                        <span *ngIf="!getActorFoto(h)" class="actor-avatar-initial" [style.background-color]="getAvatarBgColor(h.usuario || h.nombres)">
+                          {{ getActorInitial(h.nombres || h.usuario) }}
+                        </span>
+                      </div>
                       <span class="actor-name">{{ h.nombres || h.usuario || 'Funcionario Institucional' }}</span>
                       <span class="actor-user" *ngIf="h.usuario">&#64;{{ h.usuario }}</span>
                     </div>
@@ -407,10 +416,44 @@ export interface HitoHistorial {
     .actor-row {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 10px;
       font-size: 13px;
       color: #1e293b;
-      mat-icon { font-size: 16px; width: 16px; height: 16px; color: #64748b; }
+    }
+
+    .actor-avatar {
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
+      border-radius: 50%;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+      border: 1.5px solid #ffffff;
+      background: #e2e8f0;
+      flex-shrink: 0;
+    }
+
+    .actor-avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .actor-avatar-initial {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 12px;
+      line-height: 1;
+      text-transform: uppercase;
     }
 
     .actor-name {
@@ -467,7 +510,9 @@ export class HistorialDocumentoDialogComponent implements OnInit {
   readonly dialogRef = inject(MatDialogRef<HistorialDocumentoDialogComponent>);
   readonly data = inject(MAT_DIALOG_DATA);
   private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
 
+  readonly currentUser = this.authService.currentUser;
   readonly hitos = signal<HitoHistorial[]>([]);
   readonly cargando = signal<boolean>(true);
   readonly error = signal<string | null>(null);
@@ -532,7 +577,7 @@ export class HistorialDocumentoDialogComponent implements OnInit {
       case 'APROBADO': return 'Aprobado Oficialmente';
       case 'FIRMO':
       case 'FIRMADO': return 'Firmado Digitalmente';
-      case 'CERRADO': return 'Trámite Concluido / Cerrado';
+      case 'CERRADO': return 'Documento Concluido / Cerrado';
       case 'RECHAZADO': return 'Rechazado con Observación';
       case 'REVISANDO': return 'En Revisión Activa';
       case 'ANULADO': return 'Documento Anulado';
@@ -554,5 +599,46 @@ export class HistorialDocumentoDialogComponent implements OnInit {
     } catch {
       return fechaStr;
     }
+  }
+
+  getActorInitial(nameOrUser?: string): string {
+    if (!nameOrUser) return 'U';
+    const clean = nameOrUser.trim().replace(/^@/, '');
+    return (clean[0] || 'U').toUpperCase();
+  }
+
+  getAvatarBgColor(identifier?: string): string {
+    if (!identifier) return '#0d9488';
+    const palette = [
+      '#0d9488', // teal
+      '#0284c7', // sky
+      '#4f46e5', // indigo
+      '#7c3aed', // violet
+      '#db2777', // pink
+      '#ea580c', // orange
+      '#16a34a', // green
+      '#0891b2', // cyan
+      '#475569'  // slate
+    ];
+    let hash = 0;
+    for (let i = 0; i < identifier.length; i++) {
+      hash = identifier.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const idx = Math.abs(hash) % palette.length;
+    return palette[idx];
+  }
+
+  getActorFoto(h: HitoHistorial): string | null {
+    if (h.foto) return h.foto;
+    const curr = this.currentUser();
+    if (curr?.foto) {
+      if (
+        (h.usuario && curr.username && h.usuario.toLowerCase() === curr.username.toLowerCase()) ||
+        (h._usuario_creacion && curr.id && h._usuario_creacion === curr.id)
+      ) {
+        return curr.foto;
+      }
+    }
+    return null;
   }
 }

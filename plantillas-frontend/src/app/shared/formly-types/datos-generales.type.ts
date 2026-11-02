@@ -24,7 +24,7 @@ import { DestinatarioDialogComponent } from './destinatario-dialog.component';
   template: `
     <div class="hoja-datos-generales">
       <!-- Section warning if not visible in print -->
-      @if (to['showItem'] === false) {
+      @if (to?.['showItem'] === false) {
         <div class="warning-banner">
           <mat-icon>visibility_off</mat-icon>
           Esta sección no se mostrará al imprimir en PDF oficial.
@@ -32,16 +32,21 @@ import { DestinatarioDialogComponent } from './destinatario-dialog.component';
       }
 
       <!-- FILA: PARA -->
-      @if (to['show']?.para !== false) {
+      @if (to?.['show']?.para !== false) {
         <div class="renglon-documental">
           <div class="rotulo-clickable" (click)="abrirModalDestinatario()" matTooltip="Haga clic para cambiar destinatario">
             <span class="rotulo-texto">PARA:</span>
           </div>
           <div class="contenido-documental">
             @if (paraSeleccionado()) {
-              <div class="destinatario-badge">
+              <div class="destinatario-badge" [class.badge-broadcast]="paraSeleccionado()?.todos">
+                @if (paraSeleccionado()?.todos) {
+                  <mat-icon class="broadcast-icon">campaign</mat-icon>
+                }
                 <span class="nombre-persona">{{ paraSeleccionado()?.nombres }} {{ paraSeleccionado()?.apellidos }}</span>
-                <span class="cargo-persona"> - {{ paraSeleccionado()?.cargo }}</span>
+                @if (paraSeleccionado()?.cargo) {
+                  <span class="cargo-persona"> - {{ paraSeleccionado()?.cargo }}</span>
+                }
                 <button 
                   type="button" 
                   class="btn-inline-change" 
@@ -62,7 +67,7 @@ import { DestinatarioDialogComponent } from './destinatario-dialog.component';
       }
 
       <!-- FILA: VÍA (AUTOMÁTICA INTELIGENTE) -->
-      @if (to['show']?.via) {
+      @if (to?.['show']?.via) {
         <div class="renglon-documental">
           <div class="rotulo-col">
             <span class="rotulo-texto">VÍA:</span>
@@ -89,7 +94,7 @@ import { DestinatarioDialogComponent } from './destinatario-dialog.component';
       }
 
       <!-- FILA: DE (REMITENTE INAMOVIBLE + CO-PARTICIPANTES) -->
-      @if (to['show']?.de !== false) {
+      @if (to?.['show']?.de !== false) {
         <div class="renglon-documental">
           <div class="rotulo-col">
             <span class="rotulo-texto">DE:</span>
@@ -105,7 +110,7 @@ import { DestinatarioDialogComponent } from './destinatario-dialog.component';
             </div>
 
             <!-- Co-participantes agregados para firma conjunta -->
-            @for (co of coRemitentes(); track co.id_usuario) {
+            @for (co of coRemitentes(); track co.id_usuario || $index) {
               <div class="co-remitente-item">
                 <span class="nombre-persona">{{ co.nombres }} {{ co.apellidos }}</span>
                 <span class="cargo-persona"> - {{ co.cargo }}</span>
@@ -137,7 +142,7 @@ import { DestinatarioDialogComponent } from './destinatario-dialog.component';
       }
 
       <!-- FILA: REF. (TIPOGRÁFICO EDITABLE DIRECTO EN HOJA) -->
-      @if (to['show']?.ref !== false) {
+      @if (to?.['show']?.ref !== false) {
         <div class="renglon-documental renglon-ref">
           <div class="rotulo-col">
             <span class="rotulo-texto">REF.:</span>
@@ -229,6 +234,22 @@ import { DestinatarioDialogComponent } from './destinatario-dialog.component';
       align-items: center;
       gap: 6px;
       flex-wrap: wrap;
+      &.badge-broadcast {
+        background: #f0f9ff;
+        border: 1.5px dashed #0284c7;
+        padding: 4px 10px;
+        border-radius: 6px;
+        .nombre-persona {
+          color: #0284c7;
+          font-weight: 800;
+        }
+        .broadcast-icon {
+          color: #0284c7;
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+        }
+      }
     }
     .btn-inline-change {
       background: none;
@@ -455,7 +476,7 @@ export class FormlyFieldDatosGeneralesComponent extends FieldType<FieldTypeConfi
     }
 
     // Hidratar desde el formControl.value existente si ya tenía datos
-    const val = this.formControl.value || {};
+    const val = this.formControl?.value || {};
     if (val.para) {
       this.paraSeleccionado.set(val.para);
     }
@@ -478,7 +499,7 @@ export class FormlyFieldDatosGeneralesComponent extends FieldType<FieldTypeConfi
       this.referenciaTexto.set(val.ref);
     }
 
-    this.emitirValores();
+    setTimeout(() => this.emitirValores(false), 0);
   }
 
   abrirModalDestinatario(): void {
@@ -495,8 +516,13 @@ export class FormlyFieldDatosGeneralesComponent extends FieldType<FieldTypeConfi
     dialogRef.afterClosed().subscribe((dest) => {
       if (dest) {
         this.paraSeleccionado.set(dest);
+        if (dest.todos && this.model) {
+          if (this.model['inputt_1'] !== undefined || this.model['inputt_1'] === '') {
+            this.model['inputt_1'] = 'A TODO EL PERSONAL';
+          }
+        }
         this.recalcularVia();
-        this.emitirValores();
+        this.emitirValores(true);
       }
     });
   }
@@ -518,7 +544,7 @@ export class FormlyFieldDatosGeneralesComponent extends FieldType<FieldTypeConfi
         const exists = this.coRemitentes().some((x) => x.id_usuario === co.id_usuario);
         if (!exists) {
           this.coRemitentes.update((list) => [...list, co]);
-          this.emitirValores();
+          this.emitirValores(true);
         }
       }
     });
@@ -526,18 +552,24 @@ export class FormlyFieldDatosGeneralesComponent extends FieldType<FieldTypeConfi
 
   quitarCoRemitente(id_usuario: number): void {
     this.coRemitentes.update((list) => list.filter((x) => x.id_usuario !== id_usuario));
-    this.emitirValores();
+    this.emitirValores(true);
   }
 
   onRefChange(val: string): void {
     this.referenciaTexto.set(val);
-    this.emitirValores();
+    this.emitirValores(true);
   }
 
   private recalcularVia(): void {
     const dest = this.paraSeleccionado();
     if (!dest) {
       this.viasCalculadas.set([]);
+      return;
+    }
+
+    if (dest.todos || dest.id_usuario === 'TODOS') {
+      this.viasCalculadas.set([]);
+      this.emitirValores();
       return;
     }
 
@@ -598,10 +630,10 @@ export class FormlyFieldDatosGeneralesComponent extends FieldType<FieldTypeConfi
     }
 
     this.viasCalculadas.set(vias);
-    this.emitirValores();
+    this.emitirValores(false);
   }
 
-  private emitirValores(): void {
+  private emitirValores(emitir = false): void {
     const todosDe = [this.remitentePrincipal(), ...this.coRemitentes()].filter(Boolean);
     const value = {
       para: this.paraSeleccionado(),
@@ -609,7 +641,9 @@ export class FormlyFieldDatosGeneralesComponent extends FieldType<FieldTypeConfi
       de: todosDe,
       ref: this.referenciaTexto()
     };
-    this.formControl.setValue(value, { emitEvent: true });
+    if (this.formControl) {
+      this.formControl.setValue(value, { emitEvent: emitir });
+    }
   }
 
   private getCurrentUserFull(): any {

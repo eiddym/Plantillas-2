@@ -2,6 +2,8 @@ const express = require("express");
 const consign = require("consign");
 const app = express();
 
+app.set("trust proxy", true);
+
 consign()
   .include("src/config/config.js")
   .then("src/lib/util.js")

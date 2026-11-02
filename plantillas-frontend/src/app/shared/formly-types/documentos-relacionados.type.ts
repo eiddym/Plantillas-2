@@ -42,6 +42,7 @@ import { VisorPdfDialogComponent } from '../../features/visor-pdf/visor-pdf-dial
                 placeholder="Buscar documento por CITE o número..."
                 [(ngModel)]="terminoBusqueda"
                 (ngModelChange)="buscarDocumentos($event)"
+                (keyup.enter)="buscarDocumentos(terminoBusqueda)"
               />
               <button type="button" class="btn-close" (click)="cerrarSelector()">
                 <mat-icon>close</mat-icon>
@@ -61,6 +62,10 @@ import { VisorPdfDialogComponent } from '../../features/visor-pdf/visor-pdf-dial
                     </div>
                   </div>
                 }
+              </div>
+            } @else if (busquedaRealizada() && terminoBusqueda.trim().length >= 3 && !buscando()) {
+              <div class="no-resultados">
+                <span>No se encontró ningún documento con el CITE tecleado</span>
               </div>
             }
           </div>
@@ -221,6 +226,13 @@ import { VisorPdfDialogComponent } from '../../features/visor-pdf/visor-pdf-dial
       mat-icon { font-size: 16px; width: 16px; height: 16px; }
       &:hover { color: #00838f; }
     }
+    .no-resultados {
+      padding: 10px 12px;
+      font-size: 12px;
+      color: #78909c;
+      text-align: center;
+      font-style: italic;
+    }
   `]
 })
 export class FormlyFieldDocumentosRelacionadosComponent extends FieldType<FieldTypeConfig> implements OnInit {
@@ -229,11 +241,13 @@ export class FormlyFieldDocumentosRelacionadosComponent extends FieldType<FieldT
 
   mostrarSelector = signal(false);
   terminoBusqueda = '';
+  buscando = signal(false);
+  busquedaRealizada = signal(false);
   resultadosBusqueda = signal<any[]>([]);
   documentosSeleccionados = signal<any[]>([]);
 
   ngOnInit(): void {
-    const val = this.formControl.value;
+    const val = this.formControl?.value;
     if (Array.isArray(val)) {
       this.documentosSeleccionados.set(val);
     } else if (val) {
@@ -243,34 +257,62 @@ export class FormlyFieldDocumentosRelacionadosComponent extends FieldType<FieldT
 
   toggleSelector(): void {
     if (this.to.disabled) return;
-    this.mostrarSelector.update(v => !v);
-    if (this.mostrarSelector() && this.resultadosBusqueda().length === 0) {
-      this.buscarDocumentos('');
-    }
+    const nuevo = !this.mostrarSelector();
+    this.mostrarSelector.set(nuevo);
+    this.terminoBusqueda = '';
+    this.resultadosBusqueda.set([]);
+    this.busquedaRealizada.set(false);
+    this.buscando.set(false);
   }
 
   cerrarSelector(): void {
     this.mostrarSelector.set(false);
     this.terminoBusqueda = '';
+    this.resultadosBusqueda.set([]);
+    this.busquedaRealizada.set(false);
+    this.buscando.set(false);
   }
 
   buscarDocumentos(termino: string): void {
-    const filterParam = termino ? `&filter=${encodeURIComponent(termino)}&searchPro=1&tipoBus=campo&campoSel=nombre` : '';
+    const query = (termino || '').trim();
+
+    // Regla estricta: NO buscar ni mostrar documentos si no se ha tecleado un CITE (mínimo 3 caracteres)
+    if (!query || query.length < 3) {
+      this.resultadosBusqueda.set([]);
+      this.busquedaRealizada.set(false);
+      this.buscando.set(false);
+      return;
+    }
+
+    this.buscando.set(true);
+    this.busquedaRealizada.set(true);
+
+    const filterParam = `&filter=${encodeURIComponent(query)}&searchPro=1&tipoBus=campo&campoSel=nombre`;
     const url = `/api/v1/plantillasFormly/documento?fields=id_documento,nombre,fecha&estado=APROBADO,CERRADO,DERIVADO&page=1&order=-fecha&limit=15${filterParam}`;
     this.http.get<any>(url).subscribe({
       next: (resp) => {
+        if ((this.terminoBusqueda || '').trim() !== query) return;
+
         const docs = resp?.datos?.resultado || [];
         const actuales = this.documentosSeleccionados().map(d => d.id_documento);
-        this.resultadosBusqueda.set(docs.filter((d: any) => !actuales.includes(d.id_documento)));
+        const filtrados = docs
+          .filter((d: any) => d.nombre && d.nombre !== 'BORRADOR' && !actuales.includes(d.id_documento))
+          .filter((d: any) => d.nombre.toLowerCase().includes(query.toLowerCase()));
+
+        this.resultadosBusqueda.set(filtrados);
+        this.buscando.set(false);
       },
-      error: () => this.resultadosBusqueda.set([])
+      error: () => {
+        this.resultadosBusqueda.set([]);
+        this.buscando.set(false);
+      }
     });
   }
 
   seleccionarDocumento(doc: any): void {
     const nuevos = [...this.documentosSeleccionados(), doc];
     this.documentosSeleccionados.set(nuevos);
-    this.formControl.setValue(nuevos);
+    if (this.formControl) this.formControl.setValue(nuevos);
     this.cerrarSelector();
   }
 
@@ -278,7 +320,7 @@ export class FormlyFieldDocumentosRelacionadosComponent extends FieldType<FieldT
     const nuevos = [...this.documentosSeleccionados()];
     nuevos.splice(index, 1);
     this.documentosSeleccionados.set(nuevos);
-    this.formControl.setValue(nuevos);
+    if (this.formControl) this.formControl.setValue(nuevos);
   }
 
   verPdf(doc: any): void {

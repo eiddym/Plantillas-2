@@ -75,6 +75,30 @@ export interface DestinatarioDialogData {
           </div>
         } @else {
           <div class="user-card-list">
+            @if (data.mode === 'PARA') {
+              <div class="user-card card-broadcast" (click)="seleccionarTodos()">
+                <div class="avatar-circle avatar-broadcast">
+                  <mat-icon>campaign</mat-icon>
+                </div>
+                <div class="user-info">
+                  <div class="user-name text-broadcast">
+                    A TODO EL PERSONAL / TODAS LAS UNIDADES
+                  </div>
+                  <div class="user-cargo">
+                    Circular Institucional / Difusión General a Todos los Funcionarios
+                  </div>
+                  <div class="user-tags">
+                    <span class="tag-unit tag-broadcast">
+                      <mat-icon>groups</mat-icon>
+                      Envío masivo a todos los funcionarios activos
+                    </span>
+                  </div>
+                </div>
+                <button mat-flat-button class="btn-select btn-broadcast">
+                  Seleccionar
+                </button>
+              </div>
+            }
             @for (u of usuariosFiltrados(); track u.id_usuario) {
               <div class="user-card" (click)="seleccionar(u)">
                 <div class="avatar-circle">
@@ -260,6 +284,41 @@ export interface DestinatarioDialogData {
       height: 32px !important;
       border-radius: 16px !important;
     }
+    .card-broadcast {
+      border: 2px dashed #0284c7 !important;
+      background: #f0f9ff !important;
+      &:hover {
+        background: #e0f2fe !important;
+        border-color: #0369a1 !important;
+      }
+    }
+    .avatar-broadcast {
+      background: #0284c7 !important;
+      color: #ffffff !important;
+      mat-icon {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+      }
+    }
+    .text-broadcast {
+      color: #0369a1 !important;
+      font-weight: 800 !important;
+    }
+    .tag-broadcast {
+      background: #bae6fd !important;
+      color: #0369a1 !important;
+      font-weight: 600;
+      mat-icon {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+      }
+    }
+    .btn-broadcast {
+      background: #0284c7 !important;
+      color: #ffffff !important;
+    }
     .empty-state {
       text-align: center;
       padding: 30px;
@@ -391,6 +450,19 @@ export class DestinatarioDialogComponent implements OnInit {
 
   seleccionar(u: any): void {
     this.dialogRef.close(u);
+  }
+
+  seleccionarTodos(): void {
+    const usuariosActivos = (this.data.usuarios || []).filter(u => u.estado === 'ACTIVO' || u.estado !== 'INACTIVO');
+    const ids = usuariosActivos.map(u => Number(u.id_usuario)).filter(id => id > 0);
+    this.dialogRef.close({
+      id_usuario: 'TODOS',
+      todos: true,
+      todos_ids: ids,
+      nombres: 'A TODO EL PERSONAL',
+      apellidos: '',
+      cargo: 'Todas las Unidades y Funcionarios'
+    });
   }
 
   cancelar(): void {

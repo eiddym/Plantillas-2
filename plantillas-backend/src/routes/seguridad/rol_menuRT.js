@@ -248,9 +248,74 @@ module.exports = app => {
           .catch( e => {
             t.rollback();
             res.status(412).send(util.formatearMensaje("ERROR",e));
-          })
+          });
       });
+    });
 
+    app.route("/api/v1/seguridad/menu/:idMenu/roles")
+    .get((req, res) => {
+      RolMenu.findAll({
+        where: { fid_menu: req.params.idMenu, estado: 'ACTIVO' }
+      })
+      .then(respuesta => {
+        res.send(util.formatearMensaje("EXITO", "Operación exitosa", respuesta));
+      })
+      .catch(e => {
+        res.status(412).send(util.formatearMensaje("ERROR", e));
+      });
     })
+    .put(async (req, res) => {
+      const idMenu = parseInt(req.params.idMenu, 10);
+      const rolesDeseados = Array.isArray(req.body.roles) ? req.body.roles.map(r => parseInt(r, 10)) : [];
+      const idUsuarioAudit = (req.audit_usuario && req.audit_usuario.id_usuario) ? req.audit_usuario.id_usuario : 1;
 
-}
+      const t = await sequelize.transaction();
+      try {
+        // Inactivar asignaciones existentes para este menú que no estén en la lista
+        await RolMenu.update(
+          { estado: 'INACTIVO', _usuario_modificacion: idUsuarioAudit },
+          {
+            where: {
+              fid_menu: idMenu,
+              fid_rol: { [sequelize.Op ? sequelize.Op.notIn : '$notIn']: rolesDeseados }
+            },
+            transaction: t
+          }
+        );
+
+        // Para cada rol deseado, activar o crear
+        for (const idRol of rolesDeseados) {
+          const existente = await RolMenu.findOne({
+            where: { fid_menu: idMenu, fid_rol: idRol },
+            transaction: t
+          });
+
+          if (existente) {
+            if (existente.estado !== 'ACTIVO') {
+              await existente.update(
+                { estado: 'ACTIVO', _usuario_modificacion: idUsuarioAudit },
+                { transaction: t }
+              );
+            }
+          } else {
+            await RolMenu.create(
+              {
+                fid_menu: idMenu,
+                fid_rol: idRol,
+                estado: 'ACTIVO',
+                _usuario_creacion: idUsuarioAudit
+              },
+              { transaction: t }
+            );
+          }
+        }
+
+        await t.commit();
+        res.send(util.formatearMensaje("EXITO", "Roles reasignados al menú correctamente."));
+      } catch (err) {
+        await t.rollback();
+        res.status(412).send(util.formatearMensaje("ERROR", err));
+      }
+    });
+
+};

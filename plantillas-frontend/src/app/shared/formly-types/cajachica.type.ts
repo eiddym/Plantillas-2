@@ -208,7 +208,7 @@ export class FormlyFieldCajachicaComponent extends FieldType<FieldTypeConfig> im
   totalGeneral = signal<number>(0);
 
   ngOnInit(): void {
-    const val = this.formControl.value;
+    const val = this.formControl?.value;
     if (val && Array.isArray(val.rows)) {
       this.filas.set(val.rows);
       this.totalGeneral.set(Number(val.monto_total) || 0);
@@ -239,7 +239,7 @@ export class FormlyFieldCajachicaComponent extends FieldType<FieldTypeConfig> im
       rows: this.filas(),
       monto_total: this.totalGeneral()
     };
-    this.formControl.setValue(payload);
+    if (this.formControl) this.formControl.setValue(payload);
   }
 
   private calcularTotal(): void {

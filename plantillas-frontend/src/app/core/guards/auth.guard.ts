@@ -25,3 +25,15 @@ export const guestGuard: CanActivateFn = () => {
   router.navigate(['/dashboard']);
   return false;
 };
+
+export const ventanillaGuard: CanActivateFn = () => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  if (authService.hasRole('ADMIN') || authService.hasRole('CORRESPONDENCIA')) {
+    return true;
+  }
+
+  router.navigate(['/dashboard']);
+  return false;
+};

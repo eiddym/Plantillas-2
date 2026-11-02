@@ -158,7 +158,7 @@ export class FormlyFieldArchivoComponent extends FieldType<FieldTypeConfig> impl
   archivos = signal<ArchivoAdjunto[]>([]);
 
   ngOnInit(): void {
-    const val = this.formControl.value;
+    const val = this.formControl?.value;
     if (Array.isArray(val)) {
       this.archivos.set(val);
     } else if (val && typeof val === 'object' && val.filename) {
@@ -187,10 +187,10 @@ export class FormlyFieldArchivoComponent extends FieldType<FieldTypeConfig> impl
         if (esMultiple) {
           const nuevos = [...this.archivos(), adjunto];
           this.archivos.set(nuevos);
-          this.formControl.setValue(nuevos);
+          if (this.formControl) this.formControl.setValue(nuevos);
         } else {
           this.archivos.set([adjunto]);
-          this.formControl.setValue(adjunto);
+          if (this.formControl) this.formControl.setValue(adjunto);
         }
       };
       reader.readAsDataURL(file);
@@ -205,10 +205,12 @@ export class FormlyFieldArchivoComponent extends FieldType<FieldTypeConfig> impl
     nuevos.splice(index, 1);
     this.archivos.set(nuevos);
 
-    if (esMultiple) {
-      this.formControl.setValue(nuevos);
-    } else {
-      this.formControl.setValue(nuevos[0] || null);
+    if (this.formControl) {
+      if (esMultiple) {
+        this.formControl.setValue(nuevos);
+      } else {
+        this.formControl.setValue(nuevos[0] || null);
+      }
     }
   }
 

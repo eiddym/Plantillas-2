@@ -14,6 +14,12 @@ import { FormlyFieldListaContactosComponent } from './lista-contactos.type';
 import { FormlyFieldCajachicaComponent } from './cajachica.type';
 import { FormlyFieldAprobacionCdComponent } from './aprobacion-cd.type';
 import { FormlyFieldDocumentosAnularComponent } from './documentos-anular.type';
+import { FormlyFieldSelectComponent } from './select.type';
+import { FormlyFieldTextareaComponent } from './textarea.type';
+import { FormlyFieldLayoutComponent } from './layout.type';
+import { FormlyFieldCheckboxComponent } from './checkbox.type';
+import { FormlyFieldAlmacenComponent } from './almacen.type';
+import { FormlyFieldActivosComponent } from './activos.type';
 
 export {
   FormlyFieldTextoComponent,
@@ -27,55 +33,73 @@ export {
   FormlyFieldCalendarioComponent,
   FormlyFieldArchivoComponent,
   FormlyFieldListasComponent,
+  FormlyFieldSelectComponent,
   FormlyFieldListaContactosComponent,
   FormlyFieldCajachicaComponent,
   FormlyFieldAprobacionCdComponent,
-  FormlyFieldDocumentosAnularComponent
+  FormlyFieldDocumentosAnularComponent,
+  FormlyFieldTextareaComponent,
+  FormlyFieldLayoutComponent,
+  FormlyFieldCheckboxComponent,
+  FormlyFieldAlmacenComponent,
+  FormlyFieldActivosComponent
 };
 
 export const CUSTOM_FORMLY_TYPES: ConfigOption['types'] = [
   // Tipos estándar iniciales
-  { name: 'texto', component: FormlyFieldTextoComponent },
-  { name: 'cite', component: FormlyFieldCiteComponent },
-  { name: 'datosGenerales', component: FormlyFieldDatosGeneralesComponent },
-  { name: 'encabezado', component: FormlyFieldDatosGeneralesComponent },
-  { name: 'editorTexto', component: FormlyFieldEditorTextoComponent },
-  { name: 'vacio', component: FormlyFieldVacioComponent },
+  { name: 'texto', component: FormlyFieldTextoComponent, wrappers: [] },
+  { name: 'parrafo', component: FormlyFieldTextoComponent, wrappers: [] },
+  { name: 'cite', component: FormlyFieldCiteComponent, wrappers: [] },
+  { name: 'datosGenerales', component: FormlyFieldDatosGeneralesComponent, wrappers: [] },
+  { name: 'encabezado', component: FormlyFieldDatosGeneralesComponent, wrappers: [] },
+  { name: 'editorTexto', component: FormlyFieldEditorTextoComponent, wrappers: [] },
+  { name: 'editor-texto', component: FormlyFieldEditorTextoComponent, wrappers: [] },
+  { name: 'editor', component: FormlyFieldEditorTextoComponent, wrappers: [] },
+  { name: 'vacio', component: FormlyFieldVacioComponent, wrappers: [] },
 
-  // Tipos institucionales incorporados
-  { name: 'ccArchivo', component: FormlyFieldCcArchivoComponent },
-  { name: 'inputt', component: FormlyFieldInputtComponent },
-  { name: 'input', component: FormlyFieldInputtComponent },
-  { name: 'documentosRelacionados', component: FormlyFieldDocumentosRelacionadosComponent },
-  { name: 'calendario', component: FormlyFieldCalendarioComponent },
-  { name: 'datepicker', component: FormlyFieldCalendarioComponent },
-  { name: 'archivo', component: FormlyFieldArchivoComponent },
-  { name: 'cargadorArchivos', component: FormlyFieldArchivoComponent },
-  { name: 'listas', component: FormlyFieldListasComponent },
-  { name: 'lista', component: FormlyFieldListasComponent },
-  { name: 'select', component: FormlyFieldListasComponent },
-  { name: 'radio', component: FormlyFieldListasComponent },
-  { name: 'checkbox', component: FormlyFieldTextoComponent },
-  { name: 'layout', component: FormlyFieldVacioComponent },
-  { name: 'editor-texto', component: FormlyFieldEditorTextoComponent },
-  { name: 'editor', component: FormlyFieldEditorTextoComponent },
-  { name: 'textarea', component: FormlyFieldEditorTextoComponent },
-  { name: 'listaContactos', component: FormlyFieldListaContactosComponent },
-  { name: 'cajachica', component: FormlyFieldCajachicaComponent },
-  { name: 'certificacionComprometido', component: FormlyFieldCajachicaComponent },
-  { name: 'partidas', component: FormlyFieldCajachicaComponent },
-  { name: 'aprobacionCD', component: FormlyFieldAprobacionCdComponent },
-  { name: 'pdfsAprobacionCD', component: FormlyFieldAprobacionCdComponent },
-  { name: 'documentosAnular', component: FormlyFieldDocumentosAnularComponent },
+  // Campos de entrada de texto
+  { name: 'inputt', component: FormlyFieldInputtComponent, wrappers: [] },
+  { name: 'input', component: FormlyFieldInputtComponent, wrappers: [] },
+  { name: 'textarea', component: FormlyFieldTextareaComponent, wrappers: [] },
+  { name: 'inputTextArea', component: FormlyFieldTextareaComponent, wrappers: [] },
 
-  // Módulos especializados Almacén / Activos
-  { name: 'consultaAlmacen', component: FormlyFieldTextoComponent },
-  { name: 'ingresoAlmacen', component: FormlyFieldTextoComponent },
-  { name: 'recuperarEntregaAlmacen', component: FormlyFieldTextoComponent },
-  { name: 'consultaActivo', component: FormlyFieldTextoComponent },
-  { name: 'asignacionActivo', component: FormlyFieldTextoComponent },
-  { name: 'devolucionActivo', component: FormlyFieldTextoComponent },
-  { name: 'tablaActivos', component: FormlyFieldTextoComponent },
-  { name: 'ingresoActivos', component: FormlyFieldTextoComponent },
-  { name: 'bajaActivos', component: FormlyFieldTextoComponent }
+  // Contenedores y estructura
+  { name: 'layout', component: FormlyFieldLayoutComponent, wrappers: [] },
+
+  // Selección y listas
+  { name: 'select', component: FormlyFieldSelectComponent, wrappers: [] },
+  { name: 'inputSelect', component: FormlyFieldSelectComponent, wrappers: [] },
+  { name: 'radio', component: FormlyFieldSelectComponent, wrappers: [] },
+  { name: 'checkbox', component: FormlyFieldCheckboxComponent, wrappers: [] },
+  { name: 'inputCheckBox', component: FormlyFieldCheckboxComponent, wrappers: [] },
+  { name: 'listas', component: FormlyFieldListasComponent, wrappers: [] },
+  { name: 'lista', component: FormlyFieldListasComponent, wrappers: [] },
+  { name: 'listaContactos', component: FormlyFieldListaContactosComponent, wrappers: [] },
+
+  // Fecha y archivos
+  { name: 'calendario', component: FormlyFieldCalendarioComponent, wrappers: [] },
+  { name: 'datepicker', component: FormlyFieldCalendarioComponent, wrappers: [] },
+  { name: 'archivo', component: FormlyFieldArchivoComponent, wrappers: [] },
+  { name: 'cargadorArchivos', component: FormlyFieldArchivoComponent, wrappers: [] },
+  { name: 'ccArchivo', component: FormlyFieldCcArchivoComponent, wrappers: [] },
+  { name: 'documentosRelacionados', component: FormlyFieldDocumentosRelacionadosComponent, wrappers: [] },
+
+  // Módulos especializados institucionales
+  { name: 'cajachica', component: FormlyFieldCajachicaComponent, wrappers: [] },
+  { name: 'certificacionComprometido', component: FormlyFieldCajachicaComponent, wrappers: [] },
+  { name: 'partidas', component: FormlyFieldCajachicaComponent, wrappers: [] },
+  { name: 'aprobacionCD', component: FormlyFieldAprobacionCdComponent, wrappers: [] },
+  { name: 'pdfsAprobacionCD', component: FormlyFieldAprobacionCdComponent, wrappers: [] },
+  { name: 'documentosAnular', component: FormlyFieldDocumentosAnularComponent, wrappers: [] },
+
+  // Módulos especializados Almacén / Activos conectados a NSIAF
+  { name: 'consultaAlmacen', component: FormlyFieldAlmacenComponent, wrappers: [] },
+  { name: 'ingresoAlmacen', component: FormlyFieldAlmacenComponent, wrappers: [] },
+  { name: 'recuperarEntregaAlmacen', component: FormlyFieldAlmacenComponent, wrappers: [] },
+  { name: 'consultaActivo', component: FormlyFieldActivosComponent, wrappers: [] },
+  { name: 'asignacionActivo', component: FormlyFieldActivosComponent, wrappers: [] },
+  { name: 'devolucionActivo', component: FormlyFieldActivosComponent, wrappers: [] },
+  { name: 'tablaActivos', component: FormlyFieldActivosComponent, wrappers: [] },
+  { name: 'ingresoActivos', component: FormlyFieldActivosComponent, wrappers: [] },
+  { name: 'bajaActivos', component: FormlyFieldActivosComponent, wrappers: [] }
 ];
