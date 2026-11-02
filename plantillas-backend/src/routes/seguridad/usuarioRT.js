@@ -944,6 +944,10 @@ module.exports = app => {
       usuario.tipo_autenticacion = 'CIUDADANIA';
     }
 
+    const auditUser = req.body.audit_usuario || req.user || {};
+    const idAudit = Number(auditUser.id_usuario || req.body._usuario_modificacion || 1);
+    usuario._usuario_modificacion = idAudit;
+
     let usuarioDevolver = {};
     let usuarioRespuesta = {};
     let pwd=null;
@@ -1007,10 +1011,14 @@ module.exports = app => {
 
         const usuarioRol=[];
         usuario.roles.forEach((item, indice) => {
+          const fidRol = typeof item === 'object' ? (item.fid_rol || item.id_rol) : item;
           const crear={
-            fid_rol:item,
-            fid_usuario:usuarioDevolver.id_usuario,
-            _usuario_creacion:usuarioDevolver._usuario_modificacion }
+            fid_rol: fidRol,
+            fid_usuario: usuarioDevolver.id_usuario,
+            estado: 'ACTIVO',
+            _usuario_creacion: idAudit,
+            _usuario_modificacion: idAudit
+          };
           usuarioRol.push(crear);
         });
 
@@ -1048,7 +1056,8 @@ module.exports = app => {
           const objCrear = {
             fid_usuario_titular: usuarioRespuesta.id_usuario,
             fid_usuario_virtual: item.id_usuario,
-            _usuario_creacion: req.body.audit_usuario.id_usuario,
+            _usuario_creacion: idAudit,
+            _usuario_modificacion: idAudit
           };
           const tempInactivo = _.find(activos, vTemp => {
             if (vTemp.dataValues.id_usuario == item.id_usuario && vTemp.dataValues.fid_usuario_titular == usuarioRespuesta.id_usuario) {
