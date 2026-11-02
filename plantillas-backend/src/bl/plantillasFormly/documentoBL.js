@@ -160,7 +160,7 @@ module.exports = {
             {
               estado:'ELIMINADO',
               _usuario_modificacion: pIdUsuario,
-              documento_padre: -pResultado.documento_padre,
+              documento_padre: null,
             }, pModeloHistorial);
           } else {
             throw new Error('No se puede eliminar un documento con CITE oficial asignado.');
