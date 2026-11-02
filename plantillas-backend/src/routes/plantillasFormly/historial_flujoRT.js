@@ -155,8 +155,11 @@ module.exports = app => {
           promesas.push(new Promise((resolve, reject) =>
           usuario.findByPk(pItem._usuario_creacion)
             .then(pUsuario => {
-              pItem.dataValues.nombres = `${pUsuario.nombres} ${pUsuario.apellidos}`;
-              pItem.dataValues.usuario = pUsuario.usuario;
+              if (pUsuario) {
+                pItem.dataValues.nombres = `${pUsuario.nombres} ${pUsuario.apellidos}`;
+                pItem.dataValues.usuario = pUsuario.usuario;
+                pItem.dataValues.foto = pUsuario.foto || null;
+              }
               resolve(pItem);
             })
             .catch(e => reject(e))
@@ -186,9 +189,10 @@ module.exports = app => {
           estado: "ACTIVO",
           id_documento: 314,
           id_historial_flujo: -1,
-          nombres: `${usu.nombres} ${usu.apellidos}`,
+          nombres: usu ? `${usu.nombres} ${usu.apellidos}` : 'Usuario',
           observacion: "",
-          usuario: usu.usuario,
+          usuario: usu ? usu.usuario : '',
+          foto: usu ? (usu.foto || null) : null,
         });
       }
       res.send(util.formatearMensaje("EXITO", "Historial de flujo de un documento", xdocs))
@@ -338,8 +342,11 @@ module.exports = app => {
           return usuario
             .findByPk(pItem._usuario_creacion)
             .then((pUsuario) => {
-              pItem.nombres = `${pUsuario.nombres} ${pUsuario.apellidos}`;
-              pItem.usuario = pUsuario.usuario;
+              if (pUsuario) {
+                pItem.nombres = `${pUsuario.nombres} ${pUsuario.apellidos}`;
+                pItem.usuario = pUsuario.usuario;
+                pItem.foto = pUsuario.foto || null;
+              }
             })
             .then(() => {
               if (pItem.accion === "DERIVADO") {
@@ -348,22 +355,28 @@ module.exports = app => {
                     attributes: ["id_documento", "via_actual"],
                     where: { id_documento: pItem.id_documento },
                   })
-                  .then((pRespDoc) => usuario.findByPk(pRespDoc.via_actual))
+                  .then((pRespDoc) => (pRespDoc && pRespDoc.via_actual) ? usuario.findByPk(pRespDoc.via_actual) : null)
                   .then((pUsuario) => {
-                    pItem.derivado = {
-                      nombres: `${pUsuario.nombres} ${pUsuario.apellidos}`,
-                      usuario: pUsuario.usuario,
-                    };
+                    if (pUsuario) {
+                      pItem.derivado = {
+                        nombres: `${pUsuario.nombres} ${pUsuario.apellidos}`,
+                        usuario: pUsuario.usuario,
+                        foto: pUsuario.foto || null,
+                      };
+                    }
                   });
               }
               if (pItem.accion === "ANULADO") {
                 return usuario
                   .findByPk(pItem._usuario_modificacion)
                   .then((pUsuario) => {
-                    pItem.aprobado = {
-                      nombres: `${pUsuario.nombres} ${pUsuario.apellidos}`,
-                      usuario: pUsuario.usuario,
-                    };
+                    if (pUsuario) {
+                      pItem.aprobado = {
+                        nombres: `${pUsuario.nombres} ${pUsuario.apellidos}`,
+                        usuario: pUsuario.usuario,
+                        foto: pUsuario.foto || null,
+                      };
+                    }
                   });
               }
             })

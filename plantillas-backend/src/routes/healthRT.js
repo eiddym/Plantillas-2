@@ -57,4 +57,8 @@ module.exports = app => {
       }
     });
   });
+  app.post('/api/v1/client-log', (req, res) => {
+    console.error('[BROWSER CLIENT LOG]:', JSON.stringify(req.body));
+    res.status(200).json({ ok: true });
+  });
 };

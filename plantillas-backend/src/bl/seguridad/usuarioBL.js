@@ -190,9 +190,9 @@ module.exports={
             delete hijo.menu_padre;
             delete hijo.estado;
             delete hijo.fid_menu_padre;
-            
-            // Evitar duplicados en el submenu si el usuario tiene multiples roles
-            const yaExisteHijo = padre.submenu.some(s => (hijo.id_menu && s.id_menu === hijo.id_menu) || s.url === hijo.url);
+            const yaExisteHijo = padre.submenu.some(
+              (h) => (hijo.id_menu && h.id_menu === hijo.id_menu) || (hijo.url && h.url === hijo.url) || h.label === hijo.label
+            );
             if (!yaExisteHijo) {
               padre.submenu.push(hijo);
             }

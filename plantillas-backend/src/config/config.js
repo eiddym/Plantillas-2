@@ -143,6 +143,9 @@ module.exports = () => {
       url_asignacion: process.env.ACTIVOS_ASIGNACION || 'http://localhost:8000/api/v2/activos/asignacion',
       url_devolucion: process.env.ACTIVOS_DEVOLUCION || 'http://localhost:8000/api/v2/activos/devolucion',
       url_consulta_por_usuario: process.env.ACTIVOS_CONSULTA_POR_USUARIO || 'http://localhost:8000/api/v2/activos/usuario',
+      url_ingreso: process.env.ACTIVOS_INGRESO || 'http://localhost:8000/api/v2/activos/ingreso',
+      url_baja: process.env.ACTIVOS_BAJA || 'http://localhost:8000/api/v2/activos/baja',
+      url_proveedor: process.env.ACTIVOS_PROVEEDOR || 'http://localhost:8000/api/v2/activos/proveedores',
       token: process.env.ACTIVOS_TOKEN || 'Bearer TOKEN_ACCESO',
     },
     mail: {

@@ -104,10 +104,15 @@ function xautenticacion(req, res, usar_ldap=1){
   usar_ldap=req.user ? 1 : usar_ldap;
 
   if(req.body.username && req.body.password){
+    let cleanUser = String(req.body.username).trim();
+    if (cleanUser.toLowerCase() === 'sys default' || cleanUser.toLowerCase() === 'system default') {
+      cleanUser = 'sys_default';
+    }
+    req.body.username = cleanUser;
 
     // Declara constantes.
     const email = req.body.username;
-    const contrasena = req.body.password;
+    const contrasena = String(req.body.password);
 
     const condicion = {
       usuario:req.body.username,
@@ -193,9 +198,20 @@ function xautenticacion(req, res, usar_ldap=1){
       }
       const token=jwt.encode(cifrar, app.src.config.config.jwtSecret);
       const sesion= app.get("sesion");
+      const sesionesCerradas = app.get("sesionesCerradas") || {};
+
+      if (sesion[usuario.id_usuario] && sesion[usuario.id_usuario].token) {
+        sesionesCerradas[sesion[usuario.id_usuario].token] = Date.now();
+        if (sesion[usuario.id_usuario].backup) {
+          sesionesCerradas[sesion[usuario.id_usuario].backup] = Date.now();
+        }
+        app.set("sesionesCerradas", sesionesCerradas);
+      }
 
       // sesion[usuario.id_usuario]=token
       sesion[usuario.id_usuario]={
+        createdAt: Date.now(),
+        lastActivity: Date.now(),
         fecha:moment(moment().tz('America/La_Paz').format()).add(1,'minutes'),
         backup:null,
         token,
@@ -208,8 +224,10 @@ function xautenticacion(req, res, usar_ldap=1){
         }
         else res.status(200).send(util.formatearMensaje("INFORMACION","Contraseña incorrecta."));
       }
-      else
+      else {
+        app.set("sesion", sesion);
         res.status(200).send(util.formatearMensaje("EXITO","Acceso al sistema correcto",datosTemporal,token));
+      }
     })
     .catch( (error) => {
       res.status(412).send(util.formatearMensaje("ERROR",error));
@@ -291,6 +309,13 @@ app.post("/autenticar", interceptar, (req,res) => {
 });
 
 function interceptar(req, res, next){
+  if (req.body && req.body.username) {
+    let rawU = String(req.body.username).trim();
+    if (rawU.toLowerCase() === 'sys default' || rawU.toLowerCase() === 'system default') {
+      rawU = 'sys_default';
+    }
+    req.body.username = rawU;
+  }
   const username = req.body.username;
   const ldapConfigured = process.env.LDAP_URL && process.env.LDAP_URL !== '' && !process.env.LDAP_URL.includes('example.abc');
 
@@ -370,10 +395,35 @@ function interceptar(req, res, next){
 
 app.get('/api/v1/refrescar', (req,res) => {
 
-  const tokenBackup = req.headers.authorization.split(" ")[1];
+  const tokenBackup = req.headers.authorization ? req.headers.authorization.split(" ")[1] : null;
   if(tokenBackup){
     const tokenDecodificado = jwt.decode(tokenBackup, app.get('secretBJA'));
     if(tokenDecodificado){
+      const sesion = app.get("sesion") || {};
+      const sesionesCerradas = app.get("sesionesCerradas") || {};
+      let sesionActual = sesion[tokenDecodificado.id_usuario];
+
+      if (!sesionActual && !sesionesCerradas[tokenBackup]) {
+        sesion[tokenDecodificado.id_usuario] = {
+          createdAt: Date.now(),
+          lastActivity: Date.now(),
+          token: tokenBackup,
+          backup: null,
+          fecha: moment(moment().tz('America/La_Paz').format()).add(1, 'minutes')
+        };
+        sesionActual = sesion[tokenDecodificado.id_usuario];
+        app.set("sesion", sesion);
+      }
+
+      if (sesionesCerradas[tokenBackup] || !sesionActual || (sesionActual.token !== tokenBackup && sesionActual.backup !== tokenBackup)) {
+        return res.status(403).send({
+          tipoMensaje: "ERROR",
+          codigo: "SESION_DUPLICADA",
+          mensaje: "Sesión inválida. Se ha iniciado sesión en otro dispositivo o navegador.",
+          message: "Sesión inválida. Se ha iniciado sesión en otro dispositivo o navegador."
+        });
+      }
+
       // Busca al usuario con su estado 'ACTIVO'.
       usuarios.findOne({
         where:{
@@ -407,12 +457,12 @@ app.get('/api/v1/refrescar', (req,res) => {
               }
 
               const token=jwt.encode(cifrar, app.src.config.config.jwtSecret);
-              const sesion = app.get("sesion");
 
               // Actualiza los datos de la sesión.
               sesion[cifrar.id_usuario].token=token;
               sesion[cifrar.id_usuario].backup=tokenBackup;
               sesion[cifrar.id_usuario].fecha=moment(moment().tz('America/La_Paz').format()).add(1,'minutes');
+              sesion[cifrar.id_usuario].lastActivity=Date.now();
 
               // Aplica los cambios a la sesión.
               app.set("sesion", sesion);
@@ -434,6 +484,29 @@ app.get('/api/v1/refrescar', (req,res) => {
   else res.status(403).send(util.formatearMensaje("ERROR", "Falló la autenticacion"));
 
 
+});
+
+app.post('/api/v1/cerrar_sesion', (req, res) => {
+  try {
+    const token = req.headers.authorization ? req.headers.authorization.split(" ")[1] : null;
+    if (token) {
+      const sesionesCerradas = app.get("sesionesCerradas") || {};
+      sesionesCerradas[token] = Date.now();
+      app.set("sesionesCerradas", sesionesCerradas);
+
+      const tokenDecodificado = jwt.decode(token, app.get('secretBJA'));
+      if (tokenDecodificado && tokenDecodificado.id_usuario) {
+        const sesion = app.get("sesion") || {};
+        if (sesion[tokenDecodificado.id_usuario] && sesion[tokenDecodificado.id_usuario].token === token) {
+          delete sesion[tokenDecodificado.id_usuario];
+          app.set("sesion", sesion);
+        }
+      }
+    }
+    res.status(200).send(util.formatearMensaje("EXITO", "Sesión cerrada correctamente."));
+  } catch (e) {
+    res.status(200).send(util.formatearMensaje("EXITO", "Sesión cerrada."));
+  }
 });
 
 

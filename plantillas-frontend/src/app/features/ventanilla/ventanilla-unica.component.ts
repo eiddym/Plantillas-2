@@ -185,7 +185,7 @@ export interface DocumentoVentanilla {
             <div class="empty-state">
               <mat-icon>drafts</mat-icon>
               <h3>No hay correspondencia en esta bandeja</h3>
-              <p>Los trámites radicados aparecerán aquí para su respectiva verificación y despacho.</p>
+              <p>Los documentos radicados aparecerán aquí para su respectiva verificación y despacho.</p>
             </div>
           } @else {
             <div class="table-responsive">
@@ -213,7 +213,7 @@ export interface DocumentoVentanilla {
                     } @else {
                       <span class="cite-pending-tag" matTooltip="Aún sin CITE oficial. Se generará tras aprobación.">
                         <mat-icon>hourglass_empty</mat-icon>
-                        Sin CITE (En Trámite)
+                        Sin CITE (En Curso)
                       </span>
                     }
                   </td>
@@ -401,7 +401,7 @@ export interface DocumentoVentanilla {
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
-                  <mat-label>Tipo de Trámite</mat-label>
+                  <mat-label>Tipo de Documento</mat-label>
                   <mat-select formControlName="tipoTramite">
                     <mat-option value="NOTA_OFICIAL">Nota Oficial Externa</mat-option>
                     <mat-option value="SOLICITUD">Solicitud Ciudadana</mat-option>
@@ -614,7 +614,7 @@ export interface DocumentoVentanilla {
               </div>
               <div>
                 <h2>Derivar Documento al Flujo Institucional</h2>
-                <p>Hoja de Ruta: <strong>{{ docSeleccionado()?.codigo_hoja_ruta }}</strong> - El trámite viaja <strong>aún sin CITE</strong></p>
+                <p>Hoja de Ruta: <strong>{{ docSeleccionado()?.codigo_hoja_ruta }}</strong> - El documento viaja <strong>aún sin CITE</strong></p>
               </div>
               <button mat-icon-button (click)="modalDerivacionVisible.set(false)" class="close-btn">
                 <mat-icon>close</mat-icon>
@@ -627,7 +627,7 @@ export interface DocumentoVentanilla {
                 <mat-icon>info</mat-icon>
                 <div>
                   <strong>Regla Institucional de Ventanilla:</strong>
-                  <p>Al derivar el trámite, este ingresa a la bandeja de la unidad <strong>aún sin CITE</strong>, amparado en su Código de Hoja de Ruta. Tras su aprobación oficial por el Jefe o MAE, adoptará el CITE formal de la plantilla <strong>Documento Externo (DE-A)</strong>.</p>
+                  <p>Al derivar el documento, este ingresa a la bandeja de la unidad <strong>aún sin CITE</strong>, amparado en su Código de Hoja de Ruta. Tras su aprobación oficial por el Jefe o MAE, adoptará el CITE formal de la plantilla <strong>Documento Externo (DE-A)</strong>.</p>
                 </div>
               </div>
 
@@ -901,7 +901,8 @@ export interface DocumentoVentanilla {
     }
 
     .search-field {
-      width: 320px;
+      width: 100%;
+      max-width: 320px;
       ::ng-deep .mat-mdc-form-field-subscript-wrapper { display: none; }
     }
 
@@ -1315,6 +1316,40 @@ export interface DocumentoVentanilla {
       from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
     }
+
+    @media (max-width: 640px) {
+      .vu-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .vu-header-actions {
+        width: 100%;
+        button {
+          width: 100%;
+          justify-content: center;
+        }
+      }
+      .vu-card-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 12px;
+        gap: 12px;
+      }
+      .toolbar-left, .toolbar-right {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .search-field {
+        width: 100%;
+        max-width: 100%;
+      }
+      .type-pill-btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
   `]
 })
 export class VentanillaUnicaComponent implements OnInit, OnDestroy {
@@ -1653,12 +1688,12 @@ export class VentanillaUnicaComponent implements OnInit, OnDestroy {
         this.guardandoDerivacion.set(false);
         this.modalDerivacionVisible.set(false);
         const destino = res.datos?.destino || 'Despacho';
-        this.snackBar.open(`Trámite ${doc.codigo_hoja_ruta} derivado a ${destino} (aún sin CITE).`, 'Aceptar', { duration: 5000 });
+        this.snackBar.open(`Documento ${doc.codigo_hoja_ruta} derivado a ${destino} (aún sin CITE).`, 'Aceptar', { duration: 5000 });
         this.cargarBandeja();
       },
       error: (err) => {
         this.guardandoDerivacion.set(false);
-        const msg = err.error?.mensaje || 'Error al derivar el trámite.';
+        const msg = err.error?.mensaje || 'Error al derivar el documento.';
         this.snackBar.open(msg, 'Cerrar', { duration: 4500 });
       }
     });
@@ -1668,7 +1703,7 @@ export class VentanillaUnicaComponent implements OnInit, OnDestroy {
   // APROBACIÓN QUE GENERA CITE DOCUMENTO EXTERNO
   // ==========================================
   aprobarTramite(doc: DocumentoVentanilla): void {
-    if (!confirm(`¿Desea aprobar este trámite? Esta acción generará el CITE Oficial bajo la plantilla Documento Externo (DE-A) vinculado a la Hoja de Ruta ${doc.codigo_hoja_ruta}.`)) {
+    if (!confirm(`¿Desea aprobar este documento? Esta acción generará el CITE Oficial bajo la plantilla Documento Externo (DE-A) vinculado a la Hoja de Ruta ${doc.codigo_hoja_ruta}.`)) {
       return;
     }
 
@@ -1690,7 +1725,7 @@ export class VentanillaUnicaComponent implements OnInit, OnDestroy {
   // ==========================================
   verAdjuntoPdf(doc: DocumentoVentanilla): void {
     if (!doc.archivo_adjunto) {
-      this.snackBar.open('Este trámite no cuenta con documento PDF adjunto.', 'Cerrar', { duration: 3000 });
+      this.snackBar.open('Este registro no cuenta con documento PDF adjunto.', 'Cerrar', { duration: 3000 });
       return;
     }
 

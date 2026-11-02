@@ -183,7 +183,8 @@ import { CatalogoDialogComponent } from './catalogo-dialog.component';
     }
 
     .search-field {
-      width: 340px;
+      width: 100%;
+      max-width: 340px;
     }
 
     .table-responsive {
@@ -278,6 +279,21 @@ import { CatalogoDialogComponent } from './catalogo-dialog.component';
       }
 
       p { margin: 0; font-size: 0.88rem; }
+    }
+
+    @media (max-width: 640px) {
+      .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .card-toolbar {
+        padding: 12px;
+      }
+      .search-field {
+        width: 100%;
+        max-width: 100%;
+      }
     }
   `]
 })

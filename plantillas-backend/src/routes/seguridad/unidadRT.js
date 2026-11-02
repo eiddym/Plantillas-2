@@ -191,8 +191,61 @@ module.exports = app => {
     }
   });
 
+  app.post('/api/v1/seguridad/unidad/fusionar', async (req, res) => {
+    const util = app.src.lib.util;
+    const { origen_id, destino_id } = req.body;
+    if (!origen_id || !destino_id || origen_id === destino_id) {
+      return res.status(400).send(util.formatearMensaje("ERROR", "Debe especificar unidades origen y destino válidas y distintas."));
+    }
+    const t = await app.src.db.sequelize.transaction();
+    try {
+      const Usuario = app.src.db.models.usuario;
+      const Documento = app.src.db.models.documento;
+      
+      // Transferir usuarios asignados a la unidad origen
+      await Usuario.update({ fid_unidad: destino_id }, { where: { fid_unidad: origen_id }, transaction: t });
+      
+      // Transferir subunidades hijas a la unidad destino
+      await unidad.update({ fid_unidad_padre: destino_id }, { where: { fid_unidad_padre: origen_id }, transaction: t });
+      
+      // Transferir documentos si la columna fid_unidad existe
+      if (Documento) {
+        try {
+          await Documento.update({ fid_unidad: destino_id }, { where: { fid_unidad: origen_id }, transaction: t });
+        } catch (e) {}
+      }
+      
+      // Inactivar la unidad origen fusionada
+      await unidad.update({ estado: 'INACTIVO' }, { where: { id_unidad: origen_id }, transaction: t });
+      
+      await t.commit();
+      return res.status(200).send(util.formatearMensaje("EXITO", "Fusión de unidades completada exitosamente."));
+    } catch (error) {
+      await t.rollback();
+      return res.status(412).send(util.formatearMensaje("ERROR", error.message || error));
+    }
+  });
+
   app.options('/api/v1/seguridad/unidad', sequelizeFormly.formly(unidad, app.src.db.models));
-  app.post("/api/v1/seguridad/unidad", sequelizeHandlers.create(unidad)); 
-  app.put("/api/v1/seguridad/unidad/:id", sequelizeHandlers.update(unidad)); 
-  app.delete("/api/v1/seguridad/unidad/:id", sequelizeHandlers.remove(unidad));
+  app.post(
+    "/api/v1/seguridad/unidad",
+    (req, res, next) => {
+      if (!req.body._usuario_creacion) {
+        req.body._usuario_creacion = (req.body.audit_usuario && req.body.audit_usuario.id_usuario) ? req.body.audit_usuario.id_usuario : 1;
+      }
+      next();
+    },
+    sequelizeHandlers.create()
+  ); 
+  app.put(
+    "/api/v1/seguridad/unidad/:id",
+    (req, res, next) => {
+      if (!req.body._usuario_modificacion) {
+        req.body._usuario_modificacion = (req.body.audit_usuario && req.body.audit_usuario.id_usuario) ? req.body.audit_usuario.id_usuario : 1;
+      }
+      next();
+    },
+    sequelizeHandlers.update()
+  ); 
+  app.delete("/api/v1/seguridad/unidad/:id", sequelizeHandlers.remove());
 };

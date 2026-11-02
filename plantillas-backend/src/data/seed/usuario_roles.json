@@ -1,4 +1,6 @@
 [{"id_usuario_rol":2,"fid_usuario":2,"fid_rol":1,"estado":"ACTIVO","_usuario_creacion":1,"_usuario_modificacion":1,"_fecha_creacion":"2026-10-10T03:39:38.911+00:00","_fecha_modificacion":"2026-10-10T03:39:38.911+00:00"}, 
+ {"id_usuario_rol":3,"fid_usuario":2,"fid_rol":2,"estado":"ACTIVO","_usuario_creacion":1,"_usuario_modificacion":1,"_fecha_creacion":"2026-10-10T03:39:38.911+00:00","_fecha_modificacion":"2026-10-10T03:39:38.911+00:00"}, 
+ {"id_usuario_rol":4,"fid_usuario":2,"fid_rol":3,"estado":"ACTIVO","_usuario_creacion":1,"_usuario_modificacion":1,"_fecha_creacion":"2026-10-10T03:39:38.911+00:00","_fecha_modificacion":"2026-10-10T03:39:38.911+00:00"}, 
  {"id_usuario_rol":12,"fid_usuario":1,"fid_rol":1,"estado":"ACTIVO","_usuario_creacion":1,"_usuario_modificacion":null,"_fecha_creacion":"2026-10-10T06:46:14.857+00:00","_fecha_modificacion":"2026-10-10T06:46:14.857+00:00"}, 
  {"id_usuario_rol":13,"fid_usuario":1,"fid_rol":2,"estado":"ACTIVO","_usuario_creacion":1,"_usuario_modificacion":null,"_fecha_creacion":"2026-10-10T06:46:14.857+00:00","_fecha_modificacion":"2026-10-10T06:46:14.857+00:00"}, 
  {"id_usuario_rol":14,"fid_usuario":1,"fid_rol":3,"estado":"ACTIVO","_usuario_creacion":1,"_usuario_modificacion":null,"_fecha_creacion":"2026-10-10T06:46:14.857+00:00","_fecha_modificacion":"2026-10-10T06:46:14.857+00:00"}, 

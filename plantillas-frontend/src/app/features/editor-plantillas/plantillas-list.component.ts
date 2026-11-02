@@ -148,7 +148,8 @@ import { AuthService } from '../../core/auth/auth.service';
       padding: 16px;
     }
     .search-field {
-      width: 320px;
+      width: 100%;
+      max-width: 320px;
       margin-bottom: -1.25em;
     }
     .w-full { width: 100%; }

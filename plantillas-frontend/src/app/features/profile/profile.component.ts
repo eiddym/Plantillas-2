@@ -479,10 +479,19 @@ export class ProfileComponent implements OnInit {
               last_name: `${d.apellido_paterno || ''} ${d.apellido_materno || ''}`.trim() || u.last_name,
               doc: d.numero_documento || u.doc,
               email: d.email || u.email,
-              date_joined: d._fecha_creacion || u.date_joined
+              date_joined: d._fecha_creacion || u.date_joined,
+              foto: d.foto || u.foto || null
             };
             this.authService.currentUser.set(updated);
             localStorage.setItem('user', JSON.stringify(updated));
+
+            // Sincronizar automáticamente hacia el backend si ya existía localmente
+            if (!d.foto && u.foto) {
+              this.http.put<any>(`/api/v1/seguridad/usuario/${u.id}`, { foto: u.foto }).subscribe({
+                next: () => {},
+                error: () => {}
+              });
+            }
           }
         },
         error: () => {}
@@ -518,6 +527,12 @@ export class ProfileComponent implements OnInit {
           this.authService.currentUser.set(updated);
           localStorage.setItem('user', JSON.stringify(updated));
           this.snackBar.open('Foto de perfil actualizada', 'Cerrar', { duration: 3000 });
+
+          // Guardar en la base de datos a través del endpoint de usuario
+          this.http.put<any>(`/api/v1/seguridad/usuario/${u.id}`, { foto: base64 }).subscribe({
+            next: () => {},
+            error: (err) => console.error('Error al sincronizar foto con base de datos:', err)
+          });
         }
       };
       reader.readAsDataURL(file);

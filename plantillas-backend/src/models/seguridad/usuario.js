@@ -76,7 +76,7 @@ module.exports = (sequelize, DataType) => {
             xlabel: 'Tipo de autenticación',
         },
         foto: {
-            type: DataType.STRING,
+            type: DataType.TEXT,
             allowNull: true,
             xlabel: 'Foto de perfil',
         },

@@ -229,6 +229,37 @@ import { SeguridadService, UsuarioAdmin, Unidad, Rol } from '../../core/services
                   <div class="virtuales-sub-section">
                     <h4 class="virtual-title">Usuarios virtuales</h4>
                     <p class="virtual-hint">Gestione la delegación o vinculación de firma virtual para este usuario.</p>
+                    
+                    <div class="virtual-toggle-box">
+                      <mat-checkbox formControlName="virtual" color="primary">
+                        <strong>Activar como Usuario Virtual</strong>
+                      </mat-checkbox>
+                    </div>
+
+                    @if (!userForm.get('virtual')?.value) {
+                      <div class="virtuales-asignables-list">
+                        <label class="field-label-sub">Perfiles virtuales delegados a este titular:</label>
+                        @if (cargandoVirtuales()) {
+                          <span class="loading-hint">Cargando perfiles virtuales...</span>
+                        } @else if (listaTodosVirtuales().length === 0) {
+                          <span class="empty-hint">No hay perfiles virtuales adicionales creados en el sistema.</span>
+                        } @else {
+                          <div class="virtuales-checks">
+                            @for (v of listaTodosVirtuales(); track v.id_usuario) {
+                              <div class="virt-check-item">
+                                <mat-checkbox
+                                  [checked]="esVirtualAsignado(v.id_usuario)"
+                                  (change)="toggleVirtualAsignado(v.id_usuario, $event.checked)"
+                                  color="accent">
+                                  <span>{{ v.cargo || v.nombres }}</span>
+                                  <small *ngIf="v.titular && v.titular.id_usuario !== usuarioEditandoId()" class="virt-en-uso">(En uso por {{ v.titular.nombres }})</small>
+                                </mat-checkbox>
+                              </div>
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
                   </div>
                 </div>
 
@@ -682,11 +713,59 @@ import { SeguridadService, UsuarioAdmin, Unidad, Rol } from '../../core/services
         color: #1e293b;
       }
       .virtual-hint {
-        margin: 0;
+        margin: 0 0 10px 0;
         font-size: 11.5px;
         color: #64748b;
         line-height: 1.4;
       }
+    }
+
+    .virtual-toggle-box {
+      margin-bottom: 10px;
+      padding: 6px 10px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+    }
+
+    .virtuales-asignables-list {
+      margin-top: 8px;
+      padding: 8px 10px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+    }
+
+    .field-label-sub {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 6px;
+    }
+
+    .virtuales-checks {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 140px;
+      overflow-y: auto;
+    }
+
+    .virt-check-item {
+      font-size: 12.5px;
+      color: #1e293b;
+      .virt-en-uso {
+        margin-left: 6px;
+        color: #f59e0b;
+        font-size: 11px;
+      }
+    }
+
+    .loading-hint, .empty-hint {
+      font-size: 11.5px;
+      color: #94a3b8;
+      font-style: italic;
     }
 
     /* Roles Checklist */
@@ -846,6 +925,11 @@ export class UsuariosListComponent implements OnInit {
   // Set de roles seleccionados para el usuario actual
   readonly rolesSeleccionados = signal<Set<number>>(new Set<number>());
 
+  // Estados de usuarios virtuales delegables
+  readonly listaTodosVirtuales = signal<any[]>([]);
+  readonly cargandoVirtuales = signal<boolean>(false);
+  readonly virtualesSeleccionados = signal<Set<number>>(new Set<number>());
+
   readonly userForm = new FormGroup({
     numero_documento: new FormControl('', [Validators.required]),
     nombres: new FormControl('', [Validators.required]),
@@ -856,7 +940,8 @@ export class UsuariosListComponent implements OnInit {
     tipo_autenticacion: new FormControl<'AUTHENTIK' | 'LOCAL' | 'CIUDADANIA_DIGITAL'>('AUTHENTIK', [Validators.required]),
     estado: new FormControl<'ACTIVO' | 'INACTIVO'>('ACTIVO', [Validators.required]),
     fid_unidad: new FormControl<number | null>(null),
-    es_mae: new FormControl<boolean>(false)
+    es_mae: new FormControl<boolean>(false),
+    virtual: new FormControl<boolean>(false)
   });
 
   readonly usuariosFiltrados = computed(() => {
@@ -877,6 +962,33 @@ export class UsuariosListComponent implements OnInit {
   ngOnInit(): void {
     this.cargarUsuarios();
     this.cargarUnidades();
+    this.cargarTodosVirtuales();
+  }
+
+  cargarTodosVirtuales(): void {
+    this.cargandoVirtuales.set(true);
+    this.seguridadService.getTodosUsuariosVirtuales().subscribe({
+      next: (res) => {
+        this.cargandoVirtuales.set(false);
+        this.listaTodosVirtuales.set(res.datos?.resultado || []);
+      },
+      error: () => {
+        this.cargandoVirtuales.set(false);
+      }
+    });
+  }
+
+  esVirtualAsignado(idVirtual: number): boolean {
+    return this.virtualesSeleccionados().has(idVirtual);
+  }
+
+  toggleVirtualAsignado(idVirtual: number, checked: boolean): void {
+    this.virtualesSeleccionados.update(set => {
+      const nuevo = new Set(set);
+      if (checked) nuevo.add(idVirtual);
+      else nuevo.delete(idVirtual);
+      return nuevo;
+    });
   }
 
   cargarUsuarios(): void {
@@ -927,6 +1039,8 @@ export class UsuariosListComponent implements OnInit {
     this.modoEdicion.set(false);
     this.usuarioEditandoId.set(null);
     this.rolesSeleccionados.set(new Set([3])); // Default OPERADOR
+    this.virtualesSeleccionados.set(new Set());
+    this.cargarTodosVirtuales();
 
     this.userForm.reset({
       numero_documento: '',
@@ -938,7 +1052,8 @@ export class UsuariosListComponent implements OnInit {
       tipo_autenticacion: 'AUTHENTIK',
       estado: 'ACTIVO',
       fid_unidad: null,
-      es_mae: false
+      es_mae: false,
+      virtual: false
     });
 
     this.modalUsuarioVisible.set(true);
@@ -947,6 +1062,7 @@ export class UsuariosListComponent implements OnInit {
   abrirModalEditar(u: UsuarioAdmin): void {
     this.modoEdicion.set(true);
     this.usuarioEditandoId.set(u.id_usuario || null);
+    this.cargarTodosVirtuales();
 
     // Obtener los roles del usuario
     const setRoles = new Set<number>();
@@ -957,6 +1073,16 @@ export class UsuariosListComponent implements OnInit {
       });
     }
     this.rolesSeleccionados.set(setRoles);
+
+    // Obtener virtuales vinculados si el titular ya los tenía asignados
+    const setVirt = new Set<number>();
+    if ((u as any).virtuales && Array.isArray((u as any).virtuales)) {
+      (u as any).virtuales.forEach((vItem: any) => {
+        if (vItem.fid_usuario_virtual) setVirt.add(vItem.fid_usuario_virtual);
+        else if (vItem.id_usuario) setVirt.add(vItem.id_usuario);
+      });
+    }
+    this.virtualesSeleccionados.set(setVirt);
 
     // Normalizar tipo autenticacion
     let tipoAuth: 'AUTHENTIK' | 'LOCAL' | 'CIUDADANIA_DIGITAL' = 'LOCAL';
@@ -974,7 +1100,8 @@ export class UsuariosListComponent implements OnInit {
       tipo_autenticacion: tipoAuth,
       estado: (u.estado === 'INACTIVO' ? 'INACTIVO' : 'ACTIVO'),
       fid_unidad: u.fid_unidad || null,
-      es_mae: !!u.es_mae
+      es_mae: !!u.es_mae,
+      virtual: !!(u as any).virtual
     });
 
     this.modalUsuarioVisible.set(true);
@@ -1011,6 +1138,10 @@ export class UsuariosListComponent implements OnInit {
     const v = this.userForm.value;
     const rolesArray = Array.from(this.rolesSeleccionados());
 
+    // Normalizar tipo de autenticación
+    let tipoAuth: string = v.tipo_autenticacion || 'LOCAL';
+    if (tipoAuth === 'CIUDADANIA_DIGITAL') tipoAuth = 'CIUDADANIA';
+
     const payload: any = {
       numero_documento: v.numero_documento,
       nombres: v.nombres,
@@ -1018,12 +1149,17 @@ export class UsuariosListComponent implements OnInit {
       cargo: v.cargo,
       email: v.email,
       usuario: v.usuario,
-      tipo_autenticacion: v.tipo_autenticacion,
+      tipo_autenticacion: tipoAuth,
       estado: v.estado,
       fid_unidad: v.fid_unidad,
       es_mae: !!v.es_mae,
+      virtual: !!v.virtual,
       roles: rolesArray
     };
+
+    if (!v.virtual) {
+      payload.virtuales = Array.from(this.virtualesSeleccionados()).map(id => ({ id_usuario: id, valor: true }));
+    }
 
     if (this.modoEdicion() && this.usuarioEditandoId()) {
       // Actualizar usuario existente
@@ -1041,13 +1177,14 @@ export class UsuariosListComponent implements OnInit {
         }
       });
     } else {
-      // Crear nuevo usuario (con contraseña por defecto '123456')
-      payload.contrasena = '123456';
+      // Crear nuevo usuario (con contraseña por defecto igual a su CI)
+      payload.contrasena = String(v.numero_documento || '').trim();
       this.seguridadService.crearUsuario(payload).subscribe({
-        next: () => {
+        next: (res: any) => {
           this.guardando.set(false);
           this.cerrarModal();
-          this.snackBar.open(`Usuario "${v.usuario}" creado exitosamente.`, 'Aceptar', { duration: 4000 });
+          const msgExito = res?.mensaje || `Usuario "${v.usuario}" creado exitosamente (Contraseña por defecto: CI ${payload.contrasena}).`;
+          this.snackBar.open(msgExito, 'Aceptar', { duration: 5000 });
           this.cargarUsuarios();
         },
         error: (err) => {

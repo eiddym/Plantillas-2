@@ -60,9 +60,10 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
 
         <!-- VISTA HOME (isHomePage): Perfil & Título Panel de Control (Imagen 2) -->
         <ng-container *ngIf="isHomePage()">
-          <div class="home-topbar-brand">
+          <div class="home-topbar-brand" (click)="irAPerfil()" title="Mi Perfil" style="cursor: pointer;">
             <div class="home-avatar-circle">
-              {{ userInitial() }}
+              <img *ngIf="user()?.foto" [src]="user()?.foto" alt="Avatar" class="avatar-circle-img">
+              <span *ngIf="!user()?.foto">{{ userInitial() }}</span>
             </div>
             <div class="home-brand-text">
               <span class="user-handle">.{{ user()?.username || 'system' }}</span>
@@ -143,9 +144,10 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
           </div>
 
           <!-- Card de Usuario en el Sidebar (Imagen 3) -->
-          <div class="sidebar-user-card">
+          <div class="sidebar-user-card" (click)="irAPerfil()" title="Mi Perfil" style="cursor: pointer;">
             <div class="sidebar-user-avatar">
-              {{ userInitial() }}
+              <img *ngIf="user()?.foto" [src]="user()?.foto" alt="Avatar" class="sidebar-avatar-img">
+              <span *ngIf="!user()?.foto">{{ userInitial() }}</span>
             </div>
             <div class="sidebar-user-info">
               <h4 class="sidebar-user-name">
@@ -259,12 +261,17 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
       display: flex;
       align-items: center;
       gap: 8px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      max-width: calc(100vw - 160px);
     }
 
     .breadcrumb-separator {
       color: #64748b;
       font-size: 1.1rem;
       font-weight: 300;
+      flex-shrink: 0;
     }
 
     .breadcrumb-title {
@@ -272,6 +279,9 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
       font-size: 0.95rem;
       font-weight: 600;
       letter-spacing: 0.3px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
 
     /* HOME TOPBAR (Imagen 2: .system Default system user - panel de control) */
@@ -293,6 +303,15 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
       font-weight: 800;
       font-size: 0.95rem;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .avatar-circle-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
 
     .home-brand-text {
@@ -448,6 +467,17 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
       justify-content: center;
       box-shadow: 0 4px 14px rgba(20, 184, 166, 0.3);
       margin-bottom: 12px;
+      overflow: hidden;
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .sidebar-avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
 
     .sidebar-user-name {
@@ -655,7 +685,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
     if (url.startsWith('/profile') || url.startsWith('/cuenta')) return 'Profile';
     if (url.startsWith('/documentos')) return 'Documentos';
     if (url.startsWith('/plantillas')) return 'Plantillas';
-    if (url.startsWith('/aprobacion')) return 'Derivados';
+    if (url.startsWith('/aprobacion')) return 'Pendientes';
     if (url.startsWith('/firmar')) return 'Firmar';
     if (url.startsWith('/archivo')) return 'Archivo';
     if (url.startsWith('/usuario')) return 'Usuarios';
@@ -894,5 +924,12 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   logout(): void {
     this.authService.logout();
+  }
+
+  irAPerfil(): void {
+    this.router.navigate(['/profile']);
+    if (this.isMobile()) {
+      this.sidenavOpen.set(false);
+    }
   }
 }

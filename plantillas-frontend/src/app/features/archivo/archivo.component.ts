@@ -584,7 +584,7 @@ export interface UnidadArchivo {
                   <td mat-cell *matCellDef="let d">
                     <div class="cite-cell">
                       <span class="cite-badge-mono">{{ d.nombre }}</span>
-                      <button mat-icon-button class="btn-copy-mini" (click)="copiarCite(d.nombre); $event.stopPropagation()" matTooltip="Copiar CITE para referenciar en trámites">
+                      <button mat-icon-button class="btn-copy-mini" (click)="copiarCite(d.nombre); $event.stopPropagation()" matTooltip="Copiar CITE para referenciar en documentos">
                         <mat-icon>content_copy</mat-icon>
                       </button>
                     </div>

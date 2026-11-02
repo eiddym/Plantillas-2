@@ -48,7 +48,7 @@ import { FieldType, FieldTypeConfig } from '@ngx-formly/core';
 })
 export class FormlyFieldListasComponent extends FieldType<FieldTypeConfig> {
   getOpciones(): string[] {
-    const opts = this.to['options'] || this.formControl.value;
+    const opts = this.to['options'] || this.formControl?.value;
     if (Array.isArray(opts)) {
       return opts.map(o => typeof o === 'string' ? o : (o.label || o.nombre || JSON.stringify(o)));
     }

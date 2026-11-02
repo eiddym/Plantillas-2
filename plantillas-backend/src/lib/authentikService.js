@@ -6,7 +6,7 @@ const logger = require('./logger');
 /**
  * Sincroniza y crea un usuario en Authentik y lo asigna al grupo correspondiente.
  */
-async function sincronizarUsuarioAuthentik(datosUsuario) {
+async function sincronizarUsuarioAuthentik(datosUsuario, passwordPlain) {
   const username = (datosUsuario.usuario || '').trim();
   const email = (datosUsuario.email || '').trim();
   const nombres = (datosUsuario.nombres || '').trim();
@@ -14,6 +14,7 @@ async function sincronizarUsuarioAuthentik(datosUsuario) {
   const name = `${nombres} ${apellidos}`.trim() || username;
   const cedula = (datosUsuario.numero_documento || '').trim();
   const cargo = (datosUsuario.cargo || '').trim();
+  const defaultPassword = String(passwordPlain || cedula || '').trim();
 
   if (!username || !email) {
     logger.error('[AUTHENTIK_SYNC] Usuario o email no provistos.');
@@ -32,6 +33,7 @@ email = "${email}"
 name = "${name.replace(/"/g, '\\"')}"
 cedula = "${cedula}"
 cargo = "${cargo.replace(/"/g, '\\"')}"
+default_pwd = "${defaultPassword.replace(/"/g, '\\"')}"
 
 user, created = User.objects.get_or_create(username=username)
 user.email = email
@@ -40,6 +42,8 @@ user.is_active = True
 user.attributes = user.attributes or {}
 user.attributes['cedula'] = cedula
 user.attributes['cargo'] = cargo
+if default_pwd:
+    user.set_password(default_pwd)
 user.save()
 
 group, _ = Group.objects.get_or_create(name='Plantillas Users')

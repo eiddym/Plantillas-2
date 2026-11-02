@@ -205,7 +205,7 @@ export class FormlyFieldListaContactosComponent extends FieldType<FieldTypeConfi
   contactosSeleccionados = signal<any[]>([]);
 
   ngOnInit(): void {
-    const val = this.formControl.value;
+    const val = this.formControl?.value;
     if (val && val.lista && Array.isArray(val.lista)) {
       this.contactosSeleccionados.set(val.lista);
     } else if (Array.isArray(val)) {
@@ -240,7 +240,7 @@ export class FormlyFieldListaContactosComponent extends FieldType<FieldTypeConfi
   seleccionarContacto(c: any): void {
     const nuevos = [...this.contactosSeleccionados(), c];
     this.contactosSeleccionados.set(nuevos);
-    this.formControl.setValue({ lista: nuevos });
+    if (this.formControl) this.formControl.setValue({ lista: nuevos });
     this.cerrarSelector();
   }
 
@@ -248,6 +248,6 @@ export class FormlyFieldListaContactosComponent extends FieldType<FieldTypeConfi
     const nuevos = [...this.contactosSeleccionados()];
     nuevos.splice(index, 1);
     this.contactosSeleccionados.set(nuevos);
-    this.formControl.setValue({ lista: nuevos });
+    if (this.formControl) this.formControl.setValue({ lista: nuevos });
   }
 }

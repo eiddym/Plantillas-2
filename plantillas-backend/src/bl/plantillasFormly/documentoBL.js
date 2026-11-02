@@ -41,6 +41,33 @@ function normalizarIds(valor) {
     .filter((item) => item !== undefined && item !== null && item !== '');
 }
 
+function parseIdsSeguro(rawValor, plantillaValorStr, campo, fallbackIds = []) {
+  if (Array.isArray(rawValor)) {
+    const ids = normalizarIds(rawValor).map(Number).filter(n => Number.isInteger(n) && n > 0);
+    if (ids.length > 0) return ids;
+  }
+  if (typeof rawValor === 'string' && rawValor.trim().startsWith('[')) {
+    try {
+      const parsed = JSON.parse(rawValor);
+      const ids = normalizarIds(parsed).map(Number).filter(n => Number.isInteger(n) && n > 0);
+      if (ids.length > 0 || rawValor.trim() === '[]') return ids;
+    } catch (e) {}
+  }
+
+  if (plantillaValorStr) {
+    try {
+      const pv = typeof plantillaValorStr === 'string' ? JSON.parse(plantillaValorStr) : plantillaValorStr;
+      const dg = pv.datosGenerales || pv['datosGenerales-0'] || Object.keys(pv).filter(k => k.includes('datosGenerales')).map(k => pv[k])[0];
+      if (dg && dg[campo] !== undefined && dg[campo] !== null) {
+        const ids = normalizarIds(dg[campo]).map(Number).filter(n => Number.isInteger(n) && n > 0);
+        if (ids.length > 0) return ids;
+      }
+    } catch (e) {}
+  }
+
+  return fallbackIds;
+}
+
 module.exports = {
 
 
@@ -94,7 +121,7 @@ module.exports = {
           .then( pRespuesta =>  {
             if(!Array.isArray(pRespuesta)) pRespuesta = [pRespuesta];
             return resolve(Promise.each(pRespuesta, (it) => {
-              const remitentes = JSON.parse(it.de);
+              const remitentes = parseIdsSeguro(it.de, it.plantilla_valor, 'de', [Number(it._usuario_creacion)]);
               delete datosActualizar.firmante_actual;
               if(it.firmante_actual === null && it.firmaron === null) {
                 datosActualizar.firmante_actual = remitentes[0];
@@ -150,19 +177,28 @@ module.exports = {
 
   documento_enviar: (modeloHistorialFlujo, doc, transaccion, pDirector) =>
   new Promise( (resolve, reject) => {
-    let de = normalizarIds(JSON.parse(doc.de));
+    let de = parseIdsSeguro(doc.de, doc.plantilla_valor, 'de', [Number(doc._usuario_creacion)]);
+    if (de.length === 0 && doc._usuario_creacion) {
+      de = [Number(doc._usuario_creacion)];
+    }
     const _de = de.slice();
     let aprobaron_de = doc.aprobaron_de || [];
-    de = _.pull(de, doc._usuario_creacion)
+    de = _.pull(de, Number(doc._usuario_creacion));
     if (aprobaron_de && aprobaron_de.length > 0 ) {
-      aprobaron_de.push(doc._usuario_creacion)
+      aprobaron_de.push(Number(doc._usuario_creacion));
     } else {
-      aprobaron_de = _de.includes(doc._usuario_creacion) ? [doc._usuario_creacion] : [];
+      aprobaron_de = _de.includes(Number(doc._usuario_creacion)) ? [Number(doc._usuario_creacion)] : [];
     }
-    const via = normalizarIds(JSON.parse(doc.via));
-    const para = normalizarIds(JSON.parse(doc.para));
-    let viaActual = 0, i;
-    const form = JSON.parse(doc.plantilla);
+    const via = parseIdsSeguro(doc.via, doc.plantilla_valor, 'via', []);
+    const para = parseIdsSeguro(doc.para, doc.plantilla_valor, 'para', []);
+    if (para.length === 0) {
+      return reject(new Error('Debe seleccionar un destinatario (PARA) antes de enviar el documento.'));
+    }
+    let viaActual = 0;
+    let form = [];
+    try {
+      form = typeof doc.plantilla === 'string' ? JSON.parse(doc.plantilla) : (doc.plantilla || []);
+    } catch (e) {}
 
     let aprobarPorDireccion = false;
     for (let f = 0; f < form.length; f++) {
@@ -185,9 +221,12 @@ module.exports = {
     }
 
     doc.update({
+      de: JSON.stringify(_de),
+      via: JSON.stringify(via),
+      para: JSON.stringify(para),
       via_actual: viaActual,
       estado: 'ENVIADO',
-      usuario_modificacion: doc._usuario_creacion,
+      _usuario_modificacion: doc._usuario_creacion,
       aprobaron_de,
     }, transaccion)
     .then(doc =>
@@ -743,18 +782,25 @@ module.exports = {
 
       if(pDocumento.estado !== 'NUEVO'){
 
-        const via = JSON.parse(pDocumento.via);
-        const para = JSON.parse(pDocumento.para);
-        const de = JSON.parse(pDocumento.de);
+        const via = parseIdsSeguro(pDocumento.via, pDocumento.plantilla_valor, 'via', []);
+        const para = parseIdsSeguro(pDocumento.para, pDocumento.plantilla_valor, 'para', []);
+        const de = parseIdsSeguro(pDocumento.de, pDocumento.plantilla_valor, 'de', [Number(pDocumento._usuario_creacion)]);
         module.exports.obtenerDocumentos(pModeloDocumento, pModeloHistorial, pDocumento)
         .then(pDocumentos => {
 
           if(pDocumentos.length > 0 ){
-            return pDocumentos.forEach((pDoc, pIndice) => {
+            let resolved = false;
+            const safeResolve = (val) => {
+              if (!resolved) {
+                resolved = true;
+                resolve(val);
+              }
+            };
+            pDocumentos.forEach((pDoc, pIndice) => {
 
               switch (pDocumento.estado) {
                 case 'CERRADO':
-                  pUsuario.roles.forEach(pRol => {
+                  (pUsuario.roles || []).forEach(pRol => {
                     switch (pRol.rol.nombre) {
                       case 'OPERADOR':
                         if(pDoc._usuario_creacion == pUsuario.id_usuario ||
@@ -935,6 +981,7 @@ module.exports = {
 
               }
             });
+            safeResolve(true);
           } else {
             resolve(false);
           }
@@ -1180,16 +1227,16 @@ module.exports = {
 
   aprobarVia: (modelos, documento, datos, transaccion) =>
     new Promise((resolve, reject) => {
-      const via = normalizarIds(JSON.parse(documento.via));
+      const via = parseIdsSeguro(documento.via, documento.plantilla_valor, 'via', []);
       const plantilla = JSON.parse(documento.plantilla);
-      const para = normalizarIds(JSON.parse(documento.para))[0];
+      const para = parseIdsSeguro(documento.para, documento.plantilla_valor, 'para', [])[0];
       const compDatosGenerales = _.find(plantilla, ['type', 'datosGenerales']);
       const aprobaron_de = documento.aprobaron_de || [];
 
       let viaActual = documento.via_actual;
       let aprobarPorDireccion = false;
 
-      if (compDatosGenerales.templateOptions) {
+      if (compDatosGenerales && compDatosGenerales.templateOptions) {
         const opcionesComponente = compDatosGenerales.templateOptions;
         aprobarPorDireccion = opcionesComponente.aprobarPorDireccion || false;
       }
@@ -1199,7 +1246,7 @@ module.exports = {
           return indiceVia = indice + 1;
         }
       });
-      let de = normalizarIds(JSON.parse(documento.de));
+      let de = parseIdsSeguro(documento.de, documento.plantilla_valor, 'de', [Number(documento._usuario_creacion)]);
       const es_flujo_de = de.length > aprobaron_de.length;
       de = _.pull(de, documento._usuario_creacion)
       if (viaActual && es_flujo_de) {
@@ -1366,7 +1413,7 @@ module.exports = {
       .then(actualizacionResp => module.exports.generarCodigo(modelos, actualizacionResp, datos.usuarioModificacion, tr))
       .then(codigoResp => {
         documento.codigo = codigoResp.codigo;
-        const remitentes = JSON.parse(documento.de);
+        const remitentes = parseIdsSeguro(documento.de, documento.plantilla_valor, 'de', [Number(documento._usuario_creacion)]);
         if (Array.isArray(remitentes) && remitentes.length > 0 && documento.dataValues.firmaron === null) {
           firmanteActual = remitentes[0];
         }
@@ -1430,17 +1477,23 @@ module.exports = {
       include: { model: modelos.unidad, as: 'unidad' },
     })
     .then(usuarioResp => {
-      const compCite = _.find(plantilla, ['type', 'cite']);
-      const esCiteGeneral = (compCite.templateOptions.tipo == 'general');
-      const unidad = usuarioResp.unidad;
-      if (!compCite.templateOptions.tipo) throw Error('La plantilla no cuenta con el control de "CITE"');
-      if (!unidad) throw Error('El usuario que envió el documento no tiene UNIDAD, solicite al administrador del sistema que le asigne su unidad');
+      const compCite = _.find(plantilla, ['type', 'cite']) || { templateOptions: { tipo: 'general' } };
+      const tipoCite = (compCite.templateOptions && compCite.templateOptions.tipo) || 'general';
+      const esCiteGeneral = (tipoCite == 'general');
+      const unidad = usuarioResp ? usuarioResp.unidad : null;
+      const abrevDoc = (documento.abreviacion && documento.abreviacion.trim())
+        ? documento.abreviacion.trim()
+        : ((documento.nombre_plantilla || 'NI')
+            .split(/\s+/)
+            .filter(Boolean)
+            .map(w => w[0].toUpperCase())
+            .join('') || 'NI');
       if (documento.fecha !== undefined && documento.fecha !== null) {
         tieneCite = true;
         return documento.nombre;
       }
-      if (esCiteGeneral) return (`${citeGuia}/${documento.abreviacion}`);
-      if (unidad) return `${citeGuia}-${unidad.abreviacion}/${documento.abreviacion}`;
+      if (esCiteGeneral || !unidad) return (`${citeGuia}/${abrevDoc}`);
+      return `${citeGuia}-${unidad.abreviacion}/${abrevDoc}`;
     })
     .then(citeResp => {
       citeSinNumero = citeResp;
@@ -2080,7 +2133,7 @@ module.exports = {
         }
 
         const componentes = Object.keys(plantillaValorObj)
-          .filter(key => key.indexOf('datosGenerales-') > -1)
+          .filter(key => key === 'datosGenerales' || key.indexOf('datosGenerales-') > -1)
           .map(key => plantillaValorObj[key])
           .filter(Boolean);
 
@@ -2092,21 +2145,21 @@ module.exports = {
         }
 
         const datosGenerales = componentes[0];
-        const de = Array.isArray(datosGenerales.de) ? datosGenerales.de : [];
-        const via = Array.isArray(datosGenerales.via) ? datosGenerales.via : [];
-        const para = datosGenerales.para ? [datosGenerales.para] : [];
+        const de = Array.isArray(datosGenerales.de) ? datosGenerales.de : (datosGenerales.de ? [datosGenerales.de] : []);
+        const via = Array.isArray(datosGenerales.via) ? datosGenerales.via : (datosGenerales.via ? [datosGenerales.via] : []);
+        const para = Array.isArray(datosGenerales.para) ? datosGenerales.para : (datosGenerales.para ? [datosGenerales.para] : []);
 
         const obtenerIds = (usuarios, campo) => {
-          const ids = usuarios.map(item => Number(item && item.id_usuario));
-
-          if (ids.some(id => !Number.isInteger(id) || id <= 0)) {
-            throw new Error(`Existe un usuario inválido en ${campo}.`);
-          }
-
+          const ids = usuarios
+            .map(item => Number(item && (item.id_usuario || item.id || item)))
+            .filter(id => Number.isInteger(id) && id > 0);
           return ids;
         };
 
-        const idDe = obtenerIds(de, 'DE');
+        let idDe = obtenerIds(de, 'DE');
+        if (idDe.length === 0 && Number.isInteger(idCreador) && idCreador > 0) {
+          idDe = [idCreador];
+        }
         const idVia = obtenerIds(via, 'VÍA');
         const idPara = obtenerIds(para, 'PARA');
 
@@ -2114,7 +2167,8 @@ module.exports = {
           throw new Error('Debe existir al menos un usuario en DE.');
         }
 
-        const participantes = [...idPara, ...idDe, ...idVia];
+        const esDifusionGeneral = para.some(p => p && (p.todos || p.id_usuario === 'TODOS' || p.id_usuario === 0 || p.nombres === 'A TODO EL PERSONAL'));
+        const participantes = esDifusionGeneral ? [...idDe, ...idVia] : [...idPara, ...idDe, ...idVia];
         const existeParticipantesRepetidos = participantes.some(
           (id, index) => participantes.indexOf(id) !== index
         );

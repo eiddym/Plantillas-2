@@ -1,8 +1,8 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { CdkDragDrop, DragDropModule, copyArrayItem, moveItemInArray } from '@angular/cdk/drag-drop';
+import { FormBuilder, FormGroup, ReactiveFormsModule, FormsModule, Validators } from '@angular/forms';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,13 +12,16 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSelectModule } from '@angular/material/select';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { FormlyFieldConfig, FormlyModule } from '@ngx-formly/core';
 import { PlantillaFormly, PlantillasService } from '../../core/services/plantillas.service';
+import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
 
 interface PaletteItem {
   name: string;
   type: string;
   icon: string;
+  category: string;
   defaultConfig: Partial<FormlyFieldConfig>;
 }
 
@@ -29,6 +32,7 @@ interface PaletteItem {
     CommonModule,
     RouterModule,
     ReactiveFormsModule,
+    FormsModule,
     DragDropModule,
     MatCardModule,
     MatButtonModule,
@@ -36,6 +40,7 @@ interface PaletteItem {
     MatInputModule,
     MatFormFieldModule,
     MatSelectModule,
+    MatCheckboxModule,
     MatTabsModule,
     MatSnackBarModule,
     MatTooltipModule,
@@ -50,8 +55,8 @@ interface PaletteItem {
             <mat-icon>arrow_back</mat-icon>
           </a>
           <div>
-            <h2>{{ isEditing() ? 'Editar Plantilla: ' + metaForm.get('nombre')?.value : 'Diseñador de Plantilla' }}</h2>
-            <span class="subtitle">Lienzo interactivo Drag & Drop con motor &#64;ngx-formly</span>
+            <h2>{{ isEditing() ? 'Editar Plantilla: ' + (metaForm.get('nombre')?.value || '') : 'Diseñador de Plantilla' }}</h2>
+            <span class="subtitle">Lienzo interactivo con validación de esquema y previsualización en vivo</span>
           </div>
         </div>
         <div class="topbar-actions">
@@ -78,19 +83,9 @@ interface PaletteItem {
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="meta-field-short">
-            <mat-label>Abreviación (Sigla)</mat-label>
-            <input matInput formControlName="abreviacion" placeholder="Ej. ITC">
-            @if (metaForm.get('abreviacion')?.hasError('required')) {
-              <mat-error>Requerido</mat-error>
-            }
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="meta-field-short">
-            <mat-label>Formato de Hoja</mat-label>
-            <mat-select formControlName="tipoHoja">
-              <mat-option value="Letter">Carta (21.6 x 27.9 cm)</mat-option>
-              <mat-option value="Oficio">Oficio (21.6 x 33.0 cm)</mat-option>
-            </mat-select>
+            <mat-label>Abreviación (Sigla Automática)</mat-label>
+            <input matInput formControlName="abreviacion" readonly placeholder="Ej. ITC">
+            <mat-hint>Calculada sin conectores</mat-hint>
           </mat-form-field>
         </form>
       </mat-card>
@@ -102,7 +97,7 @@ interface PaletteItem {
           <mat-card-header>
             <mat-icon mat-card-avatar color="primary">widgets</mat-icon>
             <mat-card-title>Componentes</mat-card-title>
-            <mat-card-subtitle>Arrastre elementos al lienzo</mat-card-subtitle>
+            <mat-card-subtitle>Haga clic o arrastre al lienzo</mat-card-subtitle>
           </mat-card-header>
 
           <div
@@ -111,10 +106,19 @@ interface PaletteItem {
             [cdkDropListData]="paletteItems"
             [cdkDropListConnectedTo]="[canvasList]"
             class="palette-list">
-            @for (item of paletteItems; track item.type) {
-              <div cdkDrag class="palette-item">
+            @for (item of paletteItems; track item.name) {
+              <div 
+                cdkDrag 
+                class="palette-item"
+                (click)="agregarDirecto(item)"
+                matTooltip="Haga clic para agregar al final del documento"
+              >
                 <mat-icon class="item-icon">{{ item.icon }}</mat-icon>
-                <span class="item-name">{{ item.name }}</span>
+                <div class="item-text">
+                  <span class="item-name">{{ item.name }}</span>
+                  <span class="item-category">{{ item.category }}</span>
+                </div>
+                <mat-icon class="add-indicator">add_circle_outline</mat-icon>
               </div>
             }
           </div>
@@ -125,7 +129,7 @@ interface PaletteItem {
           <mat-card-header>
             <mat-icon mat-card-avatar color="accent">view_stream</mat-icon>
             <mat-card-title>Estructura del Documento</mat-card-title>
-            <mat-card-subtitle>Reordene arrastrando verticalmente</mat-card-subtitle>
+            <mat-card-subtitle>Seleccione para editar propiedades o reordene</mat-card-subtitle>
           </mat-card-header>
 
           <div
@@ -135,47 +139,154 @@ interface PaletteItem {
             (cdkDropListDropped)="onDrop($event)"
             class="canvas-list">
             @for (field of canvasFields; track field; let i = $index) {
-              <div cdkDrag class="canvas-item">
-                <div class="canvas-item-handle" cdkDragHandle>
+              <div 
+                cdkDrag 
+                class="canvas-item"
+                [class.selected]="selectedFieldIndex() === i"
+                (click)="seleccionarCampo(i)"
+              >
+                <div class="canvas-item-handle" cdkDragHandle (click)="$event.stopPropagation()">
                   <mat-icon>drag_indicator</mat-icon>
                 </div>
                 <div class="canvas-item-info">
                   <span class="type-badge">{{ field.type }}</span>
-                  <strong>{{ field.templateOptions?.label || field.key || field.type }}</strong>
+                  <strong>{{ field.templateOptions?.label || field.templateOptions?.['labelx'] || field.key || field.type }}</strong>
                 </div>
-                <button mat-icon-button color="warn" (click)="eliminarCampo(i)" matTooltip="Eliminar del lienzo">
-                  <mat-icon>close</mat-icon>
-                </button>
+                <div class="canvas-item-actions">
+                  <button mat-icon-button (click)="duplicarCampo(i, $event)" matTooltip="Duplicar">
+                    <mat-icon>content_copy</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" (click)="eliminarCampo(i, $event)" matTooltip="Eliminar">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
               </div>
             } @empty {
               <div class="canvas-placeholder">
                 <mat-icon>drag_indicator</mat-icon>
-                <p>Arrastre componentes desde la paleta izquierda aquí para comenzar el diseño.</p>
+                <p>Arrastre componentes desde la paleta izquierda o haga clic sobre ellos para comenzar.</p>
               </div>
             }
           </div>
+
+          <!-- Inspector / Propiedades del campo seleccionado -->
+          @if (selectedFieldIndex() !== null && canvasFields[selectedFieldIndex()!]) {
+            <div class="field-inspector">
+              <div class="inspector-header">
+                <h4>
+                  <mat-icon>tune</mat-icon>
+                  Propiedades: {{ canvasFields[selectedFieldIndex()!].type }}
+                </h4>
+                <button mat-icon-button (click)="selectedFieldIndex.set(null)">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+
+              <div class="inspector-body">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Etiqueta / Título del Campo</mat-label>
+                  <input
+                    matInput
+                    [ngModel]="canvasFields[selectedFieldIndex()!].templateOptions?.label || ''"
+                    (ngModelChange)="actualizarPropiedad('label', $event)"
+                  />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width" *ngIf="canvasFields[selectedFieldIndex()!].type !== 'vacio' && canvasFields[selectedFieldIndex()!].type !== 'texto'">
+                  <mat-label>Texto de Ayuda / Marcador (Placeholder)</mat-label>
+                  <input
+                    matInput
+                    [ngModel]="canvasFields[selectedFieldIndex()!].templateOptions?.placeholder || ''"
+                    (ngModelChange)="actualizarPropiedad('placeholder', $event)"
+                  />
+                </mat-form-field>
+
+                <div class="inspector-row" *ngIf="canvasFields[selectedFieldIndex()!].type === 'texto' || canvasFields[selectedFieldIndex()!].type === 'parrafo'">
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Jerarquía Tipográfica</mat-label>
+                    <mat-select
+                      [ngModel]="canvasFields[selectedFieldIndex()!].templateOptions?.['tipo'] || 'h2'"
+                      (ngModelChange)="actualizarPropiedad('tipo', $event)"
+                    >
+                      <mat-option value="h1">Título Principal (H1)</mat-option>
+                      <mat-option value="h2">Subtítulo Institucional (H2)</mat-option>
+                      <mat-option value="h3">Encabezado de Sección (H3)</mat-option>
+                      <mat-option value="h4">Subencabezado Nivel 4 (H4)</mat-option>
+                      <mat-option value="h5">Subencabezado Nivel 5 (H5)</mat-option>
+                      <mat-option value="h6">Epígrafe / Subtítulo Menor (H6)</mat-option>
+                      <mat-option value="p">Párrafo de Texto (P)</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+
+                <div class="inspector-row" *ngIf="canvasFields[selectedFieldIndex()!].type === 'texto' || canvasFields[selectedFieldIndex()!].type === 'parrafo'">
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Alineación del Texto</mat-label>
+                    <mat-select
+                      [ngModel]="getCampoAlineacion(canvasFields[selectedFieldIndex()!])"
+                      (ngModelChange)="actualizarAlineacion($event)"
+                    >
+                      <mat-option value="left">
+                        <mat-icon style="vertical-align: middle; margin-right: 6px; font-size: 18px; width: 18px; height: 18px;">format_align_left</mat-icon>
+                        Alinear a la Izquierda
+                      </mat-option>
+                      <mat-option value="center">
+                        <mat-icon style="vertical-align: middle; margin-right: 6px; font-size: 18px; width: 18px; height: 18px;">format_align_center</mat-icon>
+                        Centrado
+                      </mat-option>
+                      <mat-option value="right">
+                        <mat-icon style="vertical-align: middle; margin-right: 6px; font-size: 18px; width: 18px; height: 18px;">format_align_right</mat-icon>
+                        Alinear a la Derecha
+                      </mat-option>
+                      <mat-option value="justify">
+                        <mat-icon style="vertical-align: middle; margin-right: 6px; font-size: 18px; width: 18px; height: 18px;">format_align_justify</mat-icon>
+                        Justificado
+                      </mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+
+                <div class="inspector-checkboxes">
+                  <mat-checkbox
+                    [ngModel]="canvasFields[selectedFieldIndex()!].templateOptions?.required || false"
+                    (ngModelChange)="actualizarPropiedad('required', $event)"
+                    *ngIf="canvasFields[selectedFieldIndex()!].type !== 'vacio' && canvasFields[selectedFieldIndex()!].type !== 'texto'"
+                  >
+                    Campo Obligatorio
+                  </mat-checkbox>
+                </div>
+              </div>
+            </div>
+          }
         </mat-card>
 
         <!-- Preview Column -->
         <mat-card class="preview-card">
           <mat-card-header>
             <mat-icon mat-card-avatar color="primary">visibility</mat-icon>
-            <mat-card-title>Vista Previa (Hoja {{ metaForm.get('tipoHoja')?.value === 'Oficio' ? 'Oficio' : 'Carta' }})</mat-card-title>
-            <mat-card-subtitle>Diagramación oficial para impresión y firma</mat-card-subtitle>
+            <mat-card-title>Vista Previa del Documento</mat-card-title>
+            <mat-card-subtitle>Diagramación en tiempo real</mat-card-subtitle>
           </mat-card-header>
 
           <div class="preview-content">
-            <div [ngClass]="metaForm.get('tipoHoja')?.value === 'Oficio' ? 'pagina-oficio' : 'pagina-carta'">
-              @defer (on idle) {
+            <div class="pagina-documento">
+              <!-- Cabecera Institucional Fija con CITE y Fecha -->
+              <div class="preview-fixed-header">
+                <span class="preview-cite">CITE: [Autogenerado al aprobar]</span>
+                <span class="preview-fecha">FECHA: [Fecha oficial]</span>
+              </div>
+              <div class="preview-header-line"></div>
+
+              @if (mostrarPreview && previewFields.length > 0) {
                 <form [formGroup]="previewForm">
                   <formly-form
                     [form]="previewForm"
-                    [fields]="canvasFields"
+                    [fields]="previewFields"
                     [model]="previewModel">
                   </formly-form>
                 </form>
-              } @placeholder {
-                <div class="preview-placeholder">Generando vista previa dinámica...</div>
+              } @else {
+                <div class="preview-placeholder">Agregue componentes para ver la vista previa.</div>
               }
             </div>
           </div>
@@ -185,8 +296,33 @@ interface PaletteItem {
   `,
   styles: [`
     .editor-container {
-      max-width: 1400px;
+      max-width: 1560px;
       margin: 0 auto;
+      padding: 0 8px;
+    }
+    .preview-fixed-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0 10px 0;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #0f172a;
+      .preview-cite { font-family: monospace; color: #1e293b; }
+      .preview-fecha { color: #475569; font-size: 0.88rem; }
+    }
+    .preview-header-line {
+      height: 1px;
+      background: #e2e8f0;
+      margin-bottom: 16px;
+    }
+    .pagina-documento {
+      background: #ffffff;
+      padding: 24px 20px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      min-height: 480px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     }
     .editor-topbar {
       display: flex;
@@ -197,7 +333,7 @@ interface PaletteItem {
         display: flex;
         align-items: center;
         gap: 12px;
-        h2 { margin: 0; color: #1a237e; font-size: 1.5rem; }
+        h2 { margin: 0; color: #1a237e; font-size: 1.45rem; }
         .subtitle { color: #607d8b; font-size: 0.85rem; }
       }
       .topbar-actions {
@@ -220,14 +356,14 @@ interface PaletteItem {
 
     .workspace-grid {
       display: grid;
-      grid-template-columns: 280px 1fr 1fr;
-      gap: 20px;
+      grid-template-columns: 290px 1fr 1fr;
+      gap: 16px;
       align-items: start;
     }
 
     .palette-card, .canvas-card, .preview-card {
       border-radius: 12px;
-      min-height: 550px;
+      min-height: 600px;
     }
 
     .palette-list {
@@ -235,29 +371,39 @@ interface PaletteItem {
       display: flex;
       flex-direction: column;
       gap: 8px;
+      max-height: 650px;
+      overflow-y: auto;
     }
     .palette-item {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 10px 14px;
-      background: #f5f7fa;
-      border: 1px solid #e0e0e0;
+      padding: 9px 12px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
       border-radius: 8px;
-      cursor: grab;
-      font-weight: 500;
-      color: #37474f;
-      transition: background 0.15s ease, box-shadow 0.15s ease;
+      cursor: pointer;
+      transition: all 0.15s ease;
       &:hover {
-        background: #e8eaf6;
-        border-color: #c5cae9;
+        background: #f0fdf4;
+        border-color: #86efac;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        .add-indicator { color: #16a34a; }
       }
-      .item-icon { color: #3f51b5; font-size: 20px; width: 20px; height: 20px; }
+      .item-icon { color: #0284c7; font-size: 20px; width: 20px; height: 20px; }
+      .item-text {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .item-name { font-size: 13px; font-weight: 600; color: #1e293b; }
+      .item-category { font-size: 10.5px; color: #64748b; text-transform: uppercase; }
+      .add-indicator { color: #94a3b8; font-size: 18px; width: 18px; height: 18px; }
     }
 
     .canvas-list {
       padding: 12px;
-      min-height: 400px;
+      min-height: 250px;
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -267,25 +413,35 @@ interface PaletteItem {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 60px 20px;
-      color: #90a4ae;
+      padding: 50px 20px;
+      color: #94a3b8;
       text-align: center;
-      border: 2px dashed #cfd8dc;
+      border: 2px dashed #cbd5e1;
       border-radius: 8px;
       mat-icon { font-size: 40px; width: 40px; height: 40px; margin-bottom: 8px; }
     }
     .canvas-item {
       display: flex;
       align-items: center;
-      padding: 8px 12px;
+      padding: 6px 10px;
       background: #ffffff;
-      border: 1px solid #e0e0e0;
+      border: 1px solid #e2e8f0;
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      &:hover {
+        border-color: #94a3b8;
+      }
+      &.selected {
+        border-color: #0284c7;
+        background-color: #f0f9ff;
+        box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+      }
       .canvas-item-handle {
         cursor: grab;
-        color: #b0bec5;
-        margin-right: 8px;
+        color: #94a3b8;
+        margin-right: 6px;
         display: flex;
       }
       .canvas-item-info {
@@ -293,61 +449,95 @@ interface PaletteItem {
         display: flex;
         align-items: center;
         gap: 8px;
+        min-width: 0;
+        strong {
+          font-size: 12.5px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
       }
       .type-badge {
-        font-size: 0.75rem;
-        background: #e3f2fd;
-        color: #1976d2;
+        font-size: 0.72rem;
+        background: #e0f2fe;
+        color: #0369a1;
         padding: 2px 6px;
         border-radius: 4px;
         font-weight: 600;
+        flex-shrink: 0;
+      }
+      .canvas-item-actions {
+        display: flex;
+        button { width: 32px; height: 32px; }
+        mat-icon { font-size: 18px; width: 18px; height: 18px; }
+      }
+    }
+
+    .field-inspector {
+      margin: 12px;
+      padding: 14px;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      animation: fadeIn 0.2s ease;
+      .inspector-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        h4 {
+          margin: 0;
+          font-size: 13.5px;
+          color: #0f172a;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          mat-icon { font-size: 18px; width: 18px; height: 18px; color: #0284c7; }
+        }
+        button { width: 28px; height: 28px; }
+      }
+      .full-width {
+        width: 100%;
+        margin-bottom: -1em;
+      }
+      .inspector-checkboxes {
+        margin-top: 10px;
       }
     }
 
     .preview-content {
-      padding: 20px;
-      background: #ffffff;
+      padding: 16px;
+      background: #f8fafc;
       border-radius: 8px;
       min-height: 400px;
     }
-
-    .cdk-drag-preview {
-      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-      border-radius: 8px;
-      background: #ffffff;
-      padding: 10px;
-    }
-    .cdk-drag-placeholder {
-      opacity: 0.3;
-      border: 2px dashed #3f51b5;
+    .preview-placeholder {
+      padding: 40px 10px;
+      text-align: center;
+      color: #94a3b8;
+      font-style: italic;
     }
 
-    @media (max-width: 960px) {
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 1200px) {
+      .workspace-grid {
+        grid-template-columns: 260px 1fr;
+      }
+      .preview-card {
+        grid-column: span 2;
+      }
+    }
+
+    @media (max-width: 800px) {
       .workspace-grid {
         grid-template-columns: 1fr;
-        gap: 16px;
       }
-
-      .editor-topbar {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 12px;
-
-        .topbar-actions {
-          width: 100%;
-          button {
-            flex: 1 1 auto;
-          }
-        }
-      }
-
-      .meta-field, .meta-field-short {
-        width: 100% !important;
-        min-width: 100% !important;
-      }
-
-      .palette-card, .canvas-card, .preview-card {
-        min-height: auto;
+      .preview-card {
+        grid-column: span 1;
       }
     }
   `]
@@ -361,63 +551,235 @@ export class PlantillaEditorComponent implements OnInit {
 
   readonly isEditing = signal(false);
   readonly saving = signal(false);
+  readonly selectedFieldIndex = signal<number | null>(null);
   plantillaId: number | null = null;
 
   readonly metaForm: FormGroup = this.fb.group({
     nombre: ['', [Validators.required]],
-    abreviacion: ['', [Validators.required]],
-    tipoHoja: ['Letter', [Validators.required]]
+    abreviacion: ['', [Validators.required]]
   });
 
-  readonly previewForm = new FormGroup({});
-  readonly previewModel: any = {};
+  previewForm = new FormGroup({});
+  previewModel: Record<string, any> = {};
+  previewFields: FormlyFieldConfig[] = [];
 
   readonly paletteItems: PaletteItem[] = [
     {
-      name: 'Encabezado CITE',
-      type: 'cite',
-      icon: 'tag',
-      defaultConfig: {
-        type: 'cite',
-        templateOptions: { labelCite: 'CITE: MPT-INF-001/2026', labelFecha: 'FECHA: 14/10/2026', tipoMembrete: 'sin membrete' }
-      }
-    },
-    {
-      name: 'Datos Generales (PARA/DE/REF)',
+      name: 'Datos Generales (PARA / DE / REF)',
       type: 'datosGenerales',
+      category: 'Cabecera',
       icon: 'badge',
       defaultConfig: {
         type: 'datosGenerales',
         key: 'datosGenerales',
-        templateOptions: { show: { para: true, via: false, de: true, ref: true } }
+        templateOptions: { show: { para: true, via: true, de: true, ref: true } }
       }
     },
     {
       name: 'Título Institucional',
       type: 'texto',
+      category: 'Tipografía',
       icon: 'title',
       defaultConfig: {
         type: 'texto',
-        templateOptions: { label: 'INFORME TÉCNICO', tipo: 'h2', className: 'ap-text-center' }
+        key: 'titulo',
+        templateOptions: { label: 'TÍTULO DEL DOCUMENTO', tipo: 'h2', className: 'ap-text-center' }
       }
     },
     {
-      name: 'Cuerpo de Texto Enriquecido',
+      name: 'Párrafo de Texto',
+      type: 'parrafo',
+      category: 'Tipografía',
+      icon: 'segment',
+      defaultConfig: {
+        type: 'parrafo',
+        key: 'parrafo',
+        templateOptions: { label: 'Texto descriptivo o cláusula institucional...', tipo: 'p', className: 'ap-text-justify' }
+      }
+    },
+    {
+      name: 'Editor Enriquecido (TinyMCE)',
       type: 'editorTexto',
+      category: 'Redacción',
       icon: 'format_align_left',
       defaultConfig: {
         type: 'editorTexto',
         key: 'cuerpo',
-        templateOptions: { label: 'Contenido del Documento' }
+        templateOptions: { label: 'Cuerpo Principal del Documento' }
       }
     },
     {
-      name: 'Espaciador',
+      name: 'Campo de Texto Corto (Input)',
+      type: 'inputt',
+      category: 'Campos',
+      icon: 'edit_note',
+      defaultConfig: {
+        type: 'inputt',
+        key: 'campoTexto',
+        templateOptions: { labelx: 'DETALLE:', labelw: 15, placeholder: 'Ingrese dato...' }
+      }
+    },
+    {
+      name: 'Área de Texto (Textarea)',
+      type: 'textarea',
+      category: 'Campos',
+      icon: 'notes',
+      defaultConfig: {
+        type: 'textarea',
+        key: 'observaciones',
+        templateOptions: { label: 'Observaciones y consideraciones adicionales', rows: 3 }
+      }
+    },
+    {
+      name: 'Selección Desplegable (Select)',
+      type: 'select',
+      category: 'Campos',
+      icon: 'arrow_drop_down_circle',
+      defaultConfig: {
+        type: 'select',
+        key: 'clasificacion',
+        templateOptions: {
+          label: 'Clasificación Oficial',
+          options: [
+            { label: 'Reservado', value: 'Reservado' },
+            { label: 'Confidencial', value: 'Confidencial' },
+            { label: 'Público', value: 'Público' }
+          ]
+        }
+      }
+    },
+    {
+      name: 'Casilla de Verificación (Checkbox)',
+      type: 'checkbox',
+      category: 'Campos',
+      icon: 'check_box',
+      defaultConfig: {
+        type: 'checkbox',
+        key: 'confirmacion',
+        templateOptions: { label: 'Acepto y declaro conformidad institucional' }
+      }
+    },
+    {
+      name: 'Selector de Fecha (Datepicker)',
+      type: 'calendario',
+      category: 'Campos',
+      icon: 'event',
+      defaultConfig: {
+        type: 'calendario',
+        key: 'fechaLimite',
+        templateOptions: { label: 'Fecha Límite / Cumplimiento' }
+      }
+    },
+    {
+      name: 'Anexos y Adjuntos (PDF)',
+      type: 'archivo',
+      category: 'Archivos',
+      icon: 'attach_file',
+      defaultConfig: {
+        type: 'archivo',
+        key: 'archivoAdjunto',
+        templateOptions: { label: 'Documentos Adjuntos de Respaldo', multiple: true }
+      }
+    },
+    {
+      name: 'Con Copia / Archivo (CC)',
+      type: 'ccArchivo',
+      category: 'Cierre',
+      icon: 'mark_email_read',
+      defaultConfig: {
+        type: 'ccArchivo',
+        key: 'ccArchivo',
+        templateOptions: { label: 'CC/Archivo:' }
+      }
+    },
+    {
+      name: 'Referencias / Doc. Relacionados',
+      type: 'documentosRelacionados',
+      category: 'Trazabilidad',
+      icon: 'link',
+      defaultConfig: {
+        type: 'documentosRelacionados',
+        key: 'documentosRelacionados',
+        templateOptions: { label: 'Referencias:' }
+      }
+    },
+    {
+      name: 'Contenedor 2 Columnas (Layout)',
+      type: 'layout',
+      category: 'Estructura',
+      icon: 'view_column',
+      defaultConfig: {
+        type: 'layout',
+        key: 'columnas',
+        fieldGroup: [
+          { type: 'inputt', key: 'col1', templateOptions: { labelx: 'COLUMNA 1:', labelw: 15 } },
+          { type: 'inputt', key: 'col2', templateOptions: { labelx: 'COLUMNA 2:', labelw: 15 } }
+        ]
+      }
+    },
+    {
+      name: 'Espaciador en Blanco',
       type: 'vacio',
+      category: 'Estructura',
       icon: 'space_bar',
       defaultConfig: {
         type: 'vacio',
         templateOptions: { alto: 20 }
+      }
+    },
+    {
+      name: 'Partidas Presupuestarias (Caja Chica)',
+      type: 'cajachica',
+      category: 'Financiero',
+      icon: 'account_balance_wallet',
+      defaultConfig: {
+        type: 'cajachica',
+        key: 'cajachica',
+        templateOptions: { label: 'ASIGNACIÓN PRESUPUESTARIA / PARTIDAS' }
+      }
+    },
+    {
+      name: 'Materiales y Suministros (Almacén NSIAF)',
+      type: 'consultaAlmacen',
+      category: 'Inventario',
+      icon: 'inventory_2',
+      defaultConfig: {
+        type: 'consultaAlmacen',
+        key: 'consultaAlmacen',
+        templateOptions: { label: 'SOLICITUD DE MATERIALES Y SUMINISTROS (ALMACÉN NSIAF)' }
+      }
+    },
+    {
+      name: 'Activos Fijos (NSIAF)',
+      type: 'tablaActivos',
+      category: 'Inventario',
+      icon: 'devices',
+      defaultConfig: {
+        type: 'tablaActivos',
+        key: 'tablaActivos',
+        templateOptions: { label: 'GESTIÓN Y ASIGNACIÓN DE ACTIVOS FIJOS (NSIAF)' }
+      }
+    },
+    {
+      name: 'Documentos a Anular',
+      type: 'documentosAnular',
+      category: 'Trazabilidad',
+      icon: 'cancel',
+      defaultConfig: {
+        type: 'documentosAnular',
+        key: 'documentosAnular',
+        templateOptions: { label: 'DOCUMENTOS A ANULAR / INVALIDAR' }
+      }
+    },
+    {
+      name: 'Contactos Externos',
+      type: 'listaContactos',
+      category: 'Cabecera',
+      icon: 'contacts',
+      defaultConfig: {
+        type: 'listaContactos',
+        key: 'listaContactos',
+        templateOptions: { label: 'DESTINATARIO EXTERNO:' }
       }
     }
   ];
@@ -425,12 +787,58 @@ export class PlantillaEditorComponent implements OnInit {
   canvasFields: FormlyFieldConfig[] = [];
 
   ngOnInit(): void {
+    // Generación automática de sigla/abreviación omitiendo conectores en español
+    this.metaForm.get('nombre')?.valueChanges.subscribe(nom => {
+      const sigla = this.generarSiglaSinConectores(nom || '');
+      this.metaForm.get('abreviacion')?.setValue(sigla, { emitEvent: false });
+    });
+
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
       this.plantillaId = parseInt(idParam, 10);
       this.isEditing.set(true);
       this.cargarPlantilla(this.plantillaId);
+    } else {
+      // Precarga institucional por defecto en lienzo nuevo
+      this.canvasFields = [
+        {
+          type: 'datosGenerales',
+          key: 'datosGenerales',
+          templateOptions: { show: { para: true, via: true, de: true, ref: true } }
+        },
+        {
+          type: 'texto',
+          key: 'titulo',
+          templateOptions: { label: 'INFORME INSTITUCIONAL', tipo: 'h2', className: 'ap-text-center' }
+        },
+        {
+          type: 'editorTexto',
+          key: 'cuerpo',
+          templateOptions: { label: 'Contenido del Documento' }
+        },
+        {
+          type: 'ccArchivo',
+          key: 'ccArchivo',
+          templateOptions: { label: 'CC/Archivo:' }
+        }
+      ];
+      this.actualizarPreview();
     }
+  }
+
+  generarSiglaSinConectores(texto: string): string {
+    if (!texto) return '';
+    const conectores = new Set([
+      'de', 'del', 'la', 'las', 'los', 'el', 'en', 'para', 'por', 'y', 'e', 'o', 'u', 'a', 'al', 'con', 'sin', 'sobre'
+    ]);
+    const palabras = texto
+      .trim()
+      .split(/\s+/)
+      .filter(p => p.length > 0 && !conectores.has(p.toLowerCase()));
+
+    return palabras
+      .map(p => p.charAt(0).toUpperCase())
+      .join('');
   }
 
   cargarPlantilla(id: number): void {
@@ -438,17 +846,18 @@ export class PlantillaEditorComponent implements OnInit {
       next: (res) => {
         const p = res.datos;
         try {
-          this.canvasFields = JSON.parse(p.plantilla || '[]');
+          const raw = JSON.parse(p.plantilla || '[]');
+          this.canvasFields = Array.isArray(raw) ? raw : [];
         } catch {
           this.canvasFields = [];
         }
 
-        const th = (this.canvasFields.length > 0 && this.canvasFields[0]?.templateOptions?.['tipoHoja']) || 'Letter';
         this.metaForm.patchValue({
           nombre: p.nombre,
-          abreviacion: p.abreviacion,
-          tipoHoja: th
+          abreviacion: p.abreviacion || this.generarSiglaSinConectores(p.nombre)
         });
+
+        this.actualizarPreview();
       },
       error: () => {
         this.snackBar.open('Error al cargar la plantilla', 'Cerrar', { duration: 3000 });
@@ -463,36 +872,109 @@ export class PlantillaEditorComponent implements OnInit {
       const paletteItem: PaletteItem = event.previousContainer.data[event.previousIndex];
       const newField: FormlyFieldConfig = JSON.parse(JSON.stringify(paletteItem.defaultConfig));
       this.canvasFields.splice(event.currentIndex, 0, newField);
+      this.selectedFieldIndex.set(event.currentIndex);
     }
-    this.canvasFields = [...this.canvasFields];
+    this.actualizarPreview();
   }
 
-  eliminarCampo(index: number): void {
+  agregarDirecto(item: PaletteItem): void {
+    const newField: FormlyFieldConfig = JSON.parse(JSON.stringify(item.defaultConfig));
+    this.canvasFields.push(newField);
+    this.selectedFieldIndex.set(this.canvasFields.length - 1);
+    this.actualizarPreview();
+  }
+
+  seleccionarCampo(index: number): void {
+    this.selectedFieldIndex.set(index);
+  }
+
+  duplicarCampo(index: number, event: Event): void {
+    event.stopPropagation();
+    const copia = JSON.parse(JSON.stringify(this.canvasFields[index]));
+    this.canvasFields.splice(index + 1, 0, copia);
+    this.selectedFieldIndex.set(index + 1);
+    this.actualizarPreview();
+  }
+
+  eliminarCampo(index: number, event: Event): void {
+    event.stopPropagation();
     this.canvasFields.splice(index, 1);
-    this.canvasFields = [...this.canvasFields];
+    if (this.selectedFieldIndex() === index) {
+      this.selectedFieldIndex.set(null);
+    } else if (this.selectedFieldIndex() !== null && this.selectedFieldIndex()! > index) {
+      this.selectedFieldIndex.update(v => v! - 1);
+    }
+    this.actualizarPreview();
   }
 
   limpiarLienzo(): void {
     this.canvasFields = [];
+    this.selectedFieldIndex.set(null);
+    this.actualizarPreview();
+  }
+
+  actualizarPropiedad(prop: string, val: any): void {
+    const idx = this.selectedFieldIndex();
+    if (idx === null || !this.canvasFields[idx]) return;
+
+    if (!this.canvasFields[idx].templateOptions) {
+      this.canvasFields[idx].templateOptions = {};
+    }
+    this.canvasFields[idx].templateOptions![prop] = val;
+    this.actualizarPreview();
+  }
+
+  mostrarPreview = true;
+
+  getCampoAlineacion(field: FormlyFieldConfig): string {
+    const to = field?.templateOptions || {};
+    const raw = (to['alineacion'] || to['align'] || to['className'] || '').toLowerCase();
+    if (raw.includes('left')) return 'left';
+    if (raw.includes('right')) return 'right';
+    if (raw.includes('justify')) return 'justify';
+    if (raw.includes('center')) return 'center';
+    return to['tipo'] === 'p' ? 'justify' : 'center';
+  }
+
+  actualizarAlineacion(align: string): void {
+    const idx = this.selectedFieldIndex();
+    if (idx === null || !this.canvasFields[idx]) return;
+    if (!this.canvasFields[idx].templateOptions) {
+      this.canvasFields[idx].templateOptions = {};
+    }
+    this.canvasFields[idx].templateOptions!['alineacion'] = align;
+    this.canvasFields[idx].templateOptions!['className'] = `ap-text-${align}`;
+    this.actualizarPreview();
+  }
+
+  actualizarPreview(): void {
+    this.mostrarPreview = false;
+    this.previewForm = new FormGroup({});
+    this.previewModel = {};
+    this.previewFields = normalizarEsquemaFormly(
+      JSON.parse(JSON.stringify(this.canvasFields)),
+      this.previewModel
+    );
+    setTimeout(() => {
+      this.mostrarPreview = true;
+    });
   }
 
   guardarPlantilla(): void {
     if (this.metaForm.invalid) return;
 
     this.saving.set(true);
-    
-    // Guardar el tipo de hoja institucional (Letter / Oficio) en el primer elemento de la plantilla
-    if (this.canvasFields.length > 0) {
-      if (!this.canvasFields[0].templateOptions) {
-        this.canvasFields[0].templateOptions = {};
-      }
-      this.canvasFields[0].templateOptions['tipoHoja'] = this.metaForm.value.tipoHoja || 'Letter';
-    }
+
+    // Asegurar que guardamos el esquema perfectamente saneado y normalizado
+    const esquemaNormalizado = normalizarEsquemaFormly(
+      JSON.parse(JSON.stringify(this.canvasFields)),
+      {}
+    );
 
     const payload: PlantillaFormly = {
       nombre: this.metaForm.value.nombre,
-      abreviacion: this.metaForm.value.abreviacion,
-      plantilla: JSON.stringify(this.canvasFields)
+      abreviacion: this.metaForm.value.abreviacion || this.generarSiglaSinConectores(this.metaForm.value.nombre),
+      plantilla: JSON.stringify(esquemaNormalizado)
     };
 
     const req$ = this.isEditing() && this.plantillaId

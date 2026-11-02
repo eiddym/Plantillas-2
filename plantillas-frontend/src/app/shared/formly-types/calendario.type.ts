@@ -13,16 +13,26 @@ import { FieldType, FieldTypeConfig, FormlyModule } from '@ngx-formly/core';
         <label class="calendario-label">{{ to.label }}</label>
       }
       <div class="calendario-input-wrapper">
-        <input
-          type="date"
-          [formControl]="formControl"
-          [formlyAttributes]="field"
-          class="calendario-input"
-          [min]="to['minDate'] || ''"
-          [max]="to['maxDate'] || ''"
-          [required]="to.required || false"
-          [disabled]="to.disabled || false"
-        />
+        @if (formControl) {
+          <input
+            type="date"
+            [formControl]="formControl"
+            [formlyAttributes]="field"
+            class="calendario-input"
+            [min]="to['minDate'] || ''"
+            [max]="to['maxDate'] || ''"
+            [required]="to.required || false"
+            [disabled]="to.disabled || false"
+          />
+        } @else {
+          <input
+            type="date"
+            class="calendario-input"
+            [min]="to['minDate'] || ''"
+            [max]="to['maxDate'] || ''"
+            [disabled]="to.disabled || false"
+          />
+        }
       </div>
       @if (showError) {
         <div class="calendario-error">Debe ingresar una fecha válida</div>

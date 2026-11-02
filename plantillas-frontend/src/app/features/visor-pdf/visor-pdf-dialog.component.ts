@@ -253,12 +253,12 @@ export class VisorPdfDialogComponent implements OnInit, OnDestroy {
     }
   }
 
-  cargarPdfDinamico(cite: string): void {
+  cargarPdfDinamico(cite: string, force = false): void {
     this.loading.set(true);
     this.errorMessage.set('');
     this.cdr.markForCheck();
 
-    this.documentosService.generarPdfDocumento(cite, true).subscribe({
+    this.documentosService.generarPdfDocumento(cite, force).subscribe({
       next: (blob) => {
         this.loading.set(false);
         if (this.localBlobUrl) {
@@ -281,7 +281,7 @@ export class VisorPdfDialogComponent implements OnInit, OnDestroy {
 
   reintentar(): void {
     if (this.data.docCite) {
-      this.cargarPdfDinamico(this.data.docCite);
+      this.cargarPdfDinamico(this.data.docCite, true);
     }
   }
 

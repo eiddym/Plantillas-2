@@ -1,7 +1,8 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormGroup, ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -14,7 +15,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { FormlyFieldConfig, FormlyModule } from '@ngx-formly/core';
 import { Documento, DocumentosService } from '../../core/services/documentos.service';
+import { AuthService } from '../../core/auth/auth.service';
 import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component';
+import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
 
 @Component({
   selector: 'app-document-workbench',
@@ -53,6 +56,7 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
         </div>
 
         <div class="topbar-center">
+          <!-- Conmutador Redacción / Vista Previa -->
           <div class="view-mode-toggle">
             <button 
               type="button" 
@@ -70,37 +74,122 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
               (click)="setModo(false)"
             >
               <mat-icon>visibility</mat-icon>
-              <span>Vista de Impresión</span>
+              <span>Vista Previa</span>
+            </button>
+          </div>
+
+          <!-- Selector de Tamaño de Hoja (Carta u Oficio) -->
+          <div class="paper-size-toggle">
+            <span class="size-label">Hoja:</span>
+            <button 
+              type="button" 
+              class="size-btn" 
+              [class.active]="tipoHoja() === 'Letter'" 
+              (click)="setTipoHoja('Letter')"
+              matTooltip="Formato Carta (21.6 x 27.9 cm)"
+            >
+              Carta
+            </button>
+            <button 
+              type="button" 
+              class="size-btn" 
+              [class.active]="tipoHoja() === 'Oficio'" 
+              (click)="setTipoHoja('Oficio')"
+              matTooltip="Formato Oficio (21.6 x 33.0 cm)"
+            >
+              Oficio
             </button>
           </div>
         </div>
 
         <div class="topbar-actions">
-          <button 
-            mat-flat-button 
-            color="primary" 
-            class="action-btn-save" 
-            (click)="guardarBorrador()" 
-            [disabled]="guardando() || !doc()"
-          >
-            <mat-icon>{{ guardando() ? 'sync' : 'save' }}</mat-icon>
-            <span>{{ guardando() ? 'Guardando...' : 'Guardar' }}</span>
-          </button>
+          <!-- Acciones de Borrador (Solo en NUEVO / BORRADOR / RECHAZADO) -->
+          <ng-container *ngIf="esBorradorEditable()">
+            <!-- Eliminar Borrador -->
+            <button 
+              type="button"
+              mat-stroked-button 
+              color="warn" 
+              class="action-btn-delete"
+              (click)="confirmarEliminarBorrador()" 
+              [disabled]="guardando() || !doc()"
+              matTooltip="Eliminar borrador definitivamente"
+            >
+              <mat-icon>delete_outline</mat-icon>
+              <span>Eliminar</span>
+            </button>
 
-          <button mat-stroked-button (click)="verPdf()" class="action-btn-pdf" [disabled]="!doc() || generandoPdf()">
-            <mat-icon>picture_as_pdf</mat-icon>
-            <span>{{ generandoPdf() ? '...' : 'PDF' }}</span>
-          </button>
+            <!-- Guardar Borrador -->
+            <button 
+              type="button"
+              mat-stroked-button 
+              color="primary" 
+              class="action-btn-save" 
+              (click)="guardarBorrador()" 
+              [disabled]="guardando() || !doc()"
+            >
+              <mat-icon>{{ guardando() ? 'sync' : 'save' }}</mat-icon>
+              <span>{{ guardando() ? 'Guardando...' : 'Guardar' }}</span>
+            </button>
 
-          <button mat-stroked-button (click)="derivarDocumento()" class="action-btn-derivar" [disabled]="!doc()">
-            <mat-icon>forward</mat-icon>
-            <span>Derivar</span>
-          </button>
+            <!-- Enviar Documento Oficial -->
+            <button 
+              type="button"
+              mat-flat-button 
+              color="primary" 
+              class="action-btn-enviar" 
+              (click)="enviarDocumento()" 
+              [disabled]="guardando() || !doc()"
+              matTooltip="Enviar documento al flujo de revisión y aprobación"
+            >
+              <mat-icon>send</mat-icon>
+              <span>Enviar</span>
+            </button>
+          </ng-container>
 
-          <button mat-raised-button color="accent" (click)="firmarDocumento()" class="action-btn-firmar" [disabled]="!doc()">
-            <mat-icon>draw</mat-icon>
-            <span>Firmar</span>
-          </button>
+          <!-- Acciones de Destinatario / Jefatura (Cuando el documento fue ENVIADO o DERIVADO al usuario actual) -->
+          <ng-container *ngIf="esDestinatarioActual()">
+            <button
+              *ngIf="doc()?.estado === 'ENVIADO'"
+              type="button"
+              mat-stroked-button
+              color="warn"
+              class="action-btn-delete"
+              (click)="observarDocumento()"
+              [disabled]="guardando() || !doc()"
+              matTooltip="Observar y devolver el documento al remitente para corrección"
+            >
+              <mat-icon>feedback</mat-icon>
+              <span>Observar</span>
+            </button>
+
+            <button
+              type="button"
+              mat-stroked-button
+              color="primary"
+              class="action-btn-save"
+              (click)="togglePanelDerivar()"
+              [disabled]="guardando() || !doc()"
+              matTooltip="Derivar documento a un funcionario o unidad dependiente"
+            >
+              <mat-icon>alt_route</mat-icon>
+              <span>Derivar</span>
+            </button>
+
+            <button
+              *ngIf="doc()?.estado === 'ENVIADO'"
+              type="button"
+              mat-flat-button
+              color="primary"
+              class="action-btn-enviar"
+              (click)="aprobarDocumento()"
+              [disabled]="guardando() || !doc()"
+              matTooltip="Aprobar oficialmente el documento y generar CITE"
+            >
+              <mat-icon>verified</mat-icon>
+              <span>Aprobar</span>
+            </button>
+          </ng-container>
         </div>
       </header>
 
@@ -112,27 +201,66 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
       <div class="workbench-grid">
         <!-- Columna Central: Representación fiel de la Hoja Física (Carta / Oficio) -->
         <main class="workbench-canvas-column">
+          <!-- Panel Desplegable para Derivar Documento (Jefatura / Destinatario) -->
+          <div *ngIf="mostrarPanelDerivar()" class="auto-save-bar" style="flex-direction: column; align-items: stretch; gap: 12px; background: #ffffff; border: 2px solid #0284c7; padding: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong style="color: #0f172a; font-size: 0.95rem;">Derivar Documento / Proveído Oficial</strong>
+              <button mat-icon-button (click)="mostrarPanelDerivar.set(false)" type="button">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Destinatario a Derivar</mat-label>
+                <mat-select [(ngModel)]="usuarioDestinoDerivar">
+                  <mat-option [value]="'TODOS'">
+                    📢 <strong>[A TODOS EN GENERAL]</strong> — Difusión institucional masiva
+                  </mat-option>
+                  <mat-option *ngFor="let u of listaUsuarios()" [value]="u.id_usuario">
+                    {{ u.nombres }} {{ u.apellidos }} — {{ u.cargo || u.usuario }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Proveído / Instrucción</mat-label>
+                <input matInput [(ngModel)]="proveidoDerivar" placeholder="Ej.: Favor atender e informar..." />
+              </mat-form-field>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+              <button mat-stroked-button type="button" (click)="mostrarPanelDerivar.set(false)">Cancelar</button>
+              <button mat-flat-button color="primary" type="button" (click)="confirmarDerivarDocumento()" [disabled]="guardando() || !usuarioDestinoDerivar">
+                <mat-icon>send</mat-icon>
+                <span>Confirmar Derivación</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Barra informativa contextual fuera de la hoja física -->
+          <div *ngIf="modoEdicion()" class="auto-save-bar">
+            <mat-icon>edit_note</mat-icon>
+            <span>Modo Edición activo sobre formato {{ tipoHoja() === 'Oficio' ? 'Oficio (21.6 x 33 cm)' : 'Carta (21.6 x 27.9 cm)' }}. Recuerde hacer clic en "Guardar Borrador" al finalizar.</span>
+          </div>
+
           <div class="sheet-viewport">
             <div
               class="physical-sheet"
               [ngClass]="tipoHoja() === 'Oficio' ? 'pagina-oficio' : 'pagina-carta'"
             >
-              <!-- Membrete Oficial Institucional -->
-              <div class="sheet-membrete">
-                <div class="membrete-logo-box">
-                  <img src="assets/images/logo_cooperativa.png" alt="Cooperativa Marabunta R.L." class="membrete-logo" (error)="onLogoError($event)" />
+              <!-- Cabecera Oficial sólo en Vista Previa (en Edición la plantilla Formly incluye su propio CITE y Título) -->
+              <ng-container *ngIf="!modoEdicion()">
+                <div class="sheet-top-header">
+                  <div class="header-cite">
+                    <strong>{{ doc()?.nombre || '(CITE Automático al Aprobar)' }}</strong>
+                  </div>
+                  <div class="header-fecha">
+                    <span>{{ obtenerFechaDocumento() }}</span>
+                  </div>
                 </div>
-                <div class="membrete-text">
-                  <h3>COOPERATIVA MULTIACTIVA MARABUNTA R.L.</h3>
-                  <p>Sistema Digital de Gestión y Aprobación Documental</p>
-                  <small>La Paz - Bolivia</small>
+
+                <div class="sheet-doc-title">
+                  <h2>{{ obtenerTituloDocumento() }}</h2>
                 </div>
-                <div class="membrete-cite-box">
-                  <span class="cite-label">CITE OFICIAL</span>
-                  <strong class="cite-code">{{ doc()?.nombre || 'BORRADOR' }}</strong>
-                  <span class="cite-fecha">{{ doc()?._fecha_creacion | date:'dd/MM/yyyy' }}</span>
-                </div>
-              </div>
+              </ng-container>
 
               <!-- ============================================ -->
               <!-- MODO 1: REDACCIÓN ACTIVA (FORMULARIO FORMLY) -->
@@ -148,42 +276,35 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
                     ></formly-form>
                   </form>
                 </div>
-
-                <div class="auto-save-bar">
-                  <mat-icon>cloud_done</mat-icon>
-                  <span>Redacción en vivo sobre formato {{ tipoHoja() === 'Oficio' ? 'Oficio' : 'Carta' }}. Recuerde hacer clic en "Guardar Borrador" al finalizar.</span>
-                </div>
               </div>
 
               <!-- ============================================ -->
               <!-- MODO 2: VISTA PREVIA DE IMPRESIÓN (PROSE)    -->
               <!-- ============================================ -->
               <div *ngIf="!modoEdicion()" class="preview-mode-container">
-                <!-- Encabezado Institucional A / DE / REF / FECHA -->
+                <!-- Bloque DE / PARA / VÍA / REF -->
                 <div class="sheet-header-meta">
-                  <div class="meta-row" *ngIf="model['para'] || doc()?.para">
-                    <span class="meta-label">A:</span>
-                    <span class="meta-value">{{ model['para'] || doc()?.para }}</span>
-                  </div>
-                  <div class="meta-row" *ngIf="model['via'] || doc()?.via">
-                    <span class="meta-label">VÍA:</span>
-                    <span class="meta-value">{{ model['via'] || doc()?.via }}</span>
-                  </div>
-                  <div class="meta-row" *ngIf="model['de'] || doc()?.de">
+                  <div class="meta-row" *ngIf="obtenerTextoMeta('de')">
                     <span class="meta-label">DE:</span>
-                    <span class="meta-value">{{ model['de'] || doc()?.de }}</span>
+                    <span class="meta-value">{{ obtenerTextoMeta('de') }}</span>
                   </div>
-                  <div class="meta-row" *ngIf="model['ref'] || doc()?.ref">
-                    <span class="meta-label">REF:</span>
-                    <span class="meta-value"><strong>{{ model['ref'] || doc()?.ref }}</strong></span>
+                  <div class="meta-row" *ngIf="obtenerTextoMeta('para')">
+                    <span class="meta-label">PARA:</span>
+                    <span class="meta-value">{{ obtenerTextoMeta('para') }}</span>
                   </div>
-                  <div class="meta-row">
-                    <span class="meta-label">FECHA:</span>
-                    <span class="meta-value">{{ doc()?._fecha_creacion | date:'dd/MM/yyyy' }}</span>
+                  <div class="meta-row" *ngIf="obtenerTextoMeta('via')">
+                    <span class="meta-label">VÍA:</span>
+                    <span class="meta-value">{{ obtenerTextoMeta('via') }}</span>
+                  </div>
+                  <div class="meta-row" *ngIf="obtenerTextoMeta('ref')">
+                    <span class="meta-label">REF.:</span>
+                    <span class="meta-value"><strong>{{ obtenerTextoMeta('ref') }}</strong></span>
                   </div>
                 </div>
 
-                <div class="sheet-divider"></div>
+                <div class="saludo-consideracion">
+                  <span>De mi consideración:</span>
+                </div>
 
                 <!-- Cuerpo de Lectura Documental (Tipografía Literata con máx 75 caracteres) -->
                 <article class="document-prose">
@@ -224,11 +345,13 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
             <div class="inspector-list">
               <div class="inspector-item">
                 <span class="item-label">Clasificación</span>
-                <span class="item-badge-clasif">{{ model['inputSelect'] || doc()?.clasificacion || 'RESERVADO' }}</span>
+                <span class="item-badge-clasif">{{ model['clasificacion'] || model['inputSelect'] || doc()?.clasificacion || 'RESERVADO' }}</span>
               </div>
               <div class="inspector-item">
                 <span class="item-label">Formato de Hoja</span>
-                <span class="item-value">{{ tipoHoja() === 'Oficio' ? 'Oficio' : 'Carta' }}</span>
+                <span class="item-badge-hoja" (click)="setTipoHoja(tipoHoja() === 'Oficio' ? 'Letter' : 'Oficio')" matTooltip="Haga clic para alternar Carta / Oficio">
+                  {{ tipoHoja() === 'Oficio' ? 'Oficio (21.6 x 33 cm)' : 'Carta (21.6 x 27.9 cm)' }}
+                </span>
               </div>
               <div class="inspector-item">
                 <span class="item-label">Fecha de Creación</span>
@@ -252,7 +375,7 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
                 <div class="timeline-dot"></div>
                 <div class="timeline-content">
                   <strong>Redacción del Documento</strong>
-                  <p>Por: {{ model['de'] || doc()?.de || 'Funcionario Solicitante' }}</p>
+                  <p>Por: {{ obtenerTextoMeta('de') || 'Funcionario Solicitante' }}</p>
                   <small>{{ doc()?._fecha_creacion | date:'dd/MM/yyyy' }}</small>
                 </div>
               </div>
@@ -340,6 +463,7 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
     .topbar-center {
       display: flex;
       align-items: center;
+      gap: 16px;
     }
 
     .view-mode-toggle {
@@ -348,6 +472,47 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
       border-radius: 8px;
       padding: 3px;
       border: 1px solid #e2e8f0;
+    }
+
+    .paper-size-toggle {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      padding: 3px 6px;
+      border-radius: 8px;
+
+      .size-label {
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: #64748b;
+        padding-right: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .size-btn {
+        padding: 4px 10px;
+        border: none;
+        background: transparent;
+        color: #475569;
+        font-size: 0.78rem;
+        font-weight: 600;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          color: #0284c7;
+        }
+
+        &.active {
+          background: #0284c7;
+          color: #ffffff;
+          box-shadow: 0 1px 2px rgba(2, 132, 199, 0.3);
+        }
+      }
     }
 
     .mode-btn {
@@ -385,21 +550,35 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
     .topbar-actions {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
+    }
+
+    .action-btn-delete {
+      color: #dc2626 !important;
+      border-color: #fca5a5 !important;
+      font-weight: 600;
+      &:hover {
+        background: #fef2f2 !important;
+      }
     }
 
     .action-btn-save {
-      background: #0284c7;
-      color: #ffffff;
+      color: #0284c7 !important;
+      border-color: #0284c7 !important;
       font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+      &:hover {
+        background: #f0f9ff !important;
+      }
     }
 
-    .action-btn-pdf {
-      color: #0284c7;
-      border-color: #0284c7;
+    .action-btn-enviar {
+      background: #0284c7 !important;
+      color: #ffffff !important;
+      font-weight: 700;
+      box-shadow: 0 2px 4px rgba(2, 132, 199, 0.25);
+      &:hover {
+        background: #0369a1 !important;
+      }
     }
 
     .global-progress {
@@ -421,106 +600,88 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
     .workbench-canvas-column {
       background: #cbd5e1;
       overflow-y: auto;
-      padding: 2.5rem 1rem;
+      padding: 2rem 1rem 4rem 1rem;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
     }
 
     .sheet-viewport {
       display: flex;
-      justify-content: center;
+      flex-direction: column;
+      align-items: center;
       width: 100%;
     }
 
     .physical-sheet {
       background: #ffffff;
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-      border-radius: 2px;
+      border-radius: 4px;
       padding: 3rem 3.5rem;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
       position: relative;
+      height: auto;
     }
 
     .pagina-carta {
       width: 21.6cm;
       min-height: 27.9cm;
+      height: auto;
     }
 
     .pagina-oficio {
       width: 21.6cm;
       min-height: 33.0cm;
+      height: auto;
     }
 
-    .sheet-membrete {
-      display: grid;
-      grid-template-columns: 80px 1fr 180px;
-      align-items: center;
-      gap: 1.25rem;
-      padding-bottom: 1.25rem;
-      border-bottom: 2px solid #0f172a;
-      margin-bottom: 1.5rem;
-    }
-
-    .membrete-logo-box {
-      width: 76px;
-      height: 76px;
+    .sheet-top-header {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      justify-content: center;
-    }
+      padding-bottom: 0.75rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1.5px solid #0f172a;
 
-    .membrete-logo {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-    }
-
-    .membrete-text {
-      h3 {
-        margin: 0;
+      .header-cite {
+        font-family: 'Courier New', Courier, monospace;
         font-size: 0.95rem;
         font-weight: 800;
         color: #0f172a;
-        letter-spacing: 0.02em;
+        letter-spacing: 0.5px;
       }
-      p {
-        margin: 2px 0 0 0;
-        font-size: 0.8rem;
-        color: #475569;
-      }
-      small {
-        font-size: 0.72rem;
-        color: #64748b;
+
+      .header-fecha {
+        font-size: 0.88rem;
+        color: #334155;
+        font-weight: 500;
       }
     }
 
-    .membrete-cite-box {
-      text-align: right;
-      display: flex;
-      flex-direction: column;
-      background: #f8fafc;
-      padding: 8px 12px;
-      border-radius: 4px;
-      border: 1px solid #e2e8f0;
+    .sheet-doc-title {
+      text-align: center;
+      margin-bottom: 1.75rem;
 
-      .cite-label {
-        font-size: 0.65rem;
-        font-weight: 700;
-        color: #64748b;
-        letter-spacing: 0.05em;
+      h2 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #0f172a;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        text-decoration: underline;
+        text-underline-offset: 4px;
       }
-      .cite-code {
-        font-size: 0.85rem;
-        color: #0284c7;
-        font-family: 'Courier New', Courier, monospace;
-      }
-      .cite-fecha {
-        font-size: 0.75rem;
-        color: #475569;
-        margin-top: 2px;
-      }
+    }
+
+    .saludo-consideracion {
+      margin: 1.5rem 0 1rem 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #1e293b;
     }
 
     /* MODO EDICIÓN */
@@ -558,17 +719,22 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 12px;
+      padding: 10px 16px;
       background: #eff6ff;
       border: 1px solid #bfdbfe;
-      border-radius: 6px;
+      border-radius: 8px;
       color: #1e40af;
-      font-size: 0.78rem;
+      font-size: 0.84rem;
+      width: 21.6cm;
+      max-width: 100%;
+      box-sizing: border-box;
+      margin: 0 0 1.25rem 0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 
       mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
         color: #0284c7;
       }
     }
@@ -622,13 +788,30 @@ import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component
     }
 
     .sheet-footer {
-      margin-top: auto;
+      margin-top: 3rem;
       padding-top: 1.5rem;
       border-top: 1px solid #e2e8f0;
       display: flex;
       justify-content: space-between;
       font-size: 0.75rem;
       color: #94a3b8;
+    }
+
+    .item-badge-hoja {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      background: #e0f2fe;
+      color: #0369a1;
+      cursor: pointer;
+      border: 1px solid #bae6fd;
+      transition: all 0.2s;
+      &:hover {
+        background: #0284c7;
+        color: #ffffff;
+      }
     }
 
     .workbench-inspector-column {
@@ -895,21 +1078,44 @@ export class DocumentWorkbenchComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly documentosService = inject(DocumentosService);
+  private readonly authService = inject(AuthService);
+  private readonly http = inject(HttpClient);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
 
+  readonly currentUser = this.authService.currentUser;
   readonly doc = signal<Documento | null>(null);
   readonly loading = signal(false);
   readonly guardando = signal(false);
   readonly generandoPdf = signal(false);
   readonly tipoHoja = signal<'Letter' | 'Oficio'>('Letter');
   readonly modoEdicion = signal(true);
+  readonly mostrarPanelDerivar = signal(false);
+  readonly listaUsuarios = signal<any[]>([]);
+
+  usuarioDestinoDerivar: number | string | null = null;
+  proveidoDerivar = '';
+
+  readonly esBorradorEditable = computed(() => {
+    const d = this.doc();
+    if (!d) return false;
+    return d.estado === 'NUEVO' || d.estado === 'BORRADOR' || d.estado === 'RECHAZADO';
+  });
+
+  readonly esDestinatarioActual = computed(() => {
+    const d = this.doc() as any;
+    const u = this.currentUser();
+    if (!d || !u) return false;
+    if (d.estado !== 'ENVIADO' && d.estado !== 'DERIVADO') return false;
+    return Number(d.via_actual) === Number(u.id);
+  });
 
   readonly form = new FormGroup({});
   model: Record<string, any> = {};
   formlyFields: FormlyFieldConfig[] = [];
 
   ngOnInit(): void {
+    this.cargarUsuarios();
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
       this.cargarDocumento(Number(idParam));
@@ -942,18 +1148,28 @@ export class DocumentWorkbenchComponent implements OnInit {
           this.model = {};
         }
 
-        // Si los campos de encabezado están en el doc, hidratar modelo
-        if (d.de && !this.model['de']) this.model['de'] = d.de;
-        if (d.para && !this.model['para']) this.model['para'] = d.para;
-        if (d.via && !this.model['via']) this.model['via'] = d.via;
-        if (d.ref && !this.model['ref']) this.model['ref'] = d.ref;
+        // Sincronizar datosGenerales y datosGenerales-0 si existen
+        if (this.model['datosGenerales-0'] && !this.model['datosGenerales']) {
+          this.model['datosGenerales'] = this.model['datosGenerales-0'];
+        } else if (this.model['datosGenerales'] && !this.model['datosGenerales-0']) {
+          this.model['datosGenerales-0'] = this.model['datosGenerales'];
+        }
+
+        // Limpiar posibles valores de texto plano obsoletos en model.de/para/via
+        delete this.model['de'];
+        delete this.model['para'];
+        delete this.model['via'];
+
+        const refDoc = (d as any)?.referencia || d?.ref;
+        if (refDoc && !this.model['ref']) this.model['ref'] = refDoc;
         if (d.clasificacion && !this.model['inputSelect']) this.model['inputSelect'] = d.clasificacion;
 
         // Compilar esquema Formly desde la instantánea congelada en documento.plantilla
         if (d?.plantilla) {
           try {
             const rawFields = typeof d.plantilla === 'string' ? JSON.parse(d.plantilla) : d.plantilla;
-            this.formlyFields = Array.isArray(rawFields) ? rawFields : [];
+            const parsedArray = Array.isArray(rawFields) ? rawFields : [];
+            this.formlyFields = normalizarEsquemaFormly(parsedArray, this.model);
             
             // Detectar formato de hoja (Carta vs Oficio)
             if (this.formlyFields[0]?.templateOptions?.['tipoHoja'] === 'Oficio') {
@@ -966,8 +1182,8 @@ export class DocumentWorkbenchComponent implements OnInit {
           }
         }
 
-        // Si el estado es APROBADO o CERRADO, mostrar directamente en modo lectura
-        if (d.estado === 'APROBADO' || d.estado === 'CERRADO') {
+        // Si el estado es APROBADO, CERRADO, ENVIADO o DERIVADO, mostrar directamente en modo lectura (Vista Previa)
+        if (d.estado === 'APROBADO' || d.estado === 'CERRADO' || d.estado === 'ENVIADO' || d.estado === 'DERIVADO') {
           this.modoEdicion.set(false);
         } else {
           this.modoEdicion.set(true);
@@ -980,33 +1196,180 @@ export class DocumentWorkbenchComponent implements OnInit {
     });
   }
 
+  obtenerTituloDocumento(): string {
+    const d = this.doc();
+    if (d?.plantilla?.nombre) return d.plantilla.nombre.toUpperCase();
+    if (d?.nombre_plantilla) return d.nombre_plantilla.toUpperCase();
+    return 'NOTA INTERNA';
+  }
+
+  obtenerFechaDocumento(): string {
+    const f = this.doc()?._fecha_creacion;
+    if (!f) return this.fechaHoyTexto();
+    const d = new Date(f);
+    const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    return `${d.getDate()} de ${meses[d.getMonth()]} de ${d.getFullYear()}`;
+  }
+
+  fechaHoyTexto(): string {
+    const hoy = new Date();
+    const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    return `${hoy.getDate()} de ${meses[hoy.getMonth()]} de ${hoy.getFullYear()}`;
+  }
+
+  formatearMeta(val: any): string {
+    if (!val) return '';
+    if (typeof val === 'string') return val;
+    if (typeof val === 'object') {
+      if (val.nombres || val.apellidos) {
+        return `${val.nombres || ''} ${val.apellidos || ''} ${val.cargo ? '- ' + val.cargo : ''}`.trim();
+      }
+      if (val.nombre) return val.nombre;
+      if (val.label) return val.label;
+      if (val.value) return val.value;
+    }
+    return String(val);
+  }
+
   getCuerpoHtml(): string {
-    if (this.model['cuerpo']) return this.model['cuerpo'];
-    if (this.model['texto']) return this.model['texto'];
+    const sections: string[] = [];
+    if (this.model['cuerpo']) {
+      sections.push(this.model['cuerpo']);
+    }
+    for (const key of Object.keys(this.model)) {
+      if (key !== 'cuerpo' && (key.startsWith('editorTexto') || key.startsWith('editor')) && typeof this.model[key] === 'string' && this.model[key].trim().length > 0) {
+        sections.push(this.model[key]);
+      }
+    }
+    if (sections.length > 0) {
+      return sections.join('<div class="section-divider" style="height: 14px;"></div>');
+    }
+    if (this.model['texto'] && typeof this.model['texto'] === 'string') return this.model['texto'];
     const d = this.doc();
     if (d?.contenido?.cuerpo) return d.contenido.cuerpo;
     return '';
   }
 
+  obtenerTextoMeta(campo: 'de' | 'para' | 'via' | 'ref'): string {
+    const dg = this.model['datosGenerales'] || this.model['datosGenerales-0'] || {};
+    const fmtUser = (u: any): string => {
+      if (!u) return '';
+      if (typeof u === 'string') {
+        const trimmed = u.trim();
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) return '';
+        return trimmed;
+      }
+      if (typeof u === 'object') {
+        const nombreCompleto = `${u.nombres || ''} ${u.apellidos || ''}`.trim();
+        if (nombreCompleto) {
+          return u.cargo ? `${nombreCompleto} - ${u.cargo}` : nombreCompleto;
+        }
+        if (u.nombre) return u.nombre;
+      }
+      return '';
+    };
+
+    if (campo === 'ref') {
+      return dg.ref || this.model['ref'] || (this.doc() as any)?.referencia || this.doc()?.ref || '';
+    }
+
+    const val = dg[campo];
+    if (Array.isArray(val)) {
+      const textos = val.map(fmtUser).filter(Boolean);
+      if (textos.length > 0) return textos.join(' / ');
+    } else if (val) {
+      const txt = fmtUser(val);
+      if (txt) return txt;
+    }
+
+    const rawDocVal = (this.doc() as any)?.[campo];
+    return fmtUser(rawDocVal);
+  }
+
   private sincronizarMetadatosDesdeDatosGenerales(): void {
-    if (this.model['datosGenerales']) {
-      const dg = this.model['datosGenerales'];
-      if (dg.para) {
-        this.model['para'] = typeof dg.para === 'object' ? `${dg.para.nombres} ${dg.para.apellidos} - ${dg.para.cargo}` : dg.para;
-      }
-      if (dg.via && Array.isArray(dg.via) && dg.via.length > 0) {
-        this.model['via'] = dg.via.map((v: any) => `${v.nombres} ${v.apellidos} - ${v.cargo}`).join(' / ');
-      } else if (dg.via && typeof dg.via === 'object' && dg.via.nombres) {
-        this.model['via'] = `${dg.via.nombres} ${dg.via.apellidos} - ${dg.via.cargo}`;
-      }
-      if (dg.de && Array.isArray(dg.de) && dg.de.length > 0) {
-        this.model['de'] = dg.de.map((rem: any) => `${rem.nombres} ${rem.apellidos} - ${rem.cargo}`).join(' / ');
-      } else if (dg.de && typeof dg.de === 'object' && dg.de.nombres) {
-        this.model['de'] = `${dg.de.nombres} ${dg.de.apellidos} - ${dg.de.cargo}`;
-      }
+    const dg = this.model['datosGenerales'] || this.model['datosGenerales-0'];
+    if (dg) {
+      this.model['datosGenerales'] = dg;
+      this.model['datosGenerales-0'] = dg;
       if (dg.ref) {
         this.model['ref'] = dg.ref;
       }
+    }
+    delete this.model['de'];
+    delete this.model['para'];
+    delete this.model['via'];
+  }
+
+  private construirPayloadDocumento(d: Documento): Partial<Documento> & Record<string, any> {
+    this.sincronizarMetadatosDesdeDatosGenerales();
+
+    let plantillaActualizada = d.plantilla;
+    if (this.formlyFields && this.formlyFields.length > 0) {
+      try {
+        const raw = typeof d.plantilla === 'string' ? JSON.parse(d.plantilla) : [...d.plantilla];
+        if (Array.isArray(raw) && raw.length > 0) {
+          raw[0].templateOptions = raw[0].templateOptions || {};
+          raw[0].templateOptions['tipoHoja'] = this.tipoHoja();
+          plantillaActualizada = JSON.stringify(raw);
+        }
+      } catch {}
+    }
+
+    const dg = this.model['datosGenerales'] || this.model['datosGenerales-0'] || {};
+    const extraerIds = (val: any, fallbackStr?: string, defaultIds: number[] = []): number[] => {
+      const arr = Array.isArray(val) ? val : (val ? [val] : []);
+      const ids = arr
+        .map((item: any) => Number(item?.id_usuario ?? item?.id ?? item))
+        .filter((id: number) => Number.isInteger(id) && id > 0);
+      if (ids.length > 0) return ids;
+      if (typeof fallbackStr === 'string') {
+        try {
+          const parsed = JSON.parse(fallbackStr);
+          const pIds = (Array.isArray(parsed) ? parsed : [parsed])
+            .map((item: any) => Number(item?.id_usuario ?? item?.id ?? item))
+            .filter((id: number) => Number.isInteger(id) && id > 0);
+          if (pIds.length > 0) return pIds;
+        } catch {}
+      }
+      return defaultIds;
+    };
+
+    const idCreador = Number(d._usuario_creacion) || 1;
+    const idsDe = extraerIds(dg.de, d.de, [idCreador]);
+    let idsPara: number[] = [];
+    const pObj = Array.isArray(dg.para) ? dg.para[0] : dg.para;
+    if (pObj && (pObj.todos || pObj.id_usuario === 'TODOS')) {
+      if (Array.isArray(pObj.todos_ids) && pObj.todos_ids.length > 0) {
+        idsPara = pObj.todos_ids;
+      } else {
+        idsPara = (this.listaUsuarios() || []).map((u: any) => Number(u.id_usuario)).filter((n: number) => n > 0);
+      }
+      if (this.model['inputt_1'] === undefined || this.model['inputt_1'] === '') {
+        this.model['inputt_1'] = 'A TODO EL PERSONAL';
+      }
+    } else {
+      idsPara = extraerIds(dg.para, d.para, []);
+    }
+    const idsVia = extraerIds(dg.via, d.via, []);
+    const refTexto = dg.ref || this.model['ref'] || (d as any).referencia || d.ref || '';
+
+    return {
+      plantilla: plantillaActualizada,
+      plantilla_valor: JSON.stringify(this.model),
+      de: JSON.stringify(idsDe),
+      para: JSON.stringify(idsPara),
+      via: JSON.stringify(idsVia),
+      ref: refTexto,
+      referencia: refTexto,
+      clasificacion: this.model['clasificacion'] || this.model['inputSelect'] || d.clasificacion || 'Reservado'
+    };
+  }
+
+  setTipoHoja(tipo: 'Letter' | 'Oficio'): void {
+    this.tipoHoja.set(tipo);
+    this.model['tipoHoja'] = tipo;
+    if (this.formlyFields && this.formlyFields.length > 0 && this.formlyFields[0].templateOptions) {
+      this.formlyFields[0].templateOptions['tipoHoja'] = tipo;
     }
   }
 
@@ -1014,17 +1377,8 @@ export class DocumentWorkbenchComponent implements OnInit {
     const d = this.doc();
     if (!d || !d.id_documento) return;
 
-    this.sincronizarMetadatosDesdeDatosGenerales();
+    const payload = this.construirPayloadDocumento(d);
     this.guardando.set(true);
-
-    const payload: Partial<Documento> = {
-      plantilla_valor: JSON.stringify(this.model),
-      de: this.model['de'] || d.de,
-      para: this.model['para'] || d.para,
-      via: this.model['via'] || d.via,
-      ref: this.model['ref'] || d.ref,
-      clasificacion: this.model['inputSelect'] || d.clasificacion || 'Reservado'
-    };
 
     this.documentosService.actualizarDocumento(d.id_documento, payload).subscribe({
       next: (res) => {
@@ -1039,59 +1393,170 @@ export class DocumentWorkbenchComponent implements OnInit {
     });
   }
 
-  verPdf(): void {
-    const d = this.doc();
-    if (!d || !d.nombre) return;
-
-    this.dialog.open(VisorPdfDialogComponent, {
-      width: '85vw',
-      maxWidth: '1200px',
-      data: {
-        titulo: `${d.nombre} - ${this.model['ref'] || d.ref || 'Documento Oficial'}`,
-        docCite: d.nombre
-      }
-    });
-  }
-
-  derivarDocumento(): void {
+  confirmarEliminarBorrador(): void {
     const d = this.doc();
     if (!d || !d.id_documento) return;
 
-    this.sincronizarMetadatosDesdeDatosGenerales();
-    this.guardando.set(true);
-    // Transiciona a estado DERIVADO
-    const payload = {
-      plantilla_valor: JSON.stringify(this.model),
-      de: this.model['de'] || d.de,
-      para: this.model['para'] || d.para,
-      via: this.model['via'] || d.via,
-      ref: this.model['ref'] || d.ref,
-      estado: 'DERIVADO',
-      sw: { enviado: false, enviar: true }
-    };
+    if (!confirm(`¿Está seguro de que desea eliminar el borrador "${d.nombre || 'Sin título'}" permanentemente?`)) {
+      return;
+    }
 
-    this.documentosService.actualizarDocumento(d.id_documento, payload as any).subscribe({
-      next: (res) => {
+    this.guardando.set(true);
+    this.documentosService.eliminarDocumento(d.id_documento).subscribe({
+      next: () => {
         this.guardando.set(false);
-        this.doc.set(res.datos);
-        this.snackBar.open('Documento derivado exitosamente a la bandeja de destino', 'Cerrar', { duration: 4000 });
+        this.snackBar.open('Borrador eliminado correctamente', 'Aceptar', { duration: 3000 });
+        this.router.navigate(['/documentos']);
       },
       error: (err) => {
         this.guardando.set(false);
-        this.snackBar.open(err.error?.mensaje || 'Error al derivar el documento', 'Cerrar', { duration: 3000 });
+        this.snackBar.open(err.error?.mensaje || 'Error al eliminar el borrador', 'Cerrar', { duration: 3000 });
       }
     });
   }
 
-  firmarDocumento(): void {
-    this.snackBar.open('Iniciando proceso de firma digital autorizada con ADSIB / Ciudadanía...', 'Aceptar', { duration: 4000 });
+  enviarDocumento(): void {
+    const d = this.doc();
+    if (!d || !d.id_documento) return;
+
+    const payload = this.construirPayloadDocumento(d);
+    let idsPara: number[] = [];
+    try { idsPara = JSON.parse(payload.para || '[]'); } catch {}
+
+    if (!Array.isArray(idsPara) || idsPara.length === 0) {
+      this.snackBar.open('Debe seleccionar al menos un destinatario (PARA) antes de enviar el documento.', 'Entendido', { duration: 4000 });
+      return;
+    }
+
+    if (!confirm('¿Desea enviar este documento oficialmente para su revisión y aprobación?')) {
+      return;
+    }
+
+    this.guardando.set(true);
+
+    this.documentosService.enviarDocumento(d.id_documento, payload).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.snackBar.open('Documento enviado exitosamente al conducto regular / destinatario', 'Aceptar', { duration: 4000 });
+        this.router.navigate(['/documentos']);
+      },
+      error: (err) => {
+        this.guardando.set(false);
+        this.snackBar.open(err.error?.mensaje || 'Error al enviar el documento', 'Cerrar', { duration: 4000 });
+      }
+    });
+  }
+
+  cargarUsuarios(): void {
+    this.http.get<any>('/api/v1/seguridad/usuario?limit=100').subscribe({
+      next: (res) => {
+        const rows = res?.datos?.resultado || res?.datos || [];
+        const miId = Number(this.currentUser()?.id || 0);
+        this.listaUsuarios.set(
+          (Array.isArray(rows) ? rows : []).filter((u: any) => u.estado === 'ACTIVO' && Number(u.id_usuario) !== miId)
+        );
+      }
+    });
+  }
+
+  togglePanelDerivar(): void {
+    const nuevoEstado = !this.mostrarPanelDerivar();
+    this.mostrarPanelDerivar.set(nuevoEstado);
+    if (nuevoEstado && this.listaUsuarios().length === 0) {
+      this.cargarUsuarios();
+    }
+  }
+
+  confirmarDerivarDocumento(): void {
+    const d = this.doc();
+    if (!d || !d.id_documento || !this.usuarioDestinoDerivar) return;
+
+    this.guardando.set(true);
+    const obs = (this.proveidoDerivar || '').trim() || 'Favor atender según corresponda.';
+    const esParaTodos = this.usuarioDestinoDerivar === 'TODOS';
+    const destinoNum = esParaTodos ? 0 : Number(this.usuarioDestinoDerivar);
+
+    const peticion$ = d.estado === 'ENVIADO'
+      ? this.documentosService.aprobarDocumento(d.id_documento, {
+          derivar: true,
+          usuario_derivar: destinoNum,
+          observaciones: obs
+        })
+      : this.documentosService.derivarDocumento(d.id_documento, {
+          destino: destinoNum,
+          observaciones: obs
+        });
+
+    peticion$.subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.mostrarPanelDerivar.set(false);
+        this.snackBar.open('Documento derivado exitosamente', 'Aceptar', { duration: 4000 });
+        this.router.navigate(['/aprobacion']);
+      },
+      error: (err) => {
+        this.guardando.set(false);
+        this.snackBar.open(err.error?.mensaje || 'Error al derivar el documento', 'Cerrar', { duration: 4000 });
+      }
+    });
+  }
+
+  aprobarDocumento(): void {
+    const d = this.doc();
+    if (!d || !d.id_documento) return;
+
+    if (!confirm('¿Desea aprobar oficialmente este documento y generar su CITE institucional?')) {
+      return;
+    }
+
+    this.guardando.set(true);
+    this.documentosService.aprobarDocumento(d.id_documento, { derivar: false }).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.snackBar.open('Documento aprobado exitosamente', 'Aceptar', { duration: 4000 });
+        this.router.navigate(['/aprobacion']);
+      },
+      error: (err) => {
+        this.guardando.set(false);
+        this.snackBar.open(err.error?.mensaje || 'Error al aprobar el documento', 'Cerrar', { duration: 4000 });
+      }
+    });
+  }
+
+  observarDocumento(): void {
+    const d = this.doc();
+    if (!d || !d.id_documento) return;
+
+    const motivo = prompt('Ingrese la observación o motivo de devolución al remitente:');
+    if (!motivo || !motivo.trim()) return;
+
+    const u = this.currentUser() as any;
+    const observadoPor = u ? `${u.nombres || u.first_name || ''} ${u.apellidos || u.last_name || ''}`.trim() || u.username : 'Jefatura';
+
+    this.guardando.set(true);
+    this.documentosService.rechazarDocumento(d.id_documento, {
+      observaciones: motivo.trim(),
+      observado_por: observadoPor
+    }).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.snackBar.open('Documento observado y devuelto al remitente', 'Aceptar', { duration: 4000 });
+        this.router.navigate(['/aprobacion']);
+      },
+      error: (err) => {
+        this.guardando.set(false);
+        this.snackBar.open(err.error?.mensaje || 'Error al observar el documento', 'Cerrar', { duration: 4000 });
+      }
+    });
   }
 
   getStatusPillClass(estado?: string): string {
     switch (estado) {
       case 'APROBADO': return 'pill-aprobado';
+      case 'ENVIADO':
       case 'DERIVADO':
       case 'EN CURSO': return 'pill-revision';
+      case 'RECHAZADO':
       case 'OBSERVADO': return 'pill-observado';
       default: return 'pill-borrador';
     }

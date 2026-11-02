@@ -13,13 +13,21 @@ import { AuthService } from '../../core/auth/auth.service';
       @if (to['label']) {
         <div class="cc-label">{{ to['label'] }}</div>
       }
-      <textarea
-        [formControl]="formControl"
-        [formlyAttributes]="field"
-        class="cc-textarea"
-        [placeholder]="to.placeholder || 'Cc.: archivo'"
-        rows="2"
-      ></textarea>
+      @if (formControl) {
+        <textarea
+          [formControl]="formControl"
+          [formlyAttributes]="field"
+          class="cc-textarea"
+          [placeholder]="to.placeholder || 'Cc.: archivo'"
+          rows="2"
+        ></textarea>
+      } @else {
+        <textarea
+          class="cc-textarea"
+          [placeholder]="to.placeholder || 'Cc.: archivo'"
+          rows="2"
+        ></textarea>
+      }
     </div>
   `,
   styles: [`
@@ -61,7 +69,7 @@ export class FormlyFieldCcArchivoComponent extends FieldType<FieldTypeConfig> im
   private authService = inject(AuthService);
 
   ngOnInit(): void {
-    if (!this.formControl.value) {
+    if (this.formControl && !this.formControl.value) {
       const user = this.authService.currentUser();
       let abreviacion = '';
       if (user) {

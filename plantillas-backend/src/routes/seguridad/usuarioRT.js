@@ -731,9 +731,17 @@ module.exports = app => {
     const usuarioCrear = req.body;
     let usuarioDevolver = {};
 
-    if (!usuarioCrear.contrasena || typeof usuarioCrear.contrasena !== 'string' || usuarioCrear.contrasena.trim() === '') {
-      usuarioCrear.contrasena = usuarioCrear.numero_documento || usuarioCrear.usuario || '12345678';
+    if (usuarioCrear.tipo_autenticacion === 'CIUDADANIA_DIGITAL') {
+      usuarioCrear.tipo_autenticacion = 'CIUDADANIA';
     }
+    const creadorId = (req.body.audit_usuario && req.body.audit_usuario.id_usuario) ? req.body.audit_usuario.id_usuario : 1;
+    usuarioCrear._usuario_creacion = creadorId;
+    if (usuarioCrear.virtual === undefined || usuarioCrear.virtual === null) {
+      usuarioCrear.virtual = false;
+    }
+
+    const passwordPorDefecto = String(usuarioCrear.numero_documento || usuarioCrear.usuario || '12345678').trim();
+    usuarioCrear.contrasena = passwordPorDefecto;
 
     // Inicia una transaccion.
     sequelize.transaction().then((t) =>  {
@@ -799,9 +807,55 @@ module.exports = app => {
         .then(() => {
           if (usuarioCrear.tipo_autenticacion === 'AUTHENTIK' || !usuarioCrear.tipo_autenticacion) {
             const authentikService = require('../../lib/authentikService');
-            authentikService.sincronizarUsuarioAuthentik(usuarioDevolver);
+            authentikService.sincronizarUsuarioAuthentik(usuarioDevolver, passwordPorDefecto);
           }
-          res.status(201).send(util.formatearMensaje("EXITO","Creación de usuario correcto.",usuarioDevolver));
+
+          const datosLimpios = usuarioDevolver && usuarioDevolver.toJSON ? usuarioDevolver.toJSON() : { ...usuarioDevolver };
+          delete datosLimpios.contrasena;
+
+          if (usuarioDevolver && usuarioDevolver.email) {
+            const nombreCompleto = `${usuarioDevolver.nombres || ''} ${usuarioDevolver.apellidos || ''}`.trim();
+            const datosCorreo = {
+              para: usuarioDevolver.email,
+              titulo: 'Credenciales de Acceso - Sistema de Documentos Digitales (DOCS)',
+              mensaje: `Estimado(a) ${nombreCompleto},\n\nSu cuenta ha sido creada exitosamente en el Sistema de Documentos Digitales.\n\nUsuario: ${usuarioDevolver.usuario}\nContraseña por defecto (Nro. CI): ${passwordPorDefecto}\n\nPor seguridad, le recomendamos cambiar su contraseña al ingresar por primera vez.`,
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 10px; color: #1e293b;">
+                  <h2 style="color: #0f172a; margin-top: 0;">Bienvenido(a) al Sistema de Documentos Digitales (DOCS)</h2>
+                  <p>Estimado(a) <strong>${nombreCompleto}</strong>,</p>
+                  <p>Su cuenta de usuario ha sido registrada exitosamente con las siguientes credenciales de acceso:</p>
+                  <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                    <p style="margin: 6px 0;"><strong>Usuario:</strong> <code>${usuarioDevolver.usuario}</code></p>
+                    <p style="margin: 6px 0;"><strong>Contraseña por defecto (CI):</strong> <code>${passwordPorDefecto}</code></p>
+                  </div>
+                  <p style="font-size: 13px; color: #64748b;">Por razones de seguridad, le recomendamos actualizar su contraseña después de su primer inicio de sesión.</p>
+                </div>
+              `,
+            };
+
+            return correo.enviar(datosCorreo)
+              .then(() => {
+                res.status(201).send(util.formatearMensaje(
+                  "EXITO",
+                  `Usuario "${usuarioDevolver.usuario}" creado correctamente. Se envió el correo electrónico con su contraseña por defecto (CI: ${passwordPorDefecto}).`,
+                  datosLimpios
+                ));
+              })
+              .catch(errCorreo => {
+                logger.warn(`[USUARIO_CREAR] No se pudo enviar correo SMTP a ${usuarioDevolver.email}, pero el usuario fue creado con su CI como contraseña:`, errCorreo.message || errCorreo);
+                res.status(201).send(util.formatearMensaje(
+                  "EXITO",
+                  `Usuario "${usuarioDevolver.usuario}" creado correctamente con contraseña por defecto igual a su CI (${passwordPorDefecto}). Nota: El servidor de correo SMTP no está disponible.`,
+                  datosLimpios
+                ));
+              });
+          }
+
+          res.status(201).send(util.formatearMensaje(
+            "EXITO",
+            `Usuario "${usuarioDevolver.usuario}" creado correctamente con contraseña por defecto igual a su CI (${passwordPorDefecto}).`,
+            datosLimpios
+          ));
         })
         .catch(error  =>  {
           t.rollback();
@@ -886,6 +940,9 @@ module.exports = app => {
   */
   app.put('/api/v1/seguridad/usuario/:id',(req,res) => {
     const usuario = req.body;
+    if (usuario.tipo_autenticacion === 'CIUDADANIA_DIGITAL') {
+      usuario.tipo_autenticacion = 'CIUDADANIA';
+    }
 
     let usuarioDevolver = {};
     let usuarioRespuesta = {};

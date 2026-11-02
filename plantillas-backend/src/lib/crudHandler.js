@@ -319,9 +319,20 @@ class ModelHandler {
       .merge(options)
       .value();
 
+    if (options && options.where) {
+      finalOptions.where = finalOptions.where || {};
+      for (const sym of Object.getOwnPropertySymbols(options.where)) {
+        finalOptions.where[sym] = options.where[sym];
+      }
+    }
+
     if (custom && params.filter) {
       finalOptions.where = finalOptions.where || {};
-      finalOptions.where[Op.or] = params.filter;
+      if (finalOptions.where[Op.and]) {
+        finalOptions.where[Op.and].push({ [Op.or]: params.filter });
+      } else {
+        finalOptions.where[Op.or] = params.filter;
+      }
     }
 
     if (params.page) {

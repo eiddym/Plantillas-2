@@ -3,6 +3,7 @@ const { ModelHandler } = require("../../lib/crudHandler");
 const sequelizeFormly = require("../../lib/modelToFormly");
 const _ = require('lodash');
 const fs = require("fs");
+const path = require('path');
 const moment = require('moment');
 const axios = require('axios');
 const logger = require('../../lib/logger');
@@ -159,11 +160,34 @@ module.exports = app => {
           }
           let pValObj = {};
           try { pValObj = JSON.parse(req.body.plantilla_valor || '{}'); } catch(e) {}
-          if (!pValObj.inputSelect) {
-            pValObj.inputSelect = "Reservado";
-            req.body.plantilla_valor = JSON.stringify(pValObj);
+          const clasifElegida = pValObj.clasificacion || pValObj.inputSelect || "Reservado";
+          pValObj.inputSelect = clasifElegida;
+          pValObj.clasificacion = clasifElegida;
+
+          const dgPost = pValObj.datosGenerales || pValObj['datosGenerales-0'] || {};
+          const extractIds = (raw, fallback) => {
+            const arr = Array.isArray(raw) ? raw : (raw ? [raw] : []);
+            const ids = arr.map(u => Number(u && (u.id_usuario || u.id || u))).filter(n => Number.isInteger(n) && n > 0);
+            if (ids.length > 0) return ids;
+            if (typeof raw === 'string') {
+              try {
+                const p = JSON.parse(raw);
+                const pIds = (Array.isArray(p) ? p : [p]).map(u => Number(u && (u.id_usuario || u.id || u))).filter(n => Number.isInteger(n) && n > 0);
+                if (pIds.length > 0) return pIds;
+              } catch (_) {}
+            }
+            return fallback;
+          };
+          const idCreadorPost = Number(req.body._usuario_creacion) || 1;
+          req.body.de = JSON.stringify(extractIds(dgPost.de || req.body.de, [idCreadorPost]));
+          req.body.para = JSON.stringify(extractIds(dgPost.para || req.body.para, []));
+          req.body.via = JSON.stringify(extractIds(dgPost.via || req.body.via, []));
+          if (dgPost.ref || req.body.ref || req.body.referencia) {
+            req.body.referencia = dgPost.ref || req.body.ref || req.body.referencia;
           }
-          req.body.clasificacion = pValObj.inputSelect;
+
+          req.body.plantilla_valor = JSON.stringify(pValObj);
+          req.body.clasificacion = clasifElegida;
           return bl.verificarObtenerMultiple(req.body, transaccion);
         })
         .then((multipleResp) => {
@@ -304,7 +328,7 @@ module.exports = app => {
       if(pDocumento) {
         let pVal = {};
         try { pVal = JSON.parse(pDocumento.plantilla_valor || '{}'); } catch(e) {}
-        const clasif = pVal.inputSelect || 'Reservado';
+        const clasif = pVal.clasificacion || pVal.inputSelect || 'Reservado';
         const auditUser = req.body.audit_usuario || {};
         const esMaeOAdmin = auditUser.es_mae === true || auditUser.username === 'admin' || auditUser.usuario === 'admin';
 
@@ -447,7 +471,88 @@ module.exports = app => {
 }
 
 */
-  app.get('/api/v1/plantillasFormly/documento', sequelizeHandlers.query(documento));
+  app.get('/api/v1/plantillasFormly/documento', (req, res, next) => {
+    const auditUser = req.body?.audit_usuario || req.user || {};
+    const idUs = Number(auditUser.id_usuario || auditUser.id || 0);
+    const bandeja = req.query.bandeja || '';
+    const andConds = [{ estado: { [Op.ne]: 'ELIMINADO' } }];
+
+    if (idUs > 0) {
+      const matchJsonId = (col) => ([
+        { [col]: { [Op.like]: `[${idUs}]` } },
+        { [col]: { [Op.like]: `[${idUs},%` } },
+        { [col]: { [Op.like]: `%,${idUs},%` } },
+        { [col]: { [Op.like]: `%,${idUs}]` } },
+        { [col]: { [Op.like]: `%"${idUs}"%` } },
+      ]);
+
+      if (bandeja === 'home') {
+        andConds.push({
+          [Op.or]: [
+            {
+              [Op.and]: [
+                { estado: { [Op.in]: ['ENVIADO', 'DERIVADO'] } },
+                {
+                  [Op.or]: [
+                    { via_actual: idUs },
+                    { aprobador_cd_actual: idUs },
+                  ]
+                }
+              ]
+            },
+            {
+              [Op.and]: [
+                { _usuario_creacion: idUs },
+                { estado: { [Op.in]: ['NUEVO', 'OBSERVADO'] } },
+              ]
+            }
+          ]
+        });
+      } else if (bandeja === 'derivados' || bandeja === 'aprobar_documento') {
+        const estadoParam = String(req.query.estado || '');
+        const incluyeRevisados = estadoParam.includes('APROBADO') || estadoParam.includes('CERRADO');
+        andConds.push({
+          [Op.or]: incluyeRevisados
+            ? [
+                { via_actual: idUs },
+                { aprobador_cd_actual: idUs },
+                ...matchJsonId('para'),
+                ...matchJsonId('via'),
+              ]
+            : [
+                { via_actual: idUs },
+                { aprobador_cd_actual: idUs },
+              ]
+        });
+      } else if (bandeja !== 'impresion') {
+        andConds.push({
+          [Op.or]: [
+            { _usuario_creacion: idUs },
+            {
+              [Op.and]: [
+                { estado: { [Op.ne]: 'NUEVO' } },
+                {
+                  [Op.or]: [
+                    { via_actual: idUs },
+                    ...matchJsonId('de'),
+                    ...matchJsonId('para'),
+                    ...matchJsonId('via'),
+                  ]
+                }
+              ]
+            }
+          ]
+        });
+      }
+    }
+
+    req.options = {
+      where: {
+        [Op.and]: andConds
+      }
+    };
+    next();
+  }, sequelizeHandlers.query(documento));
 
   function filtros (req,res,next){
       if(req.query.filter && req.query.filter!='')
@@ -637,11 +742,14 @@ module.exports = app => {
         `./public/documentos/${doc.nombre.replace(/\//g, '_')}.pdf`
       );
 
-      for (const p of candidatePaths) {
-        if (p && fs.existsSync(p)) {
-          res.set('Content-Type', 'application/pdf');
-          res.set('Content-Disposition', `inline; filename="${formattedName}"`);
-          return res.sendFile(path.resolve(p));
+      const forceRegen = req.query?.force === 'true' || req.body?.force === 'true' || req.query?.force === true;
+      if (!forceRegen) {
+        for (const p of candidatePaths) {
+          if (p && fs.existsSync(p)) {
+            res.set('Content-Type', 'application/pdf');
+            res.set('Content-Disposition', `inline; filename="${formattedName}"`);
+            return res.sendFile(path.resolve(p));
+          }
         }
       }
 
@@ -1331,6 +1439,16 @@ module.exports = app => {
       "mensaje": "La eliminación fue exitosa."
     }
 */
+  app.delete('/api/v1/plantillasFormly/documento/:id', (req, res) => {
+    const idUsuario = req.body?.audit_usuario?.id_usuario;
+    if (!idUsuario) {
+      return res.status(401).send(util.formatearMensaje("ERROR", "Usuario no autenticado"));
+    }
+    bl.eliminarDocumento(idUsuario, req.params.id, documento, historial_flujo)
+      .then(() => res.send(util.formatearMensaje("EXITO", "La eliminación fue exitosa.")))
+      .catch(pError => res.status(412).send(util.formatearMensaje("ERROR", pError?.message || pError)));
+  });
+
   app.delete('/api/v1/plantillasFormly/documento/:idUs/misdocumentos/:id', (req, res) => {
 
     if( req.params.idUs == req.body.audit_usuario.id_usuario ){
@@ -1440,6 +1558,7 @@ module.exports = app => {
         try { val = JSON.parse(doc.plantilla_valor || '{}'); } catch(e) {}
 
         val.inputSelect = "Desclasificado";
+        val.clasificacion = "Desclasificado";
 
         return doc.update({ plantilla_valor: JSON.stringify(val), clasificacion: 'Desclasificado' })
         .then(docUpdated => {
@@ -1494,9 +1613,53 @@ module.exports = app => {
           try { prevVal = JSON.parse(xdoc.plantilla_valor || '{}'); } catch(e) {}
           try { newVal = JSON.parse(req.body.plantilla_valor || '{}'); } catch(e) {}
 
-          const prevClasif = prevVal.inputSelect || xdoc.clasificacion || 'Reservado';
-          const newClasif = newVal.inputSelect || prevClasif;
+          const prevClasif = prevVal.clasificacion || prevVal.inputSelect || xdoc.clasificacion || 'Reservado';
+          const newClasif = newVal.clasificacion || newVal.inputSelect || prevClasif;
           req.body.clasificacion = newClasif;
+          newVal.clasificacion = newClasif;
+          newVal.inputSelect = newClasif;
+
+          const dgPut = newVal.datosGenerales || newVal['datosGenerales-0'] || prevVal.datosGenerales || prevVal['datosGenerales-0'] || {};
+          if (newVal.datosGenerales && !newVal['datosGenerales-0']) {
+            newVal['datosGenerales-0'] = newVal.datosGenerales;
+          } else if (newVal['datosGenerales-0'] && !newVal.datosGenerales) {
+            newVal.datosGenerales = newVal['datosGenerales-0'];
+          }
+          const extractIdsPut = (raw, fallbackStr, defaultArr) => {
+            const toIds = (v) => {
+              const arr = Array.isArray(v) ? v : (v ? [v] : []);
+              const ids = [];
+              for (const u of arr) {
+                if (u && Array.isArray(u.todos_ids) && u.todos_ids.length > 0) {
+                  ids.push(...u.todos_ids);
+                } else if (u && (u.todos === true || u.id_usuario === 'TODOS' || u.id_usuario === 0)) {
+                  if (Array.isArray(u.todos_ids)) ids.push(...u.todos_ids);
+                } else {
+                  const num = Number(u && (u.id_usuario || u.id || u));
+                  if (Number.isInteger(num) && num > 0) ids.push(num);
+                }
+              }
+              return [...new Set(ids)];
+            };
+            let ids = toIds(raw);
+            if (ids.length > 0) return ids;
+            if (typeof raw === 'string') {
+              try { ids = toIds(JSON.parse(raw)); if (ids.length > 0) return ids; } catch (_) {}
+            }
+            if (typeof fallbackStr === 'string') {
+              try { ids = toIds(JSON.parse(fallbackStr)); if (ids.length > 0) return ids; } catch (_) {}
+            }
+            return defaultArr;
+          };
+          const idCreadorDoc = Number(xdoc._usuario_creacion) || Number(usuarioId) || 1;
+          req.body.de = JSON.stringify(extractIdsPut(dgPut.de || req.body.de, xdoc.de, [idCreadorDoc]));
+          req.body.para = JSON.stringify(extractIdsPut(dgPut.para || req.body.para, xdoc.para, []));
+          req.body.via = JSON.stringify(extractIdsPut(dgPut.via || req.body.via, xdoc.via, []));
+          if (dgPut.ref || req.body.ref || req.body.referencia) {
+            req.body.referencia = dgPut.ref || req.body.ref || req.body.referencia;
+          }
+
+          req.body.plantilla_valor = JSON.stringify(newVal);
 
           if (prevClasif !== 'Desclasificado' && newClasif === 'Desclasificado') {
             const auditUser = req.body.audit_usuario || {};
@@ -1642,12 +1805,16 @@ module.exports = app => {
         .then(docResp => {
           console.log('Revisando la obtencion del documento base para aprobar', tr);
           console.log('\n***Documento sin procesar :: ', docResp);
-          if (docResp.estado !== 'ENVIADO') throw Error("Este documento no puede ser modificado.");
-          if (docResp.via_actual !== usuarioModificacion) throw Error('Usted no esta autorizado para la accion solicitada.');
+          if (docResp.estado !== 'ENVIADO' && docResp.estado !== 'DERIVADO') throw Error("Este documento no puede ser modificado.");
+          if (Number(docResp.via_actual) !== Number(usuarioModificacion)) throw Error('Usted no esta autorizado para la accion solicitada.');
           documentoBase = docResp;
-          const para = JSON.parse(documentoBase.para)[0];
+          let para = null;
+          try {
+            const p = JSON.parse(documentoBase.para || '[]');
+            para = Array.isArray(p) ? p[0] : p;
+          } catch (e) {}
           const viaActual = documentoBase.via_actual;
-          const aprobarPara = (viaActual == para);
+          const aprobarPara = (Number(viaActual) === Number(para));
           const datosAprobacion = {
             derivar: req.body.derivar || false,
             observaciones: req.body.observaciones || '',
@@ -1725,28 +1892,41 @@ module.exports = app => {
 
   */
 
-  app.put('/api/v1/plantillasFormly/documento/:id/derivar',  (req, res) => {
+  app.put('/api/v1/plantillasFormly/documento/:id/derivar', async (req, res) => {
     const idDocumento = req.params.id;
     const usuarioModificacion = req.body.audit_usuario.id_usuario;
-    // const usuarioModificacion = req.body.usuario;
-    const destino = req.body.destino;
+    let destino = req.body.destino;
+    let actualizarPara = null;
 
-    const datos={
-      via_actual: destino,
-      observaciones:req.body.observaciones,
-      estado : 'DERIVADO',
+    if (destino === 0 || destino === '0' || destino === 'TODOS') {
+      try {
+        const todosActivos = await modelos.usuario.findAll({ where: { estado: 'ACTIVO' } });
+        actualizarPara = todosActivos.map(u => u.id_usuario);
+        destino = Number(usuarioModificacion);
+      } catch (e) {
+        destino = Number(usuarioModificacion);
+      }
+    }
+
+    const datos = {
+      via_actual: Number(destino),
+      observaciones: req.body.observaciones,
+      estado: 'DERIVADO',
       _usuario_modificacion: usuarioModificacion,
+    };
+    if (actualizarPara) {
+      datos.para = JSON.stringify(actualizarPara);
     }
     let doc = null;
     documento
       .findByPk(idDocumento)
       .then((pDoc) => {
         doc = pDoc;
-        if (doc.via_actual !== usuarioModificacion)
+        if (Number(doc.via_actual) !== Number(usuarioModificacion))
           throw new Error(
             "Usted no esta autorizado para la accion solicitada."
           );
-        if (doc.estado !== "DERIVADO")
+        if (doc.estado !== "DERIVADO" && doc.estado !== "ENVIADO")
           throw new Error("El documento no puede ser modificado.");
         return documento.findOne({
           where: { documento_padre: doc.id_documento },

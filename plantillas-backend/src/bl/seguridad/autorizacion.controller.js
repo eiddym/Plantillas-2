@@ -237,12 +237,24 @@ module.exports = (app) => {
         }
         const token = jwt.encode(cifrar, app.src.config.config.jwtSecret);
         const sesion = app.get("sesion");
+        const sesionesCerradas = app.get("sesionesCerradas") || {};
+
+        if (sesion[usuario.id_usuario] && sesion[usuario.id_usuario].token) {
+          sesionesCerradas[sesion[usuario.id_usuario].token] = Date.now();
+          if (sesion[usuario.id_usuario].backup) {
+            sesionesCerradas[sesion[usuario.id_usuario].backup] = Date.now();
+          }
+          app.set("sesionesCerradas", sesionesCerradas);
+        }
 
         sesion[usuario.id_usuario] = {
+          createdAt: Date.now(),
+          lastActivity: Date.now(),
           fecha: moment(moment().tz('America/La_Paz').format()).add(1, 'minutes'),
           backup: null,
           token,
         }
+        app.set("sesion", sesion);
         return { datosTemporal, token };
       }
 

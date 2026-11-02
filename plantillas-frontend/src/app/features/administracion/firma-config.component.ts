@@ -110,7 +110,7 @@ interface FirmaConfigResp {
 
           <div class="card-body">
             <p>
-              Validación y aprobación de trámites y resoluciones institucionales mediante consentimiento informado y autenticación multifactor de <strong>Ciudadanía Digital del Estado Plurinacional</strong>.
+              Validación y aprobación de documentos y resoluciones institucionales mediante consentimiento informado y autenticación multifactor de <strong>Ciudadanía Digital del Estado Plurinacional</strong>.
             </p>
             <ul class="method-features">
               <li><mat-icon>done</mat-icon> Autenticación segura de autoridades y operadores sin requerir tokens físicos.</li>

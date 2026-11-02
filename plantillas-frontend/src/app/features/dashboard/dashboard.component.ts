@@ -69,15 +69,15 @@ interface DashboardSection {
             <div class="kpi-big-number">{{ totalDocs() }}</div>
             <div class="kpi-meta">
               <strong class="kpi-title">DOCUMENTOS ACTIVOS</strong>
-              <span class="kpi-desc">Trámites en redacción y curso</span>
+              <span class="kpi-desc">Documentos en redacción y curso</span>
             </div>
           </div>
 
           <div class="kpi-card kpi-card-revision" routerLink="/aprobacion">
             <div class="kpi-big-number">{{ totalPendientes() }}</div>
             <div class="kpi-meta">
-              <strong class="kpi-title">TRÁMITES DERIVADOS</strong>
-              <span class="kpi-desc">Trámites derivados en curso y revisión</span>
+              <strong class="kpi-title">DOCUMENTOS PENDIENTES</strong>
+              <span class="kpi-desc">Documentos pendientes de atención y revisión</span>
             </div>
           </div>
 
@@ -100,16 +100,18 @@ interface DashboardSection {
         </button>
         <button mat-stroked-button routerLink="/documentos" class="quick-action-btn">
           <mat-icon>search</mat-icon>
-          <span>Buscar Trámite</span>
+          <span>Buscar Documento</span>
         </button>
         <button mat-stroked-button routerLink="/catalogos" class="quick-action-btn">
           <mat-icon>folder_open</mat-icon>
           <span>Catálogos</span>
         </button>
-        <button mat-stroked-button routerLink="/ventanilla-unica" class="quick-action-btn highlight-vu-btn">
-          <mat-icon>inbox</mat-icon>
-          <span>Ventanilla Única</span>
-        </button>
+        @if (puedeVerVentanilla()) {
+          <button mat-stroked-button routerLink="/ventanilla/externa" class="quick-action-btn highlight-vu-btn">
+            <mat-icon>inbox</mat-icon>
+            <span>Ventanilla Única</span>
+          </button>
+        }
       </section>
 
       <!-- Métricas Visuales Inteligentes con Apache ECharts -->
@@ -137,11 +139,11 @@ interface DashboardSection {
         </div>
       </section>
 
-      <!-- Trámites Recientes en Curso (Tabla Directa) -->
+      <!-- Mis Documentos Pendientes de Atención (Tabla Directa) -->
       <section class="recent-tramites-section">
         <div class="section-header-line">
-          <h2>Trámites Recientes en Curso</h2>
-          <a routerLink="/documentos" class="link-ver-todo">Ver bandeja completa</a>
+          <h2>Mis Documentos Pendientes de Atención</h2>
+          <a routerLink="/aprobacion" class="link-ver-todo">Ver bandeja de pendientes</a>
         </div>
 
         <div class="table-responsive">
@@ -158,7 +160,7 @@ interface DashboardSection {
             <ng-container matColumnDef="de">
               <th mat-header-cell *matHeaderCellDef>REMITENTE / DESTINO</th>
               <td mat-cell *matCellDef="let d">
-                <span class="text-de">{{ d.de || d.para || 'Dirección de Área' }}</span>
+                <span class="text-de">{{ getParticipanteTexto(d) }}</span>
               </td>
             </ng-container>
 
@@ -166,7 +168,7 @@ interface DashboardSection {
             <ng-container matColumnDef="ref">
               <th mat-header-cell *matHeaderCellDef>ASUNTO / REFERENCIA</th>
               <td mat-cell *matCellDef="let d">
-                <span class="text-ref">{{ d.ref || 'Trámite oficial en proceso' }}</span>
+                <span class="text-ref">{{ getReferencia(d) }}</span>
               </td>
             </ng-container>
 
@@ -186,57 +188,67 @@ interface DashboardSection {
               <td mat-cell *matCellDef="let d" class="text-right">
                 <button mat-button class="btn-revisar" (click)="irAWorkbench(d)">
                   <mat-icon>edit_note</mat-icon>
-                  <span>Revisar</span>
+                  <span>Atender</span>
                 </button>
               </td>
             </ng-container>
 
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+            <tr class="mat-row" *matNoDataRow>
+              <td class="mat-cell" colspan="5" style="text-align: center; padding: 24px; color: #64748b; font-size: 13px;">
+                No tiene documentos pendientes de atención en su bandeja.
+              </td>
+            </tr>
           </table>
         </div>
       </section>
 
-      <!-- Módulos del Sistema (Diseño Fiel a Imagen 2) -->
+      <!-- Módulos del Sistema en Cápsulas Interactivas (Modelo Fiel) -->
       <section class="modules-portal-section">
         <h2 class="section-title">MÓDULOS DEL SISTEMA</h2>
 
-        <div class="sections-stack">
-          @for (seccion of secciones(); track seccion.label) {
-            <div class="module-section-box">
-              <!-- Pastilla de Encabezado de Sección (Imagen 2) -->
-              <div class="section-badge-header">
-                <div class="section-pill" [ngClass]="seccion.colorClass">
-                  <mat-icon class="pill-icon">{{ seccion.icon }}</mat-icon>
-                  <span class="pill-title">{{ seccion.label }}</span>
-                </div>
-              </div>
+        <div class="module-section-box">
+          <!-- Barra Horizontal de Cápsulas de Menús Padre -->
+          <div class="capsules-bar">
+            @for (seccion of secciones(); track seccion.label) {
+              <button
+                type="button"
+                class="capsule-btn"
+                [ngClass]="[seccion.colorClass, seccionActual()?.label === seccion.label ? 'is-active' : 'is-inactive']"
+                (click)="seleccionarSeccion(seccion.label)"
+              >
+                <mat-icon class="capsule-icon">{{ seccion.icon }}</mat-icon>
+                <span class="capsule-label">{{ seccion.label }}</span>
+              </button>
+            }
+          </div>
 
-              <!-- Grilla de Tarjetas de Módulo (Imagen 2) -->
-              <div class="modules-cards-grid">
-                @for (item of seccion.items; track item.label) {
-                  <div class="module-card" (click)="irARuta(item.url)">
-                    <!-- Fila Superior: Icono a la izquierda, Conteo a la derecha -->
-                    <div class="card-header-row">
-                      <div class="module-icon-box" [ngClass]="'bg-' + item.color">
-                        <mat-icon>{{ item.icon }}</mat-icon>
-                      </div>
-                      <span class="module-count-badge">{{ item.count }}</span>
+          <!-- Grilla de Tarjetas del Módulo Seleccionado -->
+          @if (seccionActual(); as actual) {
+            <div class="modules-cards-grid fade-in">
+              @for (item of actual.items; track item.label) {
+                <div class="module-card" (click)="irARuta(item.url)">
+                  <!-- Fila Superior: Icono a la izquierda, Conteo a la derecha -->
+                  <div class="card-header-row">
+                    <div class="module-icon-box" [ngClass]="'bg-' + item.color">
+                      <mat-icon>{{ item.icon }}</mat-icon>
                     </div>
-
-                    <!-- Cuerpo de la Tarjeta -->
-                    <div class="module-card-body">
-                      <h4 class="module-name">{{ item.label }}</h4>
-                      <p class="module-desc">{{ item.desc }}</p>
-                    </div>
-
-                    <!-- Enlace de Acción Inferior: Ir a [MÓDULO] → -->
-                    <div class="module-card-link">
-                      <span>Ir a {{ item.label }} &rarr;</span>
-                    </div>
+                    <span class="module-count-badge">{{ item.count }}</span>
                   </div>
-                }
-              </div>
+
+                  <!-- Cuerpo de la Tarjeta -->
+                  <div class="module-card-body">
+                    <h4 class="module-name">{{ item.label }}</h4>
+                    <p class="module-desc">{{ item.desc }}</p>
+                  </div>
+
+                  <!-- Enlace de Acción Inferior: Ir a [MÓDULO] → -->
+                  <div class="module-card-link">
+                    <span>Ir a {{ item.label }} &rarr;</span>
+                  </div>
+                </div>
+              }
             </div>
           }
         </div>
@@ -524,62 +536,111 @@ interface DashboardSection {
 
     .text-right { text-align: right; }
 
-    /* MÓDULOS DEL SISTEMA (DISEÑO FIEL A IMAGEN 2) */
+    /* MÓDULOS DEL SISTEMA (CÁPSULAS INTERACTIVAS SEGÚN MODELO) */
     .modules-portal-section {
       margin-bottom: 32px;
-    }
-
-    .sections-stack {
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
     }
 
     .module-section-box {
       background: #ffffff;
       border: 1px solid #e2e8f0;
       border-radius: 14px;
-      padding: 20px 24px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+      padding: 22px 24px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
     }
 
-    /* Pastilla de Encabezado (Imagen 2) */
-    .section-badge-header {
-      margin-bottom: 18px;
+    /* Barra Horizontal de Cápsulas de Menú Padre */
+    .capsules-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #f1f5f9;
     }
 
-    .section-pill {
+    .capsule-btn {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 6px 14px;
+      padding: 8px 18px;
       border-radius: 8px;
       color: #ffffff;
       font-size: 0.82rem;
       font-weight: 800;
       letter-spacing: 0.6px;
       text-transform: uppercase;
+      border: 2px solid transparent;
+      cursor: pointer;
+      font-family: inherit;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      user-select: none;
+
+      .capsule-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: #ffffff;
+      }
+
+      &.is-inactive {
+        opacity: 0.82;
+        filter: saturate(0.9);
+
+        &:hover {
+          opacity: 1;
+          filter: saturate(1);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+        }
+      }
+
+      &.is-active {
+        opacity: 1;
+        filter: saturate(1.15);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+        border-color: rgba(255, 255, 255, 0.8);
+        outline: 3px solid rgba(37, 99, 235, 0.28);
+      }
     }
 
-    .pill-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-      color: #ffffff;
-    }
+    /* Colores de las Cápsulas según Modelo */
+    .pill-purple { background: #7c3aed; }      /* CONFIGURACIÓN */
+    .pill-green { background: #059669; }       /* ADMINISTRACIÓN */
+    .pill-blue { background: #1e40af; }        /* DOCUMENTOS (Azul oscuro profundo) */
+    .pill-teal { background: #0d9488; }        /* CATALOGOS */
+    .pill-blue-bright { background: #2563eb; } /* VENTANILLA ÚNICA */
+    .pill-slate { background: #334155; }       /* ARCHIVO */
 
-    /* Colores de las Pastillas según Imagen 2 */
-    .pill-purple { background: #7c3aed; } /* CONFIGURACIÓN */
-    .pill-green { background: #059669; }  /* ADMINISTRACIÓN */
-    .pill-blue { background: #2563eb; }   /* DOCUMENTOS */
-    .pill-teal { background: #0d9488; }   /* CATALOGOS */
-    .pill-slate { background: #334155; }  /* OTROS */
-
-    /* Grilla de Tarjetas (Imagen 2) */
+    /* Grilla de Tarjetas (4 por fila en desktop como en el modelo) */
     .modules-cards-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      grid-template-columns: repeat(4, 1fr);
       gap: 18px;
+    }
+
+    @media (max-width: 1200px) {
+      .modules-cards-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      }
+    }
+
+    .fade-in {
+      animation: fadeInCards 0.2s ease-out;
+    }
+    @keyframes fadeInCards {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .module-card {
@@ -739,12 +800,15 @@ export class DashboardComponent implements OnInit {
 
   readonly user = this.authService.currentUser;
   private readonly menus = this.authService.currentMenu;
+  readonly puedeVerVentanilla = computed(() =>
+    this.authService.hasRole('ADMIN') || this.authService.hasRole('CORRESPONDENCIA')
+  );
 
   readonly displayedColumns = ['nombre', 'de', 'ref', 'estado', 'accion'];
   readonly recentDocs = signal<Documento[]>([]);
-  readonly totalDocs = signal<number>(6);
+  readonly totalDocs = signal<number>(0);
   readonly totalPendientes = signal<number>(0);
-  readonly totalAprobados = signal<number>(1);
+  readonly totalAprobados = signal<number>(0);
 
   // Señales de métricas visuales Apache ECharts
   readonly tendenciaOptions = signal<echarts.EChartsOption | null>(null);
@@ -765,13 +829,17 @@ export class DashboardComponent implements OnInit {
     return 'Buenas noches';
   });
 
-  // Metadatos por categoría padre (Imagen 2)
+  // Metadatos por categoría padre (Cápsulas según Modelo)
   private readonly parentMetaMap: Record<string, { colorClass: string; icon: string }> = {
     'CONFIGURACIÓN': { colorClass: 'pill-purple', icon: 'build' },
+    'CONFIGURACION': { colorClass: 'pill-purple', icon: 'build' },
     'ADMINISTRACIÓN': { colorClass: 'pill-green', icon: 'settings' },
+    'ADMINISTRACION': { colorClass: 'pill-green', icon: 'settings' },
     'DOCUMENTOS': { colorClass: 'pill-blue', icon: 'description' },
     'CATALOGOS': { colorClass: 'pill-teal', icon: 'folder' },
-    'ARCHIVO': { colorClass: 'pill-slate', icon: 'archive' }
+    'VENTANILLA ÚNICA': { colorClass: 'pill-blue-bright', icon: 'inbox' },
+    'VENTANILLA UNICA': { colorClass: 'pill-blue-bright', icon: 'inbox' },
+    'ARCHIVO': { colorClass: 'pill-slate', icon: 'inventory_2' }
   };
 
   // Metadatos por módulo hijo (Icono, Color, Descripción, Conteo)
@@ -782,20 +850,39 @@ export class DashboardComponent implements OnInit {
     'rol': { icon: 'credit_card', color: 'purple', desc: 'Perfiles de permisos y roles', countSignal: () => this.totalRoles() },
     'menu': { icon: 'menu', color: 'orange', desc: 'Administración de menús', countSignal: () => this.totalMenus() },
     'unidad': { icon: 'business', color: 'blue', desc: 'Estructura organizacional', countSignal: () => this.totalUnidades() },
+    'admin/firma': { icon: 'verified', color: 'teal', desc: 'Configuración de método de firma', countSignal: () => 0 },
     'documentos': { icon: 'description', color: 'blue', desc: 'Mis documentos redactados', countSignal: () => this.totalDocs() },
-    'aprobacion': { icon: 'low_priority', color: 'orange', desc: 'Trámites derivados en curso y revisión', countSignal: () => this.totalPendientes() },
-    'impresion': { icon: 'print', color: 'blue', desc: 'Impresión oficial de documentos', countSignal: () => 0 },
-    'firmar': { icon: 'edit', color: 'purple', desc: 'Pendientes de firma digital', countSignal: () => 0 },
-    'aprobar_documento': { icon: 'fingerprint', color: 'indigo', desc: 'Aprobación con CD', countSignal: () => 0 },
+    'aprobacion': { icon: 'low_priority', color: 'orange', desc: 'Documentos pendientes en curso y revisión', countSignal: () => this.totalPendientes() },
     'monitoreo': { icon: 'speed', color: 'blue', desc: 'Monitoreo de flujos', countSignal: () => 1 },
-    'archivo': { icon: 'archive', color: 'orange', desc: 'Archivo digital emitido', countSignal: () => 0 },
+    'firmar': { icon: 'edit', color: 'purple', desc: 'Pendientes de firma digital', countSignal: () => 0 },
+    'impresion': { icon: 'print', color: 'blue', desc: 'Impresión oficial de documentos', countSignal: () => 0 },
+    'en_curso': { icon: 'description', color: 'blue', desc: 'Acceso a EN CURSO', countSignal: () => 0 },
+    'aprobar_documento': { icon: 'fingerprint', color: 'purple', desc: 'Aprobación con CD', countSignal: () => 0 },
+    'catalogos': { icon: 'folder', color: 'teal', desc: 'Tablas de datos y catálogos', countSignal: () => 0 },
+    'compartidos': { icon: 'share', color: 'teal', desc: 'Catálogos compartidos', countSignal: () => 0 },
+    'ventanilla/externa': { icon: 'cloud_download', color: 'blue', desc: 'Radicación de correspondencia externa', countSignal: () => 0 },
+    'ventanilla/interna': { icon: 'edit_document', color: 'indigo', desc: 'Ventanilla de correspondencia interna', countSignal: () => 0 },
+    'ventanilla-unica': { icon: 'inbox', color: 'blue', desc: 'Radicación de correspondencia externa', countSignal: () => 0 },
+    'archivo': { icon: 'inventory_2', color: 'orange', desc: 'Archivo digital emitido', countSignal: () => 0 },
     'archivo/general': { icon: 'public', color: 'teal', desc: 'Fondo normativo y resoluciones', countSignal: () => 0 },
     'archivo/unidad': { icon: 'domain', color: 'blue', desc: 'Fondo documental de la unidad', countSignal: () => 0 },
-    'archivo/institucional': { icon: 'manage_search', color: 'orange', desc: 'Buscador maestro de expedientes', countSignal: () => 0 },
-    'ventanilla-unica': { icon: 'inbox', color: 'indigo', desc: 'Radicación de correspondencia externa', countSignal: () => 0 },
-    'catalogos': { icon: 'folder', color: 'teal', desc: 'Tablas de datos y catálogos', countSignal: () => 0 },
-    'compartidos': { icon: 'share', color: 'teal', desc: 'Catálogos compartidos', countSignal: () => 0 }
+    'archivo/institucional': { icon: 'manage_search', color: 'orange', desc: 'Buscador maestro de expedientes', countSignal: () => 0 }
   };
+
+  // Cápsula activa seleccionada (por defecto 'DOCUMENTOS' como en el modelo)
+  readonly seccionSeleccionada = signal<string>('DOCUMENTOS');
+
+  readonly seccionActual = computed<DashboardSection | null>(() => {
+    const list = this.secciones();
+    if (!list || list.length === 0) return null;
+    const sel = this.seccionSeleccionada();
+    const found = list.find(s => s.label.toUpperCase() === sel.toUpperCase());
+    return found || list[0];
+  });
+
+  seleccionarSeccion(label: string): void {
+    this.seccionSeleccionada.set(label);
+  }
 
   readonly secciones = computed<DashboardSection[]>(() => {
     const menuList = this.menus() || [];
@@ -866,13 +953,40 @@ export class DashboardComponent implements OnInit {
   }
 
   cargarDatosDashboard(): void {
-    // 1. Cargar documentos recientes y totales
-    this.documentosService.getDocumentos(5, 1).subscribe({
+    // 1. Cargar documentos pendientes de atención del usuario actual (recibidos por atender + borradores propios)
+    this.documentosService.getDocumentos(5, 1, 'NUEVO,OBSERVADO,ENVIADO,DERIVADO', '', 'home').subscribe({
       next: (res) => {
         const docs = res.datos.resultado || [];
         this.recentDocs.set(docs);
-        if (res.datos.total !== undefined) {
+      },
+      error: () => {}
+    });
+
+    // 1a. Cargar contador de bandeja de pendientes recibidos
+    this.documentosService.getDocumentos(1, 1, 'ENVIADO,DERIVADO', '', 'derivados').subscribe({
+      next: (res) => {
+        if (res.datos && res.datos.total !== undefined) {
+          this.totalPendientes.set(res.datos.total);
+        }
+      },
+      error: () => {}
+    });
+
+    // 1b. Cargar total de documentos activos propios del usuario
+    this.documentosService.getDocumentos(1, 1, 'NUEVO,OBSERVADO,ENVIADO,DERIVADO', '', 'documentos').subscribe({
+      next: (res) => {
+        if (res.datos && res.datos.total !== undefined) {
           this.totalDocs.set(res.datos.total);
+        }
+      },
+      error: () => {}
+    });
+
+    // 1c. Cargar total de documentos aprobados/cerrados propios del usuario
+    this.documentosService.getDocumentos(1, 1, 'APROBADO,CERRADO', '', 'documentos').subscribe({
+      next: (res) => {
+        if (res.datos && res.datos.total !== undefined) {
+          this.totalAprobados.set(res.datos.total);
         }
       },
       error: () => {}
@@ -919,9 +1033,46 @@ export class DashboardComponent implements OnInit {
     });
   }
 
+  getParticipanteTexto(d: any): string {
+    try {
+      const pv = typeof d?.plantilla_valor === 'string' ? JSON.parse(d.plantilla_valor) : d?.plantilla_valor;
+      const dg = pv?.['datosGenerales-0'] || pv?.datosGenerales || {};
+      const formatPersona = (p: any): string => {
+        if (!p) return '';
+        if (Array.isArray(p) && p.length > 0) return formatPersona(p[0]);
+        if (typeof p === 'object') {
+          const nombre = `${p.nombres || ''} ${p.apellidos || ''}`.trim();
+          return nombre || p.usuario || p.cargo || '';
+        }
+        return '';
+      };
+      const deNombre = formatPersona(dg.de);
+      const paraNombre = formatPersona(dg.para);
+      if (deNombre && paraNombre) return `${deNombre} → ${paraNombre}`;
+      if (deNombre) return deNombre;
+      if (paraNombre) return paraNombre;
+    } catch {
+      // Fallback
+    }
+    return 'Remitente Institucional';
+  }
+
+  getReferencia(d: any): string {
+    if (d?.ref) return d.ref;
+    try {
+      const pv = typeof d?.plantilla_valor === 'string' ? JSON.parse(d.plantilla_valor) : d?.plantilla_valor;
+      const dg = pv?.['datosGenerales-0'] || pv?.datosGenerales || {};
+      if (dg?.ref) return dg.ref;
+    } catch {
+      // Fallback
+    }
+    return d?.anular ? `Cite: ${d.anular}` : 'Documento pendiente de revisión';
+  }
+
   getStatusClass(estado?: string): string {
     switch (estado) {
       case 'APROBADO': return 'status-aprobado';
+      case 'ENVIADO':
       case 'DERIVADO':
       case 'EN CURSO': return 'status-revision';
       case 'OBSERVADO': return 'status-observado';
@@ -963,7 +1114,7 @@ export class DashboardComponent implements OnInit {
           : ['May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct'];
         const cantidades = serieMensual.length > 0
           ? serieMensual.map((s: any) => s.cantidad || 0)
-          : [4, 7, 12, 9, 15, docs.total_general || 16];
+          : [0, 0, 0, 0, 0, docs.total_general || 0];
 
         this.tendenciaOptions.set({
           tooltip: {
@@ -973,7 +1124,7 @@ export class DashboardComponent implements OnInit {
             textStyle: { color: '#f8fafc', fontSize: 12 },
             formatter: (params: any) => {
               const p = params[0];
-              return `<strong>${p.name}</strong><br/>${p.marker} Trámites tramitados: <strong>${p.value}</strong>`;
+              return `<strong>${p.name}</strong><br/>${p.marker} Documentos procesados: <strong>${p.value}</strong>`;
             }
           },
           grid: {
@@ -997,7 +1148,7 @@ export class DashboardComponent implements OnInit {
           },
           series: [
             {
-              name: 'Trámites',
+              name: 'Documentos',
               type: 'line',
               smooth: true,
               showSymbol: true,
@@ -1063,7 +1214,7 @@ export class DashboardComponent implements OnInit {
                 }
               },
               data: [
-                { value: enCurso, name: 'En Trámite' },
+                { value: enCurso, name: 'En Curso' },
                 { value: aprobados, name: 'Aprobados' },
                 { value: cerrados, name: 'Cerrados' },
                 { value: ventanilla, name: 'Ventanilla' }

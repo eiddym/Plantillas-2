@@ -368,43 +368,44 @@
 
         switch(pItem.type) {
           case 'texto':
-            claseArriba = (!pItem.templateOptions.mTop)? "parrafo-margin-top":"";
-            claseAbajo = (!pItem.templateOptions.mBot)? "parrafo-margin-bottom":"";
-            switch(pItem.templateOptions.tipo){
-              case 'h1':
-                indiceGuion = pItem.templateOptions.className.lastIndexOf('-') +1;
-                alineacion = pItem.templateOptions.className.substr(indiceGuion,pItem.templateOptions.className.length);%>
-                <h1 class="<%=claseArriba%> <%=claseAbajo%>" align="<%= alineacion %>"><%= pItem.templateOptions.label %></h1>
+          case 'parrafo':
+            var _toTexto = pItem.templateOptions || {};
+            claseArriba = (!_toTexto.mTop)? "parrafo-margin-top":"";
+            claseAbajo = (!_toTexto.mBot)? "parrafo-margin-bottom":"";
+            var _rawAlign = (_toTexto.alineacion || _toTexto.align || _toTexto.className || '').toLowerCase();
+            if (_rawAlign.indexOf('left') !== -1) alineacion = 'left';
+            else if (_rawAlign.indexOf('right') !== -1) alineacion = 'right';
+            else if (_rawAlign.indexOf('justify') !== -1) alineacion = 'justify';
+            else if (_rawAlign.indexOf('center') !== -1) alineacion = 'center';
+            else alineacion = (_toTexto.tipo === 'p') ? 'justify' : 'center';
+
+            var _lblTexto = _toTexto.label || _toTexto.texto || '';
+            var _tipoTexto = _toTexto.tipo || 'h2';
+
+            switch(_tipoTexto){
+              case 'h1': %>
+                <h1 class="<%=claseArriba%> <%=claseAbajo%>" align="<%= alineacion %>" style="text-align:<%= alineacion %>;"><%= _lblTexto %></h1>
                 <%break;
-              case 'h2':
-                indiceGuion = pItem.templateOptions.className.lastIndexOf('-') +1;
-                alineacion = pItem.templateOptions.className.substr(indiceGuion,pItem.templateOptions.className.length);%>
-                <h2 class="<%=claseArriba%> <%=claseAbajo%>" align="<%= alineacion %>"><%= pItem.templateOptions.label%></h2>
+              case 'h2': %>
+                <h2 class="<%=claseArriba%> <%=claseAbajo%>" align="<%= alineacion %>" style="text-align:<%= alineacion %>;"><%= _lblTexto %></h2>
                 <%break;
-              case 'h3':
-                indiceGuion = pItem.templateOptions.className.lastIndexOf('-') +1;
-                alineacion = pItem.templateOptions.className.substr(indiceGuion,pItem.templateOptions.className.length);%>
-                <h3 class="<%=claseArriba%> <%=claseAbajo%>" align="<%= alineacion %>"><%= pItem.templateOptions.label%></h3>
+              case 'h3': %>
+                <h3 class="<%=claseArriba%> <%=claseAbajo%>" align="<%= alineacion %>" style="text-align:<%= alineacion %>;"><%= _lblTexto %></h3>
                 <%break;
-              case 'h4':
-                indiceGuion = pItem.templateOptions.className.lastIndexOf('-') +1;
-                alineacion = pItem.templateOptions.className.substr(indiceGuion,pItem.templateOptions.className.length);%>
-                <h4 class="<%=claseArriba%> <%=claseAbajo%>" align="<%= alineacion %>"><%= pItem.templateOptions.label%></h4>
+              case 'h4': %>
+                <h4 class="<%=claseArriba%> <%=claseAbajo%>" align="<%= alineacion %>" style="text-align:<%= alineacion %>;"><%= _lblTexto %></h4>
                 <%break;
-              case 'h5':
-                indiceGuion = pItem.templateOptions.className.lastIndexOf('-') +1;
-                alineacion = pItem.templateOptions.className.substr(indiceGuion,pItem.templateOptions.className.length);%>
-                <h5 class="<%=claseArriba%> <%=claseAbajo%>" align="<%= alineacion %>"><%= pItem.templateOptions.label%></h5>
+              case 'h5': %>
+                <h5 class="<%=claseArriba%> <%=claseAbajo%>" align="<%= alineacion %>" style="text-align:<%= alineacion %>;"><%= _lblTexto %></h5>
                 <%break;
-              case 'h6':
-                indiceGuion = pItem.templateOptions.className.lastIndexOf('-') +1;
-                alineacion = pItem.templateOptions.className.substr(indiceGuion,pItem.templateOptions.className.length);%>
-                <h6 class="<%=claseArriba%> <%=claseAbajo%>" align="<%= alineacion %>"><%= pItem.templateOptions.label%></h6>
+              case 'h6': %>
+                <h6 class="<%=claseArriba%> <%=claseAbajo%>" align="<%= alineacion %>" style="text-align:<%= alineacion %>;"><%= _lblTexto %></h6>
                 <%break;
-              case 'p':
-                indiceGuion = pItem.templateOptions.className.lastIndexOf('-') +1;
-                alineacion = pItem.templateOptions.className.substr(indiceGuion,pItem.templateOptions.className.length);%>
-                <p class="<%=claseArriba%> <%=claseAbajo%>" align="<%= alineacion %>"> <%= pItem.templateOptions.label %></p>
+              case 'p': %>
+                <p class="<%=claseArriba%> <%=claseAbajo%>" align="<%= alineacion %>" style="text-align:<%= alineacion %>;"><%= _lblTexto %></p>
+                <%break;
+              default: %>
+                <h2 class="<%=claseArriba%> <%=claseAbajo%>" align="<%= alineacion %>" style="text-align:<%= alineacion %>;"><%= _lblTexto %></h2>
                 <%break;
             }
             break;
@@ -607,7 +608,7 @@ case 'lista': %>
               ? datosGenerales.de
               : (datosGenerales.de ? [datosGenerales.de] : []);
 
-            if(pItem.templateOptions.showItem){ %>
+            if(pItem.templateOptions && pItem.templateOptions.showItem !== false){ %>
               <table width="100%">
                 <tbody>
                   <% if(pItem.templateOptions.show.para && para.length > 0) { %>
@@ -801,13 +802,15 @@ case 'lista': %>
             }
             break;
           case 'textarea':
-            var interlineado = pItem.templateOptions.interlineado || false;
-            if(pItem.templateOptions.label.length > 0) {%>
+          case 'inputTextArea':
+            var _toTextarea = pItem.templateOptions || {};
+            var interlineado = _toTextarea.interlineado || false;
+            if(_toTextarea.label && _toTextarea.label.length > 0) {%>
               <%if(pNumeracion && pRuta){%><br><%}%>
-              <span class="etiqueta"><%= pItem.templateOptions.label %></span>
+              <span class="etiqueta"><%= _toTextarea.label %></span>
             <%  }
             var pes = datos[pItem.key];
-            if(datos[pItem.key]) pes = datos[pItem.key].split('\n');
+            if(pes) pes = String(pes).split('\n');
             if(pNumeracion && pRuta) {
               if(datos[pItem.key]){
                 if(interlineado){ %>
@@ -842,7 +845,7 @@ case 'lista': %>
             break;
           case 'ccArchivo':
             if(datos[pItem.key]){
-              var vectorDatos = datos[pItem.key].split('\n') || [];
+              var vectorDatos = String(datos[pItem.key]).replace(/undefined/gi, '').split('\n') || [];
               var htmlDatos = "";
               for(var s = 0; s < vectorDatos.length; s++) {
                 if(s-1 === vectorDatos.length) htmlDatos += "<span>"+ vectorDatos[s]+"</span>";
@@ -853,25 +856,28 @@ case 'lista': %>
                 
             <%}
             break;
-          case 'checkbox': %>
+          case 'checkbox':
+          case 'inputCheckBox': %>
             <label>
-              <% if(datos[pItem.key] && datos[pItem.key]== true){%>
-                <input class="checkbox" type="checkbox" checked><%= pItem.templateOptions.label %>
+              <% if(datos[pItem.key] && (datos[pItem.key] === true || datos[pItem.key] === 'true')){%>
+                <input class="checkbox" type="checkbox" checked><%= (pItem.templateOptions && (pItem.templateOptions.label || pItem.templateOptions.texto)) || '' %>
               <%}
               else{ %>
-                <input class="checkbox" type="checkbox"><%= pItem.templateOptions.label %>
+                <input class="checkbox" type="checkbox"><%= (pItem.templateOptions && (pItem.templateOptions.label || pItem.templateOptions.texto)) || '' %>
               <%}%>
             </label>
             <%break;
+          case 'calendario':
           case 'datepicker':
             var fechaMostrar = 'SIN FECHA!!!';
             if(datos[pItem.key] !== null && datos[pItem.key] !== undefined){
-              var fecha = datos[pItem.key].substr(0,datos[pItem.key].indexOf('T'))
+              var fecha = String(datos[pItem.key]);
+              if (fecha.indexOf('T') !== -1) fecha = fecha.substr(0, fecha.indexOf('T'));
               var aux = (fecha.split('-')).reverse();
               fechaMostrar = (aux.toString()).replace(/,/g,'/');
             } %>
             <div class="calendario">
-              <span class="etiqueta"><%= pItem.templateOptions.label %></span>
+              <span class="etiqueta"><%= (pItem.templateOptions && pItem.templateOptions.label) || '' %></span>
               <p><%= fechaMostrar %></p>
             </div>
             <%break;
@@ -907,14 +913,30 @@ case 'lista': %>
             </div>
             <%break;
           case 'editorTexto':
-            if(pDatos[pItem.key]){
-              pDatos[pItem.key] = pDatos[pItem.key].replace('<b>','');
-              pDatos[pItem.key] = pDatos[pItem.key].replace('</b>','');
-              pDatos[pItem.key] = pDatos[pItem.key].replace('<i>','');
-              pDatos[pItem.key] = pDatos[pItem.key].replace('</i>','');
+          case 'editor':
+          case 'editor-texto':
+            var _valEditor = pDatos[pItem.key];
+            if (!_valEditor && pItem.key !== 'cuerpo' && pDatos['cuerpo']) {
+              _valEditor = pDatos['cuerpo'];
+            }
+            if (!_valEditor && pDatos['texto'] && typeof pDatos['texto'] === 'string') {
+              _valEditor = pDatos['texto'];
+            }
+            if (!_valEditor && typeof i !== 'undefined') {
+              _valEditor = pDatos['editorTexto_' + i] || pDatos['editorTexto-' + i];
+            }
+            if (!_valEditor) {
+              for (var _k in pDatos) {
+                if ((_k.indexOf('editorTexto') === 0 || _k.indexOf('editor') === 0) && pDatos[_k] && typeof pDatos[_k] === 'string') {
+                  _valEditor = pDatos[_k];
+                  break;
+                }
+              }
+            }
+            if(_valEditor){
               %>
               <div class="<%= pFlagHtml? 'editor-texto-html':'editor-texto'%>">
-                <%- pDatos[pItem.key] %>
+                <%- _valEditor %>
               </div>
             <%}
             break;

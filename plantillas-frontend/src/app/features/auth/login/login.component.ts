@@ -123,7 +123,7 @@ import { AuthService } from '../../../core/auth/auth.service';
               </div>
               <div class="card-text">
                 <strong class="card-title">Ventanilla Única Virtual</strong>
-                <span class="card-subtitle">Radicar notas externas o consultar trámite</span>
+                <span class="card-subtitle">Radicar notas externas o consultar documento</span>
               </div>
               <mat-icon class="card-arrow">arrow_forward</mat-icon>
             </a>

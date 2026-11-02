@@ -72,7 +72,7 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
           </ng-container>
 
           <ng-container *ngIf="modoVista() === 'derivados'">
-            <mat-tab label="Trámites Derivados"></mat-tab>
+            <mat-tab label="Documentos Pendientes"></mat-tab>
             <mat-tab label="En Curso"></mat-tab>
             <mat-tab label="Revisados"></mat-tab>
           </ng-container>
@@ -129,8 +129,8 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
             <ng-container matColumnDef="nombre">
               <th mat-header-cell *matHeaderCellDef>CITE / DOCUMENTO</th>
               <td mat-cell *matCellDef="let d">
-                <span class="doc-cite">{{ d.nombre }}</span>
-                <span class="doc-meta">{{ d.ref || 'Trámite oficial en curso' }}</span>
+                <span class="doc-cite" style="cursor: pointer;" (click)="abrirWorkbench(d)">{{ d.nombre }}</span>
+                <span class="doc-meta">{{ getReferencia(d) }}</span>
               </td>
             </ng-container>
 
@@ -139,8 +139,8 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
               <th mat-header-cell *matHeaderCellDef>PARTICIPANTES</th>
               <td mat-cell *matCellDef="let d">
                 <div class="participantes-col">
-                  <span><strong>De:</strong> {{ d.de || 'Funcionario Solicitante' }}</span>
-                  <span><strong>Para:</strong> {{ d.para || 'Jefatura de Área' }}</span>
+                  <span><strong>De:</strong> {{ getParticipanteTexto(d, 'de') }}</span>
+                  <span><strong>Para:</strong> {{ getParticipanteTexto(d, 'para') }}</span>
                 </div>
               </td>
             </ng-container>
@@ -212,7 +212,7 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
 
                 <!-- ACCIÓN PARA BANDEJAS REGULARES -->
                 <ng-container *ngIf="modoVista() !== 'firmar' && modoVista() !== 'impresion'">
-                  <button mat-icon-button (click)="abrirWorkbench(d)" matTooltip="Editar / Revisar">
+                  <button *ngIf="puedeEditar(d)" mat-icon-button (click)="abrirWorkbench(d)" matTooltip="Editar / Revisar">
                     <mat-icon>edit_note</mat-icon>
                   </button>
                   <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento">
@@ -520,13 +520,34 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
       margin-bottom: 8px;
     }
 
+    ::ng-deep .mat-mdc-tab-header {
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100% !important;
+    }
+
+    ::ng-deep .mat-mdc-tab-header-pagination {
+      display: none !important;
+    }
+
     @media (max-width: 768px) {
+      .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .btn-nuevo {
+        width: 100%;
+        justify-content: center;
+      }
       .toolbar-filter {
         flex-direction: column;
         align-items: stretch;
+        padding: 12px;
       }
       .search-field {
         width: 100%;
+        max-width: 100%;
       }
     }
   `]
@@ -591,7 +612,7 @@ export class DocumentosListComponent implements OnInit {
   readonly headerTitle = computed(() => {
     switch (this.modoVista()) {
       case 'firmar': return 'Documentos para Firma Digital';
-      case 'derivados': return 'Bandeja de Derivados';
+      case 'derivados': return 'Bandeja de Pendientes';
       case 'impresion': return 'Imprimir Documentos Oficiales';
       case 'en_curso': return 'Documentos En Curso';
       case 'aprobar_documento': return 'Aprobación Documental';
@@ -601,12 +622,12 @@ export class DocumentosListComponent implements OnInit {
 
   readonly headerSubtitle = computed(() => {
     switch (this.modoVista()) {
-      case 'firmar': return 'Trámites cerrados y aprobados con CITE oficial que esperan su firma en la cadena de flujo';
-      case 'derivados': return 'Bandeja de documentos derivados y en revisión de flujo institucional';
+      case 'firmar': return 'Documentos cerrados y aprobados con CITE oficial que esperan su firma en la cadena de flujo';
+      case 'derivados': return 'Bandeja de documentos pendientes de atención, derivación o aprobación';
       case 'impresion': return 'Bandeja oficial de expedición física e impresión certificada (Secretaría)';
-      case 'en_curso': return 'Trámites y borradores en redacción y elaboración activa';
-      case 'aprobar_documento': return 'Trámites pendientes de visto bueno y aprobación por Jefatura o Dirección General';
-      default: return 'Gestión, redacción y seguimiento de trámites';
+      case 'en_curso': return 'Documentos y borradores en redacción y elaboración activa';
+      case 'aprobar_documento': return 'Documentos pendientes de visto bueno y aprobación por Jefatura o Dirección General';
+      default: return 'Gestión, redacción y seguimiento de documentos';
     }
   });
 
@@ -619,11 +640,11 @@ export class DocumentosListComponent implements OnInit {
     return this.authService.hasRole('SECRETARIA');
   });
 
-  private readonly estadoTabsDocumentos = ['', 'NUEVO', 'DERIVADO', 'APROBADO', 'CERRADO'];
-  private readonly estadoTabsDerivados = ['DERIVADO', 'EN CURSO', 'APROBADO'];
+  private readonly estadoTabsDocumentos = ['', 'NUEVO,RECHAZADO', 'ENVIADO,DERIVADO', 'APROBADO', 'CERRADO'];
+  private readonly estadoTabsDerivados = ['ENVIADO,DERIVADO', 'ENVIADO', 'APROBADO,CERRADO'];
   private readonly estadoTabsImpresion = ['', 'APROBADO', 'CERRADO'];
-  private readonly estadoTabsEnCurso = ['NUEVO,DERIVADO', 'NUEVO', 'DERIVADO'];
-  private readonly estadoTabsAprobar = ['DERIVADO', 'APROBADO'];
+  private readonly estadoTabsEnCurso = ['NUEVO,ENVIADO,DERIVADO', 'NUEVO', 'ENVIADO,DERIVADO'];
+  private readonly estadoTabsAprobar = ['ENVIADO,DERIVADO', 'APROBADO,CERRADO'];
 
   ngOnInit(): void {
     this.currentUrl.set(this.router.url);
@@ -650,17 +671,17 @@ export class DocumentosListComponent implements OnInit {
     } else {
       let estadoFiltro = this.currentEstado;
       if (this.modoVista() === 'derivados' && !estadoFiltro) {
-        estadoFiltro = 'DERIVADO';
+        estadoFiltro = 'ENVIADO,DERIVADO';
       } else if (this.modoVista() === 'impresion' && !estadoFiltro) {
         estadoFiltro = 'APROBADO,CERRADO';
       } else if (this.modoVista() === 'en_curso' && !estadoFiltro) {
-        estadoFiltro = 'NUEVO';
+        estadoFiltro = 'NUEVO,ENVIADO,DERIVADO';
       } else if (this.modoVista() === 'aprobar_documento' && !estadoFiltro) {
-        estadoFiltro = 'DERIVADO';
+        estadoFiltro = 'ENVIADO,DERIVADO';
       }
 
       this.documentosService
-        .getDocumentos(this.pageSize(), this.pageIndex() + 1, estadoFiltro, this.searchFilter)
+        .getDocumentos(this.pageSize(), this.pageIndex() + 1, estadoFiltro, this.searchFilter, this.modoVista())
         .subscribe({
           next: (res) => {
             this.loading.set(false);
@@ -679,13 +700,13 @@ export class DocumentosListComponent implements OnInit {
     if (this.modoVista() === 'documentos') {
       this.currentEstado = this.estadoTabsDocumentos[tabIndex] || '';
     } else if (this.modoVista() === 'derivados') {
-      this.currentEstado = this.estadoTabsDerivados[tabIndex] || 'DERIVADO';
+      this.currentEstado = this.estadoTabsDerivados[tabIndex] || 'ENVIADO,DERIVADO';
     } else if (this.modoVista() === 'impresion') {
       this.currentEstado = this.estadoTabsImpresion[tabIndex] || '';
     } else if (this.modoVista() === 'en_curso') {
-      this.currentEstado = this.estadoTabsEnCurso[tabIndex] || 'NUEVO,DERIVADO';
+      this.currentEstado = this.estadoTabsEnCurso[tabIndex] || 'NUEVO,ENVIADO,DERIVADO';
     } else if (this.modoVista() === 'aprobar_documento') {
-      this.currentEstado = this.estadoTabsAprobar[tabIndex] || 'DERIVADO';
+      this.currentEstado = this.estadoTabsAprobar[tabIndex] || 'ENVIADO,DERIVADO';
     }
     this.pageIndex.set(0);
     this.cargarDocumentos();
@@ -702,6 +723,72 @@ export class DocumentosListComponent implements OnInit {
     this.searchFilter = input.value.trim();
     this.pageIndex.set(0);
     this.cargarDocumentos();
+  }
+
+  getReferencia(doc: Documento): string {
+    if (!doc) return 'Documento oficial en curso';
+    const refDirecta = (doc as any).referencia || doc.ref;
+    if (refDirecta && String(refDirecta).trim() && refDirecta !== 'null') {
+      return String(refDirecta).trim();
+    }
+    if (doc.plantilla_valor) {
+      try {
+        const pv = typeof doc.plantilla_valor === 'string' ? JSON.parse(doc.plantilla_valor) : doc.plantilla_valor;
+        const dg = pv?.datosGenerales || pv?.['datosGenerales-0'];
+        if (dg?.ref) return String(dg.ref).trim();
+        if (pv?.ref) return String(pv.ref).trim();
+      } catch {}
+    }
+    return doc.nombre_plantilla || 'Documento oficial en curso';
+  }
+
+  getParticipanteTexto(doc: Documento, campo: 'de' | 'para'): string {
+    const fallback = campo === 'de' ? 'Funcionario Solicitante' : 'Jefatura de Área';
+    if (!doc) return fallback;
+
+    const fmtUser = (u: any): string => {
+      if (!u) return '';
+      if (typeof u === 'string') {
+        const t = u.trim();
+        if (t.startsWith('[') || t === 'null') return '';
+        return t;
+      }
+      if (typeof u === 'object') {
+        const nombre = `${u.nombres || ''} ${u.apellidos || ''}`.trim();
+        if (nombre) return u.cargo ? `${nombre} (${u.cargo})` : nombre;
+        if (u.nombre) return u.nombre;
+      }
+      return '';
+    };
+
+    if (doc.plantilla_valor) {
+      try {
+        const pv = typeof doc.plantilla_valor === 'string' ? JSON.parse(doc.plantilla_valor) : doc.plantilla_valor;
+        const dg = pv?.datosGenerales || pv?.['datosGenerales-0'];
+        const val = dg?.[campo];
+        if (Array.isArray(val)) {
+          const list = val.map(fmtUser).filter(Boolean);
+          if (list.length > 0) return list.join(', ');
+        } else if (val) {
+          const single = fmtUser(val);
+          if (single) return single;
+        }
+      } catch {}
+    }
+
+    const raw = (doc as any)[campo];
+    return fmtUser(raw) || fallback;
+  }
+
+  puedeEditar(doc: Documento): boolean {
+    if (!doc) return false;
+    if (doc.estado === 'ENVIADO' || doc.estado === 'DERIVADO' || doc.estado === 'NUEVO' || doc.estado === 'RECHAZADO' || doc.estado === 'BORRADOR') {
+      return true;
+    }
+    if (doc.estado === 'CERRADO' || doc.estado === 'APROBADO' || doc.estado === 'ANULADO') {
+      return false;
+    }
+    return true;
   }
 
   abrirWorkbench(doc: Documento): void {
@@ -761,8 +848,10 @@ export class DocumentosListComponent implements OnInit {
   getEstadoClass(estado: string): string {
     switch (estado) {
       case 'NUEVO': return 'badge-nuevo';
+      case 'ENVIADO':
       case 'DERIVADO': return 'badge-derivado';
       case 'APROBADO': return 'badge-aprobado';
+      case 'RECHAZADO': return 'badge-secreto';
       default: return 'badge-cerrado';
     }
   }

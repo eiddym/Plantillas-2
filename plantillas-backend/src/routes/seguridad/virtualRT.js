@@ -199,7 +199,15 @@ module.exports = app => {
       return modelos.virtual.findAll(consultaUsuarios)
     })
     .then(virtualesResp => {
-      if(!virtualesResp || virtualesResp.length === 0) throw Error('El usuario no tiene usuarios virtuales asignados.');
+      if(!virtualesResp || virtualesResp.length === 0) {
+        return [{
+          id_usuario: solicitante.id_usuario,
+          nombres: solicitante.nombres,
+          cargo: solicitante.cargo,
+          virtual: solicitante.virtual,
+          activo: true
+        }];
+      }
       const idVirtuales = _.map(virtualesResp, 'fid_usuario_virtual');
       if (virtual === true) idVirtuales.push(titular.id_usuario);
       idVirtuales.push(solicitante.id_usuario);
@@ -213,7 +221,8 @@ module.exports = app => {
     })
     .then(virtualesResp => {
       _.map(virtualesResp, item => {
-        if (item.dataValues.id_usuario === solicitante.id_usuario) item.dataValues.activo = true;
+        if (item.dataValues && item.dataValues.id_usuario === solicitante.id_usuario) item.dataValues.activo = true;
+        else if (item.id_usuario === solicitante.id_usuario) item.activo = true;
       });
 
       return res.status(200)
@@ -224,8 +233,8 @@ module.exports = app => {
     })
     .catch(error => {
       logger.error('Error en la busqueda de usuarios virtuales', error);
-      return res.status(412)
-      .send(util.formatearMensaje("ERROR", "No se encontraron usuarios virtuales asignados.", {
+      return res.status(200)
+      .send(util.formatearMensaje("EXITO", "No se encontraron usuarios virtuales adicionales.", {
         total: 0,
         resultado: [],
       }));
