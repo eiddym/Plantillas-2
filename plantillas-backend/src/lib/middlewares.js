@@ -379,11 +379,13 @@ module.exports = app => {
                       app.set("sesion", sesion);
 
                       // otorga el acceso al sistema.
+                      req.body = req.body || {};
                       req.body.audit_usuario={
                         id_usuario: tokenDecodificado.id_usuario,
                         usuario: tokenDecodificado.usuario,
                         roles:tokenDecodificado.roles,
                       };
+                      req.user = req.body.audit_usuario;
 
                       return next();
 

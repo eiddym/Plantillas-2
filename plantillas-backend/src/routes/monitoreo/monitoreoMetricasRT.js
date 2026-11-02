@@ -303,7 +303,10 @@ module.exports = app => {
     try {
       const anioActual = `${moment().tz('America/La_Paz').year()}`;
       const auditUser = req.body?.audit_usuario || req.user || {};
-      const idUsuario = Number(auditUser.id_usuario || auditUser.id || 1);
+      const idUsuario = Number(auditUser.id_usuario || auditUser.id || 0);
+      if (!idUsuario) {
+        return res.status(401).send(util.formatearMensaje('ERROR', 'Usuario no autenticado'));
+      }
 
       // Obtener unidad del usuario autenticado para filtrar las métricas exclusivamente por su unidad / bandeja
       const [usrRow] = await sequelize.query(

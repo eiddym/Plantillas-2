@@ -767,24 +767,38 @@ export class LayoutComponent implements OnInit, OnDestroy {
       });
     }
 
-    // 2. Ventanilla Única: asegurar Ventanilla Externa e Interna
-    const ventanillaGroup = enrichedMenus.find((m: any) => m.label?.toUpperCase() === 'VENTANILLA ÚNICA' || m.label?.toUpperCase() === 'VENTANILLA');
-    if (ventanillaGroup) {
-      if (!ventanillaGroup.submenu || ventanillaGroup.submenu.length === 0) {
-        ventanillaGroup.submenu = [
-          { label: 'VENTANILLA EXTERNA', url: 'ventanilla/externa', icon: 'cloud_download' },
-          { label: 'VENTANILLA INTERNA', url: 'ventanilla/interna', icon: 'edit_document' }
-        ];
+    // 2. Ventanilla Única: únicamente visible para usuarios con rol CORRESPONDENCIA o ADMIN
+    const puedeVerVentanilla = this.authService.hasRole('ADMIN') || this.authService.hasRole('CORRESPONDENCIA');
+    const vIdx = enrichedMenus.findIndex((m: any) => 
+      m.label?.toUpperCase() === 'VENTANILLA ÚNICA' || 
+      m.label?.toUpperCase() === 'VENTANILLA' ||
+      m.id_menu === 26 || m.id_menu === 27 || m.id_menu === 28 ||
+      m.url?.toLowerCase().startsWith('ventanilla')
+    );
+
+    if (!puedeVerVentanilla) {
+      if (vIdx !== -1) {
+        enrichedMenus.splice(vIdx, 1);
       }
     } else {
-      enrichedMenus.push({
-        label: 'VENTANILLA ÚNICA',
-        icon: 'inbox',
-        submenu: [
-          { label: 'VENTANILLA EXTERNA', url: 'ventanilla/externa', icon: 'cloud_download' },
-          { label: 'VENTANILLA INTERNA', url: 'ventanilla/interna', icon: 'edit_document' }
-        ]
-      });
+      if (vIdx !== -1) {
+        const ventanillaGroup = enrichedMenus[vIdx];
+        if (!ventanillaGroup.submenu || ventanillaGroup.submenu.length === 0) {
+          ventanillaGroup.submenu = [
+            { label: 'VENTANILLA EXTERNA', url: 'ventanilla/externa', icon: 'cloud_download' },
+            { label: 'VENTANILLA INTERNA', url: 'ventanilla/interna', icon: 'edit_document' }
+          ];
+        }
+      } else {
+        enrichedMenus.push({
+          label: 'VENTANILLA ÚNICA',
+          icon: 'inbox',
+          submenu: [
+            { label: 'VENTANILLA EXTERNA', url: 'ventanilla/externa', icon: 'cloud_download' },
+            { label: 'VENTANILLA INTERNA', url: 'ventanilla/interna', icon: 'edit_document' }
+          ]
+        });
+      }
     }
 
     // 3. Administración: asegurar Método de Firma

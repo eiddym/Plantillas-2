@@ -166,7 +166,11 @@ export class AuthService {
 
   hasRole(roleName: string): boolean {
     const roles = this.currentRoles();
-    return roles.some((r) => r.rol?.nombre?.toUpperCase() === roleName.toUpperCase());
+    const target = (roleName || '').trim().toUpperCase();
+    return roles.some((r: any) => {
+      const n = (r?.rol?.nombre || r?.nombre || '').trim().toUpperCase();
+      return n === target;
+    });
   }
 
   updateSessionFromVirtual(datos: { token: string; user: any; menu: any; roles: any }): void {

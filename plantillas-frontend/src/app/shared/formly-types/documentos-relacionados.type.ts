@@ -42,6 +42,7 @@ import { VisorPdfDialogComponent } from '../../features/visor-pdf/visor-pdf-dial
                 placeholder="Buscar documento por CITE o número..."
                 [(ngModel)]="terminoBusqueda"
                 (ngModelChange)="buscarDocumentos($event)"
+                (keyup.enter)="buscarDocumentos(terminoBusqueda)"
               />
               <button type="button" class="btn-close" (click)="cerrarSelector()">
                 <mat-icon>close</mat-icon>
@@ -62,7 +63,7 @@ import { VisorPdfDialogComponent } from '../../features/visor-pdf/visor-pdf-dial
                   </div>
                 }
               </div>
-            } @else if (busquedaRealizada() && terminoBusqueda.trim().length > 0 && !buscando()) {
+            } @else if (busquedaRealizada() && terminoBusqueda.trim().length >= 3 && !buscando()) {
               <div class="no-resultados">
                 <span>No se encontró ningún documento con el CITE tecleado</span>
               </div>
@@ -275,8 +276,8 @@ export class FormlyFieldDocumentosRelacionadosComponent extends FieldType<FieldT
   buscarDocumentos(termino: string): void {
     const query = (termino || '').trim();
 
-    // Regla estricta: NO buscar ni mostrar documentos si no se ha tecleado un CITE
-    if (!query) {
+    // Regla estricta: NO buscar ni mostrar documentos si no se ha tecleado un CITE (mínimo 3 caracteres)
+    if (!query || query.length < 3) {
       this.resultadosBusqueda.set([]);
       this.busquedaRealizada.set(false);
       this.buscando.set(false);

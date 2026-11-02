@@ -474,6 +474,9 @@ module.exports = app => {
   app.get('/api/v1/plantillasFormly/documento', (req, res, next) => {
     const auditUser = req.body?.audit_usuario || req.user || {};
     const idUs = Number(auditUser.id_usuario || auditUser.id || 0);
+    if (!idUs) {
+      return res.status(401).json(util.formatearMensaje('ERROR', 'Usuario no autenticado'));
+    }
     const bandeja = req.query.bandeja || '';
     const andConds = [{ estado: { [Op.ne]: 'ELIMINADO' } }];
 
@@ -503,7 +506,7 @@ module.exports = app => {
             {
               [Op.and]: [
                 { _usuario_creacion: idUs },
-                { estado: { [Op.in]: ['NUEVO', 'OBSERVADO'] } },
+                { estado: { [Op.in]: ['RECHAZADO', 'OBSERVADO'] } },
               ]
             }
           ]

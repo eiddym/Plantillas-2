@@ -953,13 +953,15 @@ export class DashboardComponent implements OnInit {
   }
 
   cargarDatosDashboard(): void {
-    // 1. Cargar documentos pendientes de atención del usuario actual (recibidos por atender + borradores propios)
-    this.documentosService.getDocumentos(5, 1, 'NUEVO,OBSERVADO,ENVIADO,DERIVADO', '', 'home').subscribe({
+    // 1. Cargar documentos pendientes de atención del usuario actual (recibidos por atender o devueltos para subsanar)
+    this.documentosService.getDocumentos(5, 1, 'ENVIADO,DERIVADO,RECHAZADO', '', 'home').subscribe({
       next: (res) => {
-        const docs = res.datos.resultado || [];
+        const docs = res?.datos?.resultado || [];
         this.recentDocs.set(docs);
       },
-      error: () => {}
+      error: () => {
+        this.recentDocs.set([]);
+      }
     });
 
     // 1a. Cargar contador de bandeja de pendientes recibidos
@@ -973,7 +975,7 @@ export class DashboardComponent implements OnInit {
     });
 
     // 1b. Cargar total de documentos activos propios del usuario
-    this.documentosService.getDocumentos(1, 1, 'NUEVO,OBSERVADO,ENVIADO,DERIVADO', '', 'documentos').subscribe({
+    this.documentosService.getDocumentos(1, 1, 'NUEVO,RECHAZADO,ENVIADO,DERIVADO', '', 'documentos').subscribe({
       next: (res) => {
         if (res.datos && res.datos.total !== undefined) {
           this.totalDocs.set(res.datos.total);
