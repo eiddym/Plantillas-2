@@ -264,6 +264,8 @@ export class PlantillasListComponent implements OnInit {
 
     const payload = {
       nombre: 'BORRADOR',
+      nombre_plantilla: p.nombre,
+      abreviacion: p.abreviacion,
       plantilla: p.plantilla,
       plantilla_valor: JSON.stringify({ inputSelect: 'Reservado' }),
       sw: { enviado: false, enviar: false },

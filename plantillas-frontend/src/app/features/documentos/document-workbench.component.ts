@@ -302,8 +302,8 @@ import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
                   </div>
                 </div>
 
-                <div class="saludo-consideracion">
-                  <span>De mi consideración:</span>
+                <div class="saludo-consideracion" *ngIf="obtenerSaludo()">
+                  <span>{{ obtenerSaludo() }}</span>
                 </div>
 
                 <!-- Cuerpo de Lectura Documental (Tipografía Literata con máx 75 caracteres) -->
@@ -311,18 +311,17 @@ import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
                   @if (getCuerpoHtml()) {
                     <div [innerHTML]="getCuerpoHtml()"></div>
                   } @else {
-                    <p>
-                      En cumplimiento a las disposiciones normativas y a los procedimientos de la Cooperativa Minera
-                      Marabunta R.L., se emite el presente documento oficial para su revisión y tramitación
-                      correspondiente ante las instancias pertinentes.
-                    </p>
-                    <p>
-                      El expediente adjunto cuenta con las valoraciones técnicas y operativas requeridas,
-                      quedando registrado en el sistema con estampado criptográfico para los fines de control
-                      y archivo institucional.
-                    </p>
+                    <div class="draft-empty-placeholder">
+                      <mat-icon>edit_note</mat-icon>
+                      <p>Borrador sin contenido redactado aún.</p>
+                      <span class="hint">Haga clic en la pestaña <strong>Redacción</strong> para ingresar el texto del documento.</span>
+                    </div>
                   }
                 </article>
+
+                <div class="despedida-cierre" *ngIf="obtenerDespedida() && getCuerpoHtml()">
+                  <p>{{ obtenerDespedida() }}</p>
+                </div>
               </div>
 
               <!-- Pie de Hoja Física -->
@@ -779,11 +778,60 @@ import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
       line-height: 1.75;
       color: #1e293b;
       max-width: 75ch;
-      margin-bottom: 3rem;
+      margin-bottom: 2rem;
 
       p {
         margin-bottom: 1.25rem;
         text-align: justify;
+      }
+    }
+
+    .despedida-cierre {
+      margin-top: 2rem;
+      margin-bottom: 2.5rem;
+      p {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 500;
+        color: #1e293b;
+      }
+    }
+
+    .draft-empty-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 1.5rem;
+      background: #f8fafc;
+      border: 2px dashed #cbd5e1;
+      border-radius: 8px;
+      color: #64748b;
+      text-align: center;
+      margin: 1.5rem 0;
+
+      mat-icon {
+        font-size: 40px;
+        height: 40px;
+        width: 40px;
+        color: #94a3b8;
+        margin-bottom: 8px;
+      }
+
+      p {
+        font-size: 15px;
+        font-weight: 600;
+        margin: 0 0 4px 0;
+        color: #334155;
+      }
+
+      .hint {
+        font-size: 13px;
+        color: #64748b;
+
+        strong {
+          color: #1e40af;
+        }
       }
     }
 
@@ -1198,9 +1246,86 @@ export class DocumentWorkbenchComponent implements OnInit {
 
   obtenerTituloDocumento(): string {
     const d = this.doc();
-    if (d?.plantilla?.nombre) return d.plantilla.nombre.toUpperCase();
-    if (d?.nombre_plantilla) return d.nombre_plantilla.toUpperCase();
-    return 'NOTA INTERNA';
+    if (d?.nombre_plantilla && d.nombre_plantilla.trim().length > 0) {
+      return d.nombre_plantilla.trim().toUpperCase();
+    }
+    if (this.formlyFields && this.formlyFields.length > 0) {
+      const headingField = this.formlyFields.find(f => 
+        f.type === 'texto' && 
+        (f.templateOptions?.['tipo'] === 'h1' || f.templateOptions?.['tipo'] === 'h2' || String(f.key) === 'texto') &&
+        f.templateOptions?.label &&
+        typeof f.templateOptions.label === 'string' &&
+        f.templateOptions.label.trim().length > 0
+      );
+      if (headingField?.templateOptions?.label) {
+        return headingField.templateOptions.label.trim().toUpperCase();
+      }
+    }
+    if (d?.plantilla) {
+      try {
+        const fields = typeof d.plantilla === 'string' ? JSON.parse(d.plantilla) : d.plantilla;
+        if (Array.isArray(fields)) {
+          const headingField = fields.find((f: any) => 
+            f.type === 'texto' && 
+            (f.templateOptions?.['tipo'] === 'h1' || f.templateOptions?.['tipo'] === 'h2' || String(f.key) === 'texto') &&
+            f.templateOptions?.label
+          );
+          if (headingField?.templateOptions?.label) {
+            return String(headingField.templateOptions.label).trim().toUpperCase();
+          }
+        }
+      } catch {}
+    }
+    if ((d as any)?.plantilla?.nombre) return (d as any).plantilla.nombre.toUpperCase();
+    return 'DOCUMENTO OFICIAL';
+  }
+
+  obtenerSaludo(): string {
+    if (this.formlyFields && this.formlyFields.length > 0) {
+      const saludoField = this.formlyFields.find(f => 
+        (f.type === 'texto' || String(f.key || '').startsWith('parrafo')) &&
+        typeof f.templateOptions?.label === 'string' &&
+        (f.templateOptions.label.toLowerCase().includes('consideraci') || 
+         f.templateOptions.label.toLowerCase().includes('distinguido') || 
+         f.templateOptions.label.toLowerCase().includes('estimad'))
+      );
+      if (saludoField?.templateOptions?.label) {
+        return saludoField.templateOptions.label.trim();
+      }
+    }
+    if (this.doc()?.plantilla) {
+      try {
+        const fields = typeof this.doc()!.plantilla === 'string' ? JSON.parse(this.doc()!.plantilla) : this.doc()!.plantilla;
+        if (Array.isArray(fields)) {
+          const saludoField = fields.find((f: any) => 
+            (f.type === 'texto' || String(f.key || '').startsWith('parrafo')) &&
+            typeof f.templateOptions?.label === 'string' &&
+            (f.templateOptions.label.toLowerCase().includes('consideraci') || 
+             f.templateOptions.label.toLowerCase().includes('distinguido') || 
+             f.templateOptions.label.toLowerCase().includes('estimad'))
+          );
+          if (saludoField?.templateOptions?.label) {
+            return saludoField.templateOptions.label.trim();
+          }
+        }
+      } catch {}
+    }
+    return '';
+  }
+
+  obtenerDespedida(): string {
+    if (this.formlyFields && this.formlyFields.length > 0) {
+      const despField = this.formlyFields.find(f => 
+        (f.type === 'texto' || String(f.key || '').startsWith('parrafo')) &&
+        typeof f.templateOptions?.label === 'string' &&
+        (f.templateOptions.label.toLowerCase().includes('atentamente') || 
+         f.templateOptions.label.toLowerCase().includes('cordialmente'))
+      );
+      if (despField?.templateOptions?.label) {
+        return despField.templateOptions.label.trim();
+      }
+    }
+    return '';
   }
 
   obtenerFechaDocumento(): string {
@@ -1233,18 +1358,26 @@ export class DocumentWorkbenchComponent implements OnInit {
 
   getCuerpoHtml(): string {
     const sections: string[] = [];
-    if (this.model['cuerpo']) {
+    if (this.model['cuerpo'] && typeof this.model['cuerpo'] === 'string' && this.model['cuerpo'].trim().length > 0) {
       sections.push(this.model['cuerpo']);
     }
     for (const key of Object.keys(this.model)) {
-      if (key !== 'cuerpo' && (key.startsWith('editorTexto') || key.startsWith('editor')) && typeof this.model[key] === 'string' && this.model[key].trim().length > 0) {
-        sections.push(this.model[key]);
+      if (key !== 'cuerpo' && typeof this.model[key] === 'string' && this.model[key].trim().length > 0) {
+        if (key.startsWith('editorTexto') || key.startsWith('editor')) {
+          sections.push(this.model[key]);
+        } else if (key.startsWith('inputTextArea') || key.startsWith('textarea')) {
+          const val = this.model[key];
+          const formatted = val.includes('<p>') || val.includes('<br>') ? val : `<p style="white-space: pre-wrap;">${val}</p>`;
+          sections.push(formatted);
+        }
       }
     }
     if (sections.length > 0) {
       return sections.join('<div class="section-divider" style="height: 14px;"></div>');
     }
-    if (this.model['texto'] && typeof this.model['texto'] === 'string') return this.model['texto'];
+    if (this.model['texto'] && typeof this.model['texto'] === 'string' && this.model['texto'].trim().length > 0) {
+      return this.model['texto'];
+    }
     const d = this.doc();
     if (d?.contenido?.cuerpo) return d.contenido.cuerpo;
     return '';
@@ -1352,8 +1485,10 @@ export class DocumentWorkbenchComponent implements OnInit {
     }
     const idsVia = extraerIds(dg.via, d.via, []);
     const refTexto = dg.ref || this.model['ref'] || (d as any).referencia || d.ref || '';
+    const titDoc = this.obtenerTituloDocumento();
 
     return {
+      nombre_plantilla: d.nombre_plantilla || (titDoc !== 'DOCUMENTO OFICIAL' ? titDoc : undefined),
       plantilla: plantillaActualizada,
       plantilla_valor: JSON.stringify(this.model),
       de: JSON.stringify(idsDe),

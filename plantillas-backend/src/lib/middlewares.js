@@ -61,6 +61,7 @@ module.exports = app => {
       max: 15000,
       standardHeaders: true,
       legacyHeaders: false,
+      validate: { trustProxy: false },
       skip: (req) => req.path.includes('/client-log') || req.path.includes('/refrescar'),
       message: { tipoMensaje: 'ERROR', mensaje: 'Demasiadas solicitudes desde esta IP, por favor intente más tarde.' }
     });
@@ -70,6 +71,7 @@ module.exports = app => {
       max: 30,
       standardHeaders: true,
       legacyHeaders: false,
+      validate: { trustProxy: false },
       message: { tipoMensaje: 'ERROR', mensaje: 'Demasiados intentos de acceso. Por favor espere un momento antes de reintentar.' }
     });
 
@@ -78,6 +80,7 @@ module.exports = app => {
       max: 45,
       standardHeaders: true,
       legacyHeaders: false,
+      validate: { trustProxy: false },
       message: { tipoMensaje: 'ERROR', mensaje: 'Límite de generación de documentos alcanzado. Por favor espere un momento.' }
     });
 

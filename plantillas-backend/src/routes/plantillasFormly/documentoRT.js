@@ -131,7 +131,7 @@ module.exports = app => {
 
   @apiSampleRequest off
 */
-  app.post('/api/v1/plantillasFormly/documento', (req, res) => {
+  app.post('/api/v1/plantillasFormly/documento', async (req, res) => {
     let xdoc;
     const msg = "La operación se realizó correctamente.";
     const sw = req.body.sw || {};
@@ -147,6 +147,20 @@ module.exports = app => {
         req.body._usuario_creacion = req.body.audit_usuario.id_usuario;
       } else {
         req.body._usuario_creacion = 1;
+      }
+    }
+
+    // Si viene fid_plantilla y falta nombre_plantilla o abreviacion, autocompletar desde plantilla_formly
+    if (req.body.fid_plantilla && (!req.body.nombre_plantilla || !req.body.abreviacion)) {
+      try {
+        const plantillaEncontrada = await modelos.plantilla_formly.findByPk(req.body.fid_plantilla);
+        if (plantillaEncontrada) {
+          if (!req.body.nombre_plantilla) req.body.nombre_plantilla = plantillaEncontrada.nombre;
+          if (!req.body.abreviacion) req.body.abreviacion = plantillaEncontrada.abreviacion;
+          if (!req.body.plantilla && plantillaEncontrada.plantilla) req.body.plantilla = plantillaEncontrada.plantilla;
+        }
+      } catch (errPl) {
+        logger.error('Error al autocompletar metadatos de plantilla_formly:', errPl);
       }
     }
 
