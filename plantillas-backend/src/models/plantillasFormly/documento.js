@@ -61,6 +61,12 @@ module.exports = (sequelize, DataType) => {
             allowNull: true,
             xlabel: 'Via',
         },
+        copia: {
+            type: DataType.TEXT,
+            allowNull: true,
+            defaultValue: '[]',
+            xlabel: 'Con copia a (unidades):',
+        },
         firmado: {
           type: DataType.BOOLEAN,
           xlabel: 'Firmado',

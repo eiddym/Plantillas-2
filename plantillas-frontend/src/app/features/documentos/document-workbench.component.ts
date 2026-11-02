@@ -296,6 +296,10 @@ import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
                     <span class="meta-label">VÍA:</span>
                     <span class="meta-value">{{ obtenerTextoMeta('via') }}</span>
                   </div>
+                  <div class="meta-row" *ngIf="obtenerTextoMeta('copia')">
+                    <span class="meta-label">CC:</span>
+                    <span class="meta-value">{{ obtenerTextoMeta('copia') }}</span>
+                  </div>
                   <div class="meta-row" *ngIf="obtenerTextoMeta('ref')">
                     <span class="meta-label">REF.:</span>
                     <span class="meta-value"><strong>{{ obtenerTextoMeta('ref') }}</strong></span>
@@ -1465,7 +1469,7 @@ export class DocumentWorkbenchComponent implements OnInit {
     return '';
   }
 
-  obtenerTextoMeta(campo: 'de' | 'para' | 'via' | 'ref'): string {
+  obtenerTextoMeta(campo: 'de' | 'para' | 'via' | 'ref' | 'copia'): string {
     const dg = this.model['datosGenerales'] || this.model['datosGenerales-0'] || {};
     const fmtUser = (u: any): string => {
       if (!u) return '';
@@ -1479,7 +1483,8 @@ export class DocumentWorkbenchComponent implements OnInit {
         if (nombreCompleto) {
           return u.cargo ? `${nombreCompleto} - ${u.cargo}` : nombreCompleto;
         }
-        if (u.nombre) return u.nombre;
+        if (u.nombre) return u.abreviacion ? `${u.nombre} (${u.abreviacion})` : u.nombre;
+        if (u.abreviacion) return u.abreviacion;
       }
       return '';
     };
@@ -1491,7 +1496,7 @@ export class DocumentWorkbenchComponent implements OnInit {
     const val = dg[campo];
     if (Array.isArray(val)) {
       const textos = val.map(fmtUser).filter(Boolean);
-      if (textos.length > 0) return textos.join(' / ');
+      if (textos.length > 0) return textos.join(', ');
     } else if (val) {
       const txt = fmtUser(val);
       if (txt) return txt;
@@ -1566,6 +1571,24 @@ export class DocumentWorkbenchComponent implements OnInit {
       idsPara = extraerIds(dg.para, d.para, []);
     }
     const idsVia = extraerIds(dg.via, d.via, []);
+    const extraerIdsUnidades = (val: any, fallbackStr?: string): number[] => {
+      const arr = Array.isArray(val) ? val : (val ? [val] : []);
+      const ids = arr
+        .map((item: any) => Number(item?.id_unidad ?? item?.id ?? item))
+        .filter((id: number) => Number.isInteger(id) && id > 0);
+      if (ids.length > 0) return ids;
+      if (typeof fallbackStr === 'string') {
+        try {
+          const parsed = JSON.parse(fallbackStr);
+          const pIds = (Array.isArray(parsed) ? parsed : [parsed])
+            .map((item: any) => Number(item?.id_unidad ?? item?.id ?? item))
+            .filter((id: number) => Number.isInteger(id) && id > 0);
+          if (pIds.length > 0) return pIds;
+        } catch {}
+      }
+      return [];
+    };
+    const idsCopia = extraerIdsUnidades(dg.copia, (d as any).copia);
     const refTexto = dg.ref || this.model['ref'] || (d as any).referencia || d.ref || '';
     const titDoc = this.obtenerTituloDocumento();
 
@@ -1576,6 +1599,7 @@ export class DocumentWorkbenchComponent implements OnInit {
       de: JSON.stringify(idsDe),
       para: JSON.stringify(idsPara),
       via: JSON.stringify(idsVia),
+      copia: JSON.stringify(idsCopia),
       ref: refTexto,
       referencia: refTexto,
       clasificacion: this.model['clasificacion'] || this.model['inputSelect'] || d.clasificacion || 'Reservado'

@@ -141,6 +141,45 @@ import { DestinatarioDialogComponent } from './destinatario-dialog.component';
         </div>
       }
 
+      <!-- FILA: CON COPIA A (CC) - DESIGNACIÓN DE UNIDADES -->
+      <div class="renglon-documental">
+        <div class="rotulo-col">
+          <span class="rotulo-texto">CC:</span>
+        </div>
+        <div class="contenido-documental">
+          <!-- Unidades designadas para recibir copia oficial -->
+          @for (cp of copiasSeleccionadas(); track cp.id_unidad || $index) {
+            <div class="copia-unidad-item">
+              <span class="nombre-persona">{{ cp.nombre }}</span>
+              @if (cp.abreviacion) {
+                <span class="cargo-persona"> ({{ cp.abreviacion }})</span>
+              }
+              <span class="tag-copia-cc">Copia Oficial</span>
+              <button 
+                type="button" 
+                class="btn-remove-co" 
+                (click)="quitarCopia(cp.id_unidad)" 
+                matTooltip="Quitar unidad en copia"
+              >
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          }
+
+          <!-- Botón para designar unidad en copia -->
+          <div class="co-remitente-action">
+            <button 
+              type="button" 
+              class="btn-agregar-coparticipante btn-agregar-cc" 
+              (click)="abrirModalCopia()"
+            >
+              <mat-icon>domain_add</mat-icon>
+              <span>+ Con Copia a Unidad (CC)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- FILA: REF. (TIPOGRÁFICO EDITABLE DIRECTO EN HOJA) -->
       @if (to?.['show']?.ref !== false) {
         <div class="renglon-documental renglon-ref">
@@ -346,6 +385,29 @@ import { DestinatarioDialogComponent } from './destinatario-dialog.component';
       border-radius: 10px;
       text-transform: uppercase;
     }
+    .copia-unidad-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+    .tag-copia-cc {
+      font-size: 0.68rem;
+      background: #f3e8ff;
+      color: #7e22ce;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 10px;
+      text-transform: uppercase;
+    }
+    .btn-agregar-cc {
+      color: #7e22ce !important;
+      &:hover {
+        background: #faf5ff !important;
+        color: #6b21a8 !important;
+      }
+    }
     .btn-remove-co {
       background: none;
       border: none;
@@ -432,6 +494,7 @@ export class FormlyFieldDatosGeneralesComponent extends FieldType<FieldTypeConfi
   readonly viasCalculadas = signal<any[]>([]);
   readonly remitentePrincipal = signal<any | null>(null);
   readonly coRemitentes = signal<any[]>([]);
+  readonly copiasSeleccionadas = signal<any[]>([]);
   readonly referenciaTexto = signal<string>('');
 
   private usuariosCache: any[] = [];
@@ -457,10 +520,24 @@ export class FormlyFieldDatosGeneralesComponent extends FieldType<FieldTypeConfi
     this.http.get<any>('/api/v1/seguridad/unidad').subscribe({
       next: (res) => {
         this.unidadesCache = res.datos?.resultado || res.datos || [];
+        this.hidratarCopiasSiEsNecesario();
         this.recalcularVia();
       },
       error: () => {}
     });
+  }
+
+  private hidratarCopiasSiEsNecesario(): void {
+    const list = this.copiasSeleccionadas();
+    if (!list || list.length === 0 || this.unidadesCache.length === 0) return;
+    const actualizadas = list.map((item: any) => {
+      const uId = Number(item?.id_unidad ?? item?.id ?? item);
+      const match = this.unidadesCache.find((u) => u.id_unidad === uId);
+      return match
+        ? { id_unidad: match.id_unidad, nombre: match.nombre, abreviacion: match.abreviacion }
+        : item;
+    });
+    this.copiasSeleccionadas.set(actualizadas);
   }
 
   private inicializarRemitenteYValores(): void {
@@ -482,6 +559,11 @@ export class FormlyFieldDatosGeneralesComponent extends FieldType<FieldTypeConfi
     }
     if (val.via) {
       this.viasCalculadas.set(Array.isArray(val.via) ? val.via : [val.via]);
+    }
+    if (val.copia) {
+      const arr = Array.isArray(val.copia) ? val.copia : [val.copia];
+      this.copiasSeleccionadas.set(arr);
+      this.hidratarCopiasSiEsNecesario();
     }
     if (val.de) {
       if (Array.isArray(val.de)) {
@@ -552,6 +634,33 @@ export class FormlyFieldDatosGeneralesComponent extends FieldType<FieldTypeConfi
 
   quitarCoRemitente(id_usuario: number): void {
     this.coRemitentes.update((list) => list.filter((x) => x.id_usuario !== id_usuario));
+    this.emitirValores(true);
+  }
+
+  abrirModalCopia(): void {
+    const dialogRef = this.dialog.open(DestinatarioDialogComponent, {
+      width: '620px',
+      data: {
+        mode: 'COPIA_UNIDAD',
+        currentUser: this.getCurrentUserFull(),
+        usuarios: this.usuariosCache,
+        unidades: this.unidadesCache
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((unidad) => {
+      if (unidad && unidad.id_unidad) {
+        const exists = this.copiasSeleccionadas().some((x) => x.id_unidad === unidad.id_unidad);
+        if (!exists) {
+          this.copiasSeleccionadas.update((list) => [...list, unidad]);
+          this.emitirValores(true);
+        }
+      }
+    });
+  }
+
+  quitarCopia(id_unidad: number): void {
+    this.copiasSeleccionadas.update((list) => list.filter((x) => x.id_unidad !== id_unidad));
     this.emitirValores(true);
   }
 
@@ -639,6 +748,7 @@ export class FormlyFieldDatosGeneralesComponent extends FieldType<FieldTypeConfi
       para: this.paraSeleccionado(),
       via: this.viasCalculadas(),
       de: todosDe,
+      copia: this.copiasSeleccionadas(),
       ref: this.referenciaTexto()
     };
     if (this.formControl) {

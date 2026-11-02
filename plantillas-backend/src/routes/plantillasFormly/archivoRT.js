@@ -163,18 +163,34 @@ module.exports = app => {
 
       const todasUnidadesIds = [idUnidad, ...subUnidades.map(s => s.id_unidad)];
 
-      // Documentos de los funcionarios de esta unidad y sub-unidades
+      const matchJsonUnidadArray = (col, ids) => {
+        const conds = [];
+        for (const uId of ids) {
+          conds.push({ [col]: { [Op.like]: `[${uId}]` } });
+          conds.push({ [col]: { [Op.like]: `[${uId},%` } });
+          conds.push({ [col]: { [Op.like]: `%,${uId},%` } });
+          conds.push({ [col]: { [Op.like]: `%,${uId}]` } });
+          conds.push({ [col]: { [Op.like]: `%"${uId}"%` } });
+        }
+        return conds;
+      };
+
+      // Documentos de los funcionarios de esta unidad, sub-unidades o recibidos en copia oficial (CC)
       const docs = await Documento.findAll({
         where: {
           estado: 'CERRADO',
-          nombre: { [Op.like]: '%/%' }
+          nombre: { [Op.like]: '%/%' },
+          [Op.or]: [
+            { '$usuario_creacion.fid_unidad$': { [Op.in]: todasUnidadesIds } },
+            ...matchJsonUnidadArray('copia', todasUnidadesIds)
+          ]
         },
         include: [
           {
             model: Usuario,
             as: 'usuario_creacion',
             attributes: ['id_usuario', 'nombres', 'apellidos', 'cargo', 'fid_unidad'],
-            where: { fid_unidad: { [Op.in]: todasUnidadesIds } },
+            required: false,
             include: [{ model: Unidad, as: 'unidad', attributes: ['id_unidad', 'nombre', 'abreviacion'] }]
           }
         ],
@@ -188,8 +204,18 @@ module.exports = app => {
         tiposSet.add(tipo.trim());
       });
 
+      const esCopiaParaUnidad = (d, uId) => {
+        if (!d.copia) return false;
+        try {
+          const arr = Array.isArray(d.copia) ? d.copia : JSON.parse(d.copia);
+          return (Array.isArray(arr) ? arr : [arr]).map(Number).includes(Number(uId));
+        } catch (_) {
+          return String(d.copia).includes(`[${uId}]`) || String(d.copia).includes(`"${uId}"`);
+        }
+      };
+
       // Documentos propios de la unidad principal
-      const docsPropios = docs.filter(d => d.usuario_creacion.fid_unidad === idUnidad);
+      const docsPropios = docs.filter(d => d.usuario_creacion && d.usuario_creacion.fid_unidad === idUnidad);
       const propiosPorTipo = {};
       docsPropios.forEach(d => {
         const t = d.nombre_plantilla || 'Documento Oficial';
@@ -197,10 +223,19 @@ module.exports = app => {
         propiosPorTipo[t].push(d);
       });
 
+      // Documentos recibidos en copia (CC)
+      const docsCopia = docs.filter(d => esCopiaParaUnidad(d, idUnidad) && (!d.usuario_creacion || d.usuario_creacion.fid_unidad !== idUnidad));
+      const copiaPorTipo = {};
+      docsCopia.forEach(d => {
+        const t = d.nombre_plantilla || 'Documento Oficial';
+        if (!copiaPorTipo[t]) copiaPorTipo[t] = [];
+        copiaPorTipo[t].push(d);
+      });
+
       // Mapear sub-unidades dependientes con sus propios documentos
       const subUnidadesMapeadas = subUnidades.map(sub => {
         const subPlain = sub.toJSON();
-        const subDocs = docs.filter(d => d.usuario_creacion.fid_unidad === sub.id_unidad);
+        const subDocs = docs.filter(d => d.usuario_creacion && d.usuario_creacion.fid_unidad === sub.id_unidad);
         const subPorTipo = {};
         subDocs.forEach(d => {
           const t = d.nombre_plantilla || 'Documento Oficial';
@@ -215,10 +250,12 @@ module.exports = app => {
 
       res.status(200).send(util.formatearMensaje("EXITO", "Archivo de unidad obtenido exitosamente.", {
         unidad: unidadPrincipal,
-        total_documentos: docsPropios.length,
+        total_documentos: docsPropios.length + docsCopia.length,
         tipos_disponibles: Array.from(tiposSet).sort(),
         documentos_propios: docsPropios,
+        documentos_copia: docsCopia,
         agrupado_por_tipo: propiosPorTipo,
+        agrupado_por_tipo_copia: copiaPorTipo,
         sub_unidades: subUnidadesMapeadas
       }));
     } catch (error) {

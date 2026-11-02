@@ -9,7 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatChipsModule } from '@angular/material/chips';
 
 export interface DestinatarioDialogData {
-  mode: 'PARA' | 'CO_REMITENTE';
+  mode: 'PARA' | 'CO_REMITENTE' | 'COPIA_UNIDAD';
   currentUser: any;
   usuarios: any[];
   unidades: any[];
@@ -31,12 +31,12 @@ export interface DestinatarioDialogData {
   template: `
     <div class="destinatario-dialog">
       <div class="dialog-header">
-        <div class="header-icon" [class.icon-co]="data.mode === 'CO_REMITENTE'">
-          <mat-icon>{{ data.mode === 'PARA' ? 'person_search' : 'group_add' }}</mat-icon>
+        <div class="header-icon" [class.icon-co]="data.mode === 'CO_REMITENTE'" [class.icon-cc]="data.mode === 'COPIA_UNIDAD'">
+          <mat-icon>{{ data.mode === 'PARA' ? 'person_search' : (data.mode === 'COPIA_UNIDAD' ? 'domain' : 'group_add') }}</mat-icon>
         </div>
         <div class="header-text">
           <h2 mat-dialog-title>
-            {{ data.mode === 'PARA' ? 'Seleccionar Destinatario (PARA)' : 'Agregar Co-Participante (DE)' }}
+            {{ data.mode === 'PARA' ? 'Seleccionar Destinatario (PARA)' : (data.mode === 'COPIA_UNIDAD' ? 'Designar Unidad Con Copia a (CC)' : 'Agregar Co-Participante (DE)') }}
           </h2>
           <p class="header-subtitle">
             <span *ngIf="data.mode === 'PARA' && isCurrentUserJefeOrMae()">
@@ -48,6 +48,9 @@ export interface DestinatarioDialogData {
             <span *ngIf="data.mode === 'CO_REMITENTE'">
               <strong>Firma Conjunta:</strong> Listando compañeros de su misma unidad ({{ getUnidadNombre(data.currentUser?.fid_unidad) }}) y de igual rango.
             </span>
+            <span *ngIf="data.mode === 'COPIA_UNIDAD'">
+              <strong>Copia Informativa Oficial (CC):</strong> La unidad designada recibirá una copia oficial directa del documento final cuando genere su CITE.
+            </span>
           </p>
         </div>
       </div>
@@ -58,7 +61,7 @@ export interface DestinatarioDialogData {
           <input 
             matInput 
             [(ngModel)]="busqueda" 
-            placeholder="Buscar por nombre, cargo o unidad..."
+            [placeholder]="data.mode === 'COPIA_UNIDAD' ? 'Buscar por nombre o sigla de la unidad...' : 'Buscar por nombre, cargo o unidad...'"
             autocomplete="off"
           >
           <button *ngIf="busqueda" mat-icon-button matSuffix (click)="busqueda = ''">
@@ -68,65 +71,104 @@ export interface DestinatarioDialogData {
       </div>
 
       <div class="user-list-container">
-        @if (usuariosFiltrados().length === 0) {
-          <div class="empty-state">
-            <mat-icon>person_off</mat-icon>
-            <p>No se encontraron funcionarios disponibles que cumplan el criterio jerárquico.</p>
-          </div>
+        @if (data.mode === 'COPIA_UNIDAD') {
+          @if (unidadesFiltradas().length === 0) {
+            <div class="empty-state">
+              <mat-icon>domain_disabled</mat-icon>
+              <p>No se encontraron unidades disponibles con ese criterio de búsqueda.</p>
+            </div>
+          } @else {
+            <div class="user-card-list">
+              @for (un of unidadesFiltradas(); track un.id_unidad) {
+                <div class="user-card card-unidad-cc" (click)="seleccionarUnidad(un)">
+                  <div class="avatar-circle avatar-unidad-cc">
+                    {{ un.abreviacion || un.nombre?.substring(0, 2)?.toUpperCase() || 'UN' }}
+                  </div>
+                  <div class="user-info">
+                    <div class="user-name">
+                      {{ un.nombre }}
+                    </div>
+                    <div class="user-cargo">
+                      {{ un.descripcion || 'Unidad Organizacional' }}
+                    </div>
+                    <div class="user-tags">
+                      <span class="tag-unit">
+                        <mat-icon>business</mat-icon>
+                        Sigla: {{ un.abreviacion || 'S/S' }}
+                      </span>
+                      <span class="tag-role tag-cc-badge">
+                        UNIDAD INSTITUCIONAL
+                      </span>
+                    </div>
+                  </div>
+                  <button mat-flat-button class="btn-select btn-cc-select">
+                    Designar CC
+                  </button>
+                </div>
+              }
+            </div>
+          }
         } @else {
-          <div class="user-card-list">
-            @if (data.mode === 'PARA') {
-              <div class="user-card card-broadcast" (click)="seleccionarTodos()">
-                <div class="avatar-circle avatar-broadcast">
-                  <mat-icon>campaign</mat-icon>
+          @if (usuariosFiltrados().length === 0) {
+            <div class="empty-state">
+              <mat-icon>person_off</mat-icon>
+              <p>No se encontraron funcionarios disponibles que cumplan el criterio jerárquico.</p>
+            </div>
+          } @else {
+            <div class="user-card-list">
+              @if (data.mode === 'PARA') {
+                <div class="user-card card-broadcast" (click)="seleccionarTodos()">
+                  <div class="avatar-circle avatar-broadcast">
+                    <mat-icon>campaign</mat-icon>
+                  </div>
+                  <div class="user-info">
+                    <div class="user-name text-broadcast">
+                      A TODO EL PERSONAL / TODAS LAS UNIDADES
+                    </div>
+                    <div class="user-cargo">
+                      Circular Institucional / Difusión General a Todos los Funcionarios
+                    </div>
+                    <div class="user-tags">
+                      <span class="tag-unit tag-broadcast">
+                        <mat-icon>groups</mat-icon>
+                        Envío masivo a todos los funcionarios activos
+                      </span>
+                    </div>
+                  </div>
+                  <button mat-flat-button class="btn-select btn-broadcast">
+                    Seleccionar
+                  </button>
                 </div>
-                <div class="user-info">
-                  <div class="user-name text-broadcast">
-                    A TODO EL PERSONAL / TODAS LAS UNIDADES
+              }
+              @for (u of usuariosFiltrados(); track u.id_usuario) {
+                <div class="user-card" (click)="seleccionar(u)">
+                  <div class="avatar-circle">
+                    {{ getInitials(u.nombres, u.apellidos) }}
                   </div>
-                  <div class="user-cargo">
-                    Circular Institucional / Difusión General a Todos los Funcionarios
+                  <div class="user-info">
+                    <div class="user-name">
+                      {{ u.nombres }} {{ u.apellidos }}
+                    </div>
+                    <div class="user-cargo">
+                      {{ u.cargo }}
+                    </div>
+                    <div class="user-tags">
+                      <span class="tag-unit">
+                        <mat-icon>business</mat-icon>
+                        {{ getUnidadSigla(u.fid_unidad) }} - {{ getUnidadNombre(u.fid_unidad) }}
+                      </span>
+                      <span class="tag-role" [class.tag-jefe]="esJefe(u)" [class.tag-mae]="esMae(u)">
+                        {{ getRolPrincipal(u) }}
+                      </span>
+                    </div>
                   </div>
-                  <div class="user-tags">
-                    <span class="tag-unit tag-broadcast">
-                      <mat-icon>groups</mat-icon>
-                      Envío masivo a todos los funcionarios activos
-                    </span>
-                  </div>
+                  <button mat-flat-button class="btn-select">
+                    Seleccionar
+                  </button>
                 </div>
-                <button mat-flat-button class="btn-select btn-broadcast">
-                  Seleccionar
-                </button>
-              </div>
-            }
-            @for (u of usuariosFiltrados(); track u.id_usuario) {
-              <div class="user-card" (click)="seleccionar(u)">
-                <div class="avatar-circle">
-                  {{ getInitials(u.nombres, u.apellidos) }}
-                </div>
-                <div class="user-info">
-                  <div class="user-name">
-                    {{ u.nombres }} {{ u.apellidos }}
-                  </div>
-                  <div class="user-cargo">
-                    {{ u.cargo }}
-                  </div>
-                  <div class="user-tags">
-                    <span class="tag-unit">
-                      <mat-icon>business</mat-icon>
-                      {{ getUnidadSigla(u.fid_unidad) }} - {{ getUnidadNombre(u.fid_unidad) }}
-                    </span>
-                    <span class="tag-role" [class.tag-jefe]="esJefe(u)" [class.tag-mae]="esMae(u)">
-                      {{ getRolPrincipal(u) }}
-                    </span>
-                  </div>
-                </div>
-                <button mat-flat-button class="btn-select">
-                  Seleccionar
-                </button>
-              </div>
-            }
-          </div>
+              }
+            </div>
+          }
         }
       </div>
 
@@ -172,6 +214,10 @@ export interface DestinatarioDialogData {
       &.icon-co {
         background: #f0fdf4;
         color: #16a34a;
+      }
+      &.icon-cc {
+        background: #fdf4ff;
+        color: #9333ea;
       }
     }
     .search-bar-row {
@@ -319,6 +365,30 @@ export interface DestinatarioDialogData {
       background: #0284c7 !important;
       color: #ffffff !important;
     }
+    .card-unidad-cc {
+      border-left: 4px solid #9333ea !important;
+      &:hover {
+        border-color: #9333ea !important;
+        background: #faf5ff !important;
+      }
+    }
+    .avatar-unidad-cc {
+      background: #581c87 !important;
+      color: #f3e8ff !important;
+      font-size: 0.8rem !important;
+    }
+    .tag-cc-badge {
+      background: #f3e8ff !important;
+      color: #7e22ce !important;
+      font-weight: 700;
+    }
+    .btn-cc-select {
+      background: #7e22ce !important;
+      color: #ffffff !important;
+      &:hover {
+        background: #6b21a8 !important;
+      }
+    }
     .empty-state {
       text-align: center;
       padding: 30px;
@@ -450,6 +520,26 @@ export class DestinatarioDialogComponent implements OnInit {
 
   seleccionar(u: any): void {
     this.dialogRef.close(u);
+  }
+
+  seleccionarUnidad(un: any): void {
+    this.dialogRef.close({
+      id_unidad: un.id_unidad,
+      nombre: un.nombre,
+      abreviacion: un.abreviacion
+    });
+  }
+
+  unidadesFiltradas(): any[] {
+    let list = (this.data.unidades || []).filter((u) => u.estado === 'ACTIVO' || !u.estado || u.estado !== 'INACTIVO');
+    if (this.busqueda.trim()) {
+      const q = this.busqueda.toLowerCase();
+      list = list.filter((u) => {
+        const full = `${u.nombre || ''} ${u.abreviacion || ''} ${u.descripcion || ''}`.toLowerCase();
+        return full.includes(q);
+      });
+    }
+    return list;
   }
 
   seleccionarTodos(): void {

@@ -193,9 +193,23 @@ module.exports = app => {
             return fallback;
           };
           const idCreadorPost = Number(req.body._usuario_creacion) || 1;
+          const extractUnidadIdsPost = (raw) => {
+            const arr = Array.isArray(raw) ? raw : (raw ? [raw] : []);
+            const ids = arr.map(u => Number(u && (u.id_unidad || u.id || u))).filter(n => Number.isInteger(n) && n > 0);
+            if (ids.length > 0) return ids;
+            if (typeof raw === 'string') {
+              try {
+                const p = JSON.parse(raw);
+                const pIds = (Array.isArray(p) ? p : [p]).map(u => Number(u && (u.id_unidad || u.id || u))).filter(n => Number.isInteger(n) && n > 0);
+                if (pIds.length > 0) return pIds;
+              } catch (_) {}
+            }
+            return [];
+          };
           req.body.de = JSON.stringify(extractIds(dgPost.de || req.body.de, [idCreadorPost]));
           req.body.para = JSON.stringify(extractIds(dgPost.para || req.body.para, []));
           req.body.via = JSON.stringify(extractIds(dgPost.via || req.body.via, []));
+          req.body.copia = JSON.stringify(extractUnidadIdsPost(dgPost.copia || req.body.copia));
           if (dgPost.ref || req.body.ref || req.body.referencia) {
             req.body.referencia = dgPost.ref || req.body.ref || req.body.referencia;
           }
@@ -485,7 +499,7 @@ module.exports = app => {
 }
 
 */
-  app.get('/api/v1/plantillasFormly/documento', (req, res, next) => {
+  app.get('/api/v1/plantillasFormly/documento', async (req, res, next) => {
     const auditUser = req.body?.audit_usuario || req.user || {};
     const idUs = Number(auditUser.id_usuario || auditUser.id || 0);
     if (!idUs) {
@@ -494,6 +508,17 @@ module.exports = app => {
     const bandeja = req.query.bandeja || '';
     const andConds = [{ estado: { [Op.ne]: 'ELIMINADO' } }];
 
+    let fidUnidad = Number(auditUser.fid_unidad || 0);
+    if (!fidUnidad && idUs > 0) {
+      try {
+        const uDb = await usuario.findByPk(idUs, { attributes: ['fid_unidad'] });
+        if (uDb && uDb.fid_unidad) {
+          fidUnidad = Number(uDb.fid_unidad);
+          auditUser.fid_unidad = fidUnidad;
+        }
+      } catch (_) {}
+    }
+
     if (idUs > 0) {
       const matchJsonId = (col) => ([
         { [col]: { [Op.like]: `[${idUs}]` } },
@@ -501,6 +526,14 @@ module.exports = app => {
         { [col]: { [Op.like]: `%,${idUs},%` } },
         { [col]: { [Op.like]: `%,${idUs}]` } },
         { [col]: { [Op.like]: `%"${idUs}"%` } },
+      ]);
+
+      const matchJsonUnidad = (col, uId) => ([
+        { [col]: { [Op.like]: `[${uId}]` } },
+        { [col]: { [Op.like]: `[${uId},%` } },
+        { [col]: { [Op.like]: `%,${uId},%` } },
+        { [col]: { [Op.like]: `%,${uId}]` } },
+        { [col]: { [Op.like]: `%"${uId}"%` } },
       ]);
 
       if (bandeja === 'home') {
@@ -528,6 +561,7 @@ module.exports = app => {
       } else if (bandeja === 'derivados' || bandeja === 'aprobar_documento') {
         const estadoParam = String(req.query.estado || '');
         const incluyeRevisados = estadoParam.includes('APROBADO') || estadoParam.includes('CERRADO');
+        const ccCondRevisados = (fidUnidad > 0 && incluyeRevisados) ? matchJsonUnidad('copia', fidUnidad) : [];
         andConds.push({
           [Op.or]: incluyeRevisados
             ? [
@@ -535,6 +569,7 @@ module.exports = app => {
                 { aprobador_cd_actual: idUs },
                 ...matchJsonId('para'),
                 ...matchJsonId('via'),
+                ...ccCondRevisados
               ]
             : [
                 { via_actual: idUs },
@@ -542,6 +577,15 @@ module.exports = app => {
               ]
         });
       } else if (bandeja !== 'impresion') {
+        const ccCond = (fidUnidad > 0) ? [
+          {
+            [Op.and]: [
+              { estado: { [Op.in]: ['APROBADO', 'CERRADO'] } },
+              { [Op.or]: matchJsonUnidad('copia', fidUnidad) }
+            ]
+          }
+        ] : [];
+
         andConds.push({
           [Op.or]: [
             { _usuario_creacion: idUs },
@@ -557,7 +601,8 @@ module.exports = app => {
                   ]
                 }
               ]
-            }
+            },
+            ...ccCond
           ]
         });
       }
@@ -1669,9 +1714,30 @@ module.exports = app => {
             return defaultArr;
           };
           const idCreadorDoc = Number(xdoc._usuario_creacion) || Number(usuarioId) || 1;
+          const extractUnidadIdsPut = (raw, fallbackStr) => {
+            const toIds = (v) => {
+              const arr = Array.isArray(v) ? v : (v ? [v] : []);
+              const ids = [];
+              for (const u of arr) {
+                const num = Number(u && (u.id_unidad || u.id || u));
+                if (Number.isInteger(num) && num > 0) ids.push(num);
+              }
+              return [...new Set(ids)];
+            };
+            let ids = toIds(raw);
+            if (ids.length > 0) return ids;
+            if (typeof raw === 'string') {
+              try { ids = toIds(JSON.parse(raw)); if (ids.length > 0) return ids; } catch (_) {}
+            }
+            if (typeof fallbackStr === 'string') {
+              try { ids = toIds(JSON.parse(fallbackStr)); if (ids.length > 0) return ids; } catch (_) {}
+            }
+            return [];
+          };
           req.body.de = JSON.stringify(extractIdsPut(dgPut.de || req.body.de, xdoc.de, [idCreadorDoc]));
           req.body.para = JSON.stringify(extractIdsPut(dgPut.para || req.body.para, xdoc.para, []));
           req.body.via = JSON.stringify(extractIdsPut(dgPut.via || req.body.via, xdoc.via, []));
+          req.body.copia = JSON.stringify(extractUnidadIdsPut(dgPut.copia || req.body.copia, xdoc.copia));
           if (dgPut.ref || req.body.ref || req.body.referencia) {
             req.body.referencia = dgPut.ref || req.body.ref || req.body.referencia;
           }

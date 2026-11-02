@@ -630,6 +630,9 @@ case 'lista': %>
             var de = Array.isArray(datosGenerales.de)
               ? datosGenerales.de
               : (datosGenerales.de ? [datosGenerales.de] : []);
+            var copia = Array.isArray(datosGenerales.copia)
+              ? datosGenerales.copia
+              : (datosGenerales.copia ? [datosGenerales.copia] : []);
 
             if(pItem.templateOptions && pItem.templateOptions.showItem !== false){ %>
               <table width="100%">
@@ -663,6 +666,16 @@ case 'lista': %>
                           <%}%>
                       </td>
                     </tr>
+                  <% } if(copia && copia.length > 0) { %>
+                    <tr>
+                      <td class="datosGenerales">CC:</td>
+                      <td>
+                        <% for(var k = 0; k < copia.length; k++){
+                          var itemCc = copia[k]; %>
+                          <%= itemCc.nombre || itemCc.abreviacion || itemCc %><% if(k < copia.length - 1){ %>, <% } %>
+                        <% } %><br />
+                      </td>
+                    </tr>
                   <% } if(pItem.templateOptions.show.ref) { %>
                     <tr>
                       <td class="datosGenerales"><%= pItem.templateOptions.labelRef %></td>
@@ -684,6 +697,9 @@ case 'lista': %>
             var deEncabezado = Array.isArray(datosEncabezado.de)
               ? datosEncabezado.de
               : (datosEncabezado.de ? [datosEncabezado.de] : []);
+            var copiaEncabezado = Array.isArray(datosEncabezado.copia)
+              ? datosEncabezado.copia
+              : (datosEncabezado.copia ? [datosEncabezado.copia] : []);
             %>
             <table width="100%">
               <tbody>
@@ -731,6 +747,18 @@ case 'lista': %>
                           <%= itemDeEncabezado.cargo %><br />
                         <% } %>
                       <% } %>
+                    </td>
+                  </tr>
+                <% } %>
+
+                <% if(copiaEncabezado && copiaEncabezado.length > 0) { %>
+                  <tr>
+                    <td class="datosGenerales">CC:</td>
+                    <td>
+                      <% for(var k = 0; k < copiaEncabezado.length; k++){
+                        var itemCcEnc = copiaEncabezado[k]; %>
+                        <%= itemCcEnc.nombre || itemCcEnc.abreviacion || itemCcEnc %><% if(k < copiaEncabezado.length - 1){ %>, <% } %>
+                      <% } %><br />
                     </td>
                   </tr>
                 <% } %>

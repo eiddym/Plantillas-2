@@ -797,6 +797,14 @@ module.exports = {
               }
             };
             pDocumentos.forEach((pDoc, pIndice) => {
+              let copiaIds = [];
+              try {
+                copiaIds = Array.isArray(pDocumento.copia) ? pDocumento.copia : JSON.parse(pDocumento.copia || '[]');
+              } catch (_) { copiaIds = []; }
+              const userUnidad = Number(pUsuario.fid_unidad || 0);
+              if (['CERRADO', 'APROBADO'].includes(pDocumento.estado) && userUnidad > 0 && copiaIds.map(Number).includes(userUnidad)) {
+                return safeResolve(true);
+              }
 
               switch (pDocumento.estado) {
                 case 'CERRADO':

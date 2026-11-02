@@ -141,6 +141,7 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
                 <div class="participantes-col">
                   <span><strong>De:</strong> {{ getParticipanteTexto(d, 'de') }}</span>
                   <span><strong>Para:</strong> {{ getParticipanteTexto(d, 'para') }}</span>
+                  <span *ngIf="getCopiaTexto(d)"><strong>CC:</strong> {{ getCopiaTexto(d) }}</span>
                 </div>
               </td>
             </ng-container>
@@ -778,6 +779,22 @@ export class DocumentosListComponent implements OnInit {
 
     const raw = (doc as any)[campo];
     return fmtUser(raw) || fallback;
+  }
+
+  getCopiaTexto(doc: Documento): string {
+    if (!doc) return '';
+    if (doc.plantilla_valor) {
+      try {
+        const pv = typeof doc.plantilla_valor === 'string' ? JSON.parse(doc.plantilla_valor) : doc.plantilla_valor;
+        const dg = pv?.datosGenerales || pv?.['datosGenerales-0'];
+        const val = dg?.copia;
+        if (Array.isArray(val) && val.length > 0) {
+          const names = val.map((item: any) => item?.abreviacion || item?.nombre || item).filter(Boolean);
+          if (names.length > 0) return names.join(', ');
+        }
+      } catch {}
+    }
+    return '';
   }
 
   puedeEditar(doc: Documento): boolean {

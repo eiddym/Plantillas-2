@@ -507,6 +507,65 @@ export interface UnidadArchivo {
             }
           </div>
 
+          <!-- Documentos Oficiales Recibidos en Copia (CC) -->
+          @if (docsUnidadCopiaFiltrados().length > 0) {
+            <div class="content-card card-copia-cc">
+              <div class="card-top-title">
+                <mat-icon style="color: #7e22ce;">mark_email_read</mat-icon>
+                <h3>Documentos Oficiales Recibidos en Copia (CC) ({{ docsUnidadCopiaFiltrados().length }})</h3>
+                <span class="badge-cc-info">Remisión Directa Oficial</span>
+              </div>
+
+              <table mat-table [dataSource]="docsUnidadCopiaFiltrados()" class="archivo-table">
+                <ng-container matColumnDef="cite">
+                  <th mat-header-cell *matHeaderCellDef>CITE</th>
+                  <td mat-cell *matCellDef="let d">
+                    <span class="cite-text">{{ d.nombre }}</span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="tipo">
+                  <th mat-header-cell *matHeaderCellDef>Tipo</th>
+                  <td mat-cell *matCellDef="let d">
+                    <span class="tipo-tag tipo-tag-cc">{{ d.nombre_plantilla }}</span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="ref">
+                  <th mat-header-cell *matHeaderCellDef>Referencia</th>
+                  <td mat-cell *matCellDef="let d">
+                    <span class="ref-text" [matTooltip]="obtenerReferencia(d)">{{ obtenerReferencia(d) }}</span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="autor">
+                  <th mat-header-cell *matHeaderCellDef>Generado por / Unidad Emisora</th>
+                  <td mat-cell *matCellDef="let d">
+                    {{ d.usuario_creacion?.nombres }} {{ d.usuario_creacion?.apellidos }}
+                    <span *ngIf="d.usuario_creacion?.unidad?.abreviacion"> ({{ d.usuario_creacion.unidad.abreviacion }})</span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="acciones">
+                  <th mat-header-cell *matHeaderCellDef>Acciones</th>
+                  <td mat-cell *matCellDef="let d">
+                    <div class="action-btn-row">
+                      <button mat-icon-button (click)="verDetalle(d)" matTooltip="Ver Trazabilidad" class="btn-action">
+                        <mat-icon>visibility</mat-icon>
+                      </button>
+                      <button mat-icon-button (click)="descargarPdf(d)" matTooltip="Descargar Copia Digital" class="btn-action pdf">
+                        <mat-icon>picture_as_pdf</mat-icon>
+                      </button>
+                    </div>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="['cite', 'tipo', 'ref', 'autor', 'acciones']"></tr>
+                <tr mat-row *matRowDef="let row; columns: ['cite', 'tipo', 'ref', 'autor', 'acciones'];" class="data-row clickable-row" [class.selected-row]="docSeleccionado()?.id_documento === row.id_documento" (click)="seleccionarDocumento(row)"></tr>
+              </table>
+            </div>
+          }
+
           <!-- Sub-Unidades Jerárquicas Dependientes -->
           @if (dataUnidadActual()?.sub_unidades && dataUnidadActual()!.sub_unidades!.length > 0) {
             <div class="sub-unidades-box">
@@ -1251,6 +1310,26 @@ export interface UnidadArchivo {
     .stat-number { font-size: 24px; font-weight: 800; color: #00b4db; }
     .stat-label { font-size: 11px; color: rgba(255, 255, 255, 0.7); }
 
+    .card-copia-cc {
+      border-top: 3px solid #7e22ce !important;
+      margin-top: 20px;
+    }
+    .badge-cc-info {
+      font-size: 11px;
+      background: #f3e8ff;
+      color: #7e22ce;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      margin-left: 8px;
+      text-transform: uppercase;
+    }
+    .tipo-tag-cc {
+      background: #faf5ff !important;
+      color: #6b21a8 !important;
+      border: 1px solid #d8b4fe !important;
+    }
+
     /* Sub-Unidades Dependientes */
     .sub-unidades-box {
       background: #fff;
@@ -1976,6 +2055,16 @@ export class ArchivoComponent implements OnInit {
     if (tipo === 'TODOS') return data.documentos_propios;
 
     return data.documentos_propios.filter((d: any) => (d.nombre_plantilla || '').trim() === tipo);
+  });
+
+  readonly docsUnidadCopiaFiltrados = computed(() => {
+    const data = this.dataUnidadActual();
+    if (!data || !data.documentos_copia) return [];
+
+    const tipo = this.tipoFiltroUnidad();
+    if (tipo === 'TODOS') return data.documentos_copia;
+
+    return data.documentos_copia.filter((d: any) => (d.nombre_plantilla || '').trim() === tipo);
   });
 
   ngOnInit(): void {

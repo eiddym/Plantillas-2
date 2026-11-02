@@ -387,6 +387,8 @@ module.exports = app => {
                         id_usuario: tokenDecodificado.id_usuario,
                         usuario: tokenDecodificado.usuario,
                         roles:tokenDecodificado.roles,
+                        fid_unidad: pUsuario ? pUsuario.fid_unidad : null,
+                        es_mae: pUsuario ? pUsuario.es_mae : false,
                       };
                       req.user = req.body.audit_usuario;
 
