@@ -100,9 +100,24 @@ async function sincronizar() {
     const menusData = JSON.parse(fs.readFileSync(path.join(seedDir, 'menus.json'), 'utf8'));
     let mInsertados = 0;
     for (const m of menusData) {
-      const [menu, creado] = await models.menu.findOrCreate({
-        where: { id_menu: m.id_menu },
-        defaults: {
+      const existe = await models.menu.findOne({
+        where: {
+          [Op.or]: [
+            { id_menu: m.id_menu },
+            { nombre: m.nombre }
+          ]
+        }
+      });
+      if (existe) {
+        await existe.update({
+          descripcion: m.descripcion || existe.descripcion,
+          icono: m.icono || existe.icono,
+          ruta: m.ruta !== undefined ? m.ruta : existe.ruta,
+          orden: m.orden || existe.orden,
+          estado: m.estado || existe.estado
+        });
+      } else {
+        await models.menu.create({
           id_menu: m.id_menu,
           nombre: m.nombre,
           descripcion: m.descripcion,
@@ -112,9 +127,9 @@ async function sincronizar() {
           estado: m.estado || 'ACTIVO',
           _usuario_creacion: 1,
           _usuario_modificacion: 1
-        }
-      });
-      if (creado) mInsertados++;
+        });
+        mInsertados++;
+      }
     }
     console.log(`[Menús] Procesados: ${menusData.length} (Nuevos: ${mInsertados})`);
 
@@ -163,18 +178,26 @@ async function sincronizar() {
     // Asegurar que NO existan más usuarios que los 2 autorizados (sys_default y 10794552-1J)
     const usuariosPermitidos = usuariosData.map(u => u.usuario);
     const idsPermitidos = usuariosData.map(u => u.id_usuario);
-    await models.usuario_rol.destroy({
-      where: {
-        fid_usuario: { [Op.notIn]: idsPermitidos }
+    try {
+      await models.usuario_rol.destroy({
+        where: {
+          fid_usuario: { [Op.notIn]: idsPermitidos }
+        }
+      });
+      const eliminados = await models.usuario.destroy({
+        where: {
+          usuario: { [Op.notIn]: usuariosPermitidos }
+        }
+      });
+      if (eliminados > 0) {
+        console.log(`[Usuarios] Eliminados ${eliminados} usuario(s) no autorizados.`);
       }
-    });
-    const eliminados = await models.usuario.destroy({
-      where: {
-        usuario: { [Op.notIn]: usuariosPermitidos }
-      }
-    });
-    if (eliminados > 0) {
-      console.log(`[Usuarios] Eliminados ${eliminados} usuario(s) no autorizados.`);
+    } catch {
+      await models.usuario.update(
+        { estado: 'INACTIVO' },
+        { where: { usuario: { [Op.notIn]: usuariosPermitidos } } }
+      );
+      console.log(`[Usuarios] Usuarios no autorizados deshabilitados a estado INACTIVO.`);
     }
 
     console.log(`[Usuarios] Total permitidos en el sistema: ${usuariosData.length} (sys_default y 10794552-1J)`);
@@ -183,6 +206,10 @@ async function sincronizar() {
     console.log('\n--- 5. Sincronizando Asignaciones de Roles y Permisos ---');
     const rolMenusData = JSON.parse(fs.readFileSync(path.join(seedDir, 'rol_menus.json'), 'utf8'));
     for (const rm of rolMenusData) {
+      const menuExiste = await models.menu.findByPk(rm.fid_menu);
+      const rolExiste = await models.rol.findByPk(rm.fid_rol);
+      if (!menuExiste || !rolExiste) continue;
+
       await models.rol_menu.findOrCreate({
         where: { fid_rol: rm.fid_rol, fid_menu: rm.fid_menu },
         defaults: {
@@ -197,6 +224,10 @@ async function sincronizar() {
 
     const usuarioRolesData = JSON.parse(fs.readFileSync(path.join(seedDir, 'usuario_roles.json'), 'utf8'));
     for (const ur of usuarioRolesData) {
+      const usrExiste = await models.usuario.findByPk(ur.fid_usuario);
+      const rolExiste = await models.rol.findByPk(ur.fid_rol);
+      if (!usrExiste || !rolExiste) continue;
+
       await models.usuario_rol.findOrCreate({
         where: { fid_usuario: ur.fid_usuario, fid_rol: ur.fid_rol },
         defaults: {
