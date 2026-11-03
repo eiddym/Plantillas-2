@@ -114,8 +114,15 @@ function xautenticacion(req, res, usar_ldap=1){
     const email = req.body.username;
     const contrasena = String(req.body.password);
 
-    const condicion = {
-      usuario:req.body.username,
+    const Op = (Sequelize && Sequelize.Op) ? Sequelize.Op : null;
+    const condicion = Op ? {
+      [Op.or]: [
+        { usuario: cleanUser },
+        { numero_documento: cleanUser },
+        { email: cleanUser }
+      ]
+    } : {
+      usuario: cleanUser
     };
     if(!req.user) {
       condicion.contrasena=crypto.createHash("SHA256").update(req.body.password).digest("hex");
