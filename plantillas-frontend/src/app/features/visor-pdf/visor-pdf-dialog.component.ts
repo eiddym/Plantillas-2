@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, OnDestroy, inject, signal, ChangeDetectorRef } from '@angular/core';
+import { Component, Inject, OnInit, OnDestroy, inject, signal, ChangeDetectorRef, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -20,6 +20,7 @@ export interface VisorPdfData {
 @Component({
   selector: 'app-visor-pdf-dialog',
   standalone: true,
+  encapsulation: ViewEncapsulation.None,
   imports: [
     CommonModule,
     MatDialogModule,
@@ -29,249 +30,311 @@ export interface VisorPdfData {
     MatTooltipModule
   ],
   template: `
-    <div class="dialog-header">
-      <div class="header-info">
-        <mat-icon [class.pdf-icon]="!data.esBorrador" [class.html-icon]="data.esBorrador">
-          {{ data.esBorrador ? 'description' : 'picture_as_pdf' }}
-        </mat-icon>
-        <div>
-          <h2 mat-dialog-title class="dialog-title">
-            {{ data.titulo || (data.esBorrador ? 'Vista Previa' : 'Documento Oficial') }}
-          </h2>
+    <div class="visor-dialog-container" [class.visor-html-mode]="data.esBorrador">
+      <!-- Cabecera Institucional Verde Petróleo con Degradados -->
+      <div class="dialog-header">
+        <div class="header-left">
+          <div class="icon-circle" [class.html-circle]="data.esBorrador">
+            <mat-icon>{{ data.esBorrador ? 'description' : 'picture_as_pdf' }}</mat-icon>
+          </div>
+          <h2 class="dialog-title">{{ data.titulo || (data.esBorrador ? 'Vista Previa' : 'Documento Oficial') }}</h2>
         </div>
-      </div>
-      <div class="header-actions">
-        <button mat-icon-button mat-dialog-close matTooltip="Cerrar">
+        <button mat-icon-button (click)="dialogRef.close()" class="btn-close" matTooltip="Cerrar">
           <mat-icon>close</mat-icon>
         </button>
       </div>
-    </div>
 
-    <mat-progress-bar *ngIf="loading()" mode="indeterminate" class="header-progress"></mat-progress-bar>
+      <mat-progress-bar *ngIf="loading()" mode="indeterminate" class="header-progress"></mat-progress-bar>
 
-    <mat-dialog-content class="dialog-body">
-      @if (loading()) {
-        <div class="pdf-loading-state">
-          <mat-icon class="spinner-icon">hourglass_top</mat-icon>
-          <h3>{{ data.esBorrador ? 'Cargando Vista Previa...' : 'Generando Documento Oficial...' }}</h3>
-          <p>{{ data.esBorrador ? 'Preparando visualización del documento.' : 'Compilando sellos digitales y código QR de verificación institucional.' }}</p>
-        </div>
-      } @else if (errorMessage()) {
-        <div class="pdf-error-state">
-          <mat-icon class="error-icon">report_problem</mat-icon>
-          <h3>No se pudo cargar el documento</h3>
-          <p>{{ errorMessage() }}</p>
-          <button mat-flat-button color="primary" (click)="reintentar()">
-            <mat-icon>refresh</mat-icon>
-            <span>Reintentar</span>
-          </button>
-        </div>
-      } @else if (safePdfUrl) {
-        <iframe
-          [src]="safePdfUrl"
-          class="pdf-iframe"
-          title="Visor PDF Oficial">
-        </iframe>
-      } @else if (safeHtml) {
-        <div class="html-preview-wrapper">
-          <div class="sheet-viewport">
-            <div
-              [innerHTML]="safeHtml"
-              class="html-preview-container sheet-preview">
-            </div>
+      <!-- Cuerpo del Visor -->
+      <div class="dialog-body" [class.html-body]="data.esBorrador">
+        @if (loading()) {
+          <div class="visor-loading-state">
+            <mat-icon class="spinner-icon">hourglass_top</mat-icon>
+            <h3>{{ data.esBorrador ? 'Cargando Vista Previa...' : 'Generando Documento Oficial...' }}</h3>
+            <p>{{ data.esBorrador ? 'Preparando visualización del documento.' : 'Compilando sellos digitales y código QR de verificación institucional.' }}</p>
           </div>
+        } @else if (errorMessage()) {
+          <div class="visor-error-state">
+            <mat-icon class="error-icon">report_problem</mat-icon>
+            <h3>No se pudo cargar el documento</h3>
+            <p>{{ errorMessage() }}</p>
+            <button mat-flat-button color="primary" (click)="reintentar()">
+              <mat-icon>refresh</mat-icon>
+              <span>Reintentar</span>
+            </button>
+          </div>
+        } @else if (safePdfUrl) {
+          <iframe
+            [src]="safePdfUrl"
+            class="pdf-iframe"
+            title="Visor PDF Oficial">
+          </iframe>
+        } @else if (safeHtml) {
+          <!-- Hoja Completa Blanca sin espacios laterales oscuros -->
+          <div class="document-sheet">
+            <div [innerHTML]="safeHtml" class="document-html-content"></div>
+          </div>
+        }
+      </div>
+
+      <!-- Footer solo para PDF si hay descarga -->
+      @if (downloadUrl() && !data.esBorrador) {
+        <div class="dialog-footer">
+          <a mat-raised-button color="primary" [href]="downloadUrl()" [download]="getDownloadFileName()">
+            <mat-icon>download</mat-icon>
+            <span>Descargar PDF</span>
+          </a>
         </div>
       }
-    </mat-dialog-content>
-
-    @if (downloadUrl() && !data.esBorrador) {
-      <mat-dialog-actions align="end" class="dialog-footer">
-        <a mat-raised-button color="primary" [href]="downloadUrl()" [download]="getDownloadFileName()">
-          <mat-icon>download</mat-icon>
-          <span>Descargar PDF</span>
-        </a>
-      </mat-dialog-actions>
-    }
+    </div>
   `,
   styles: [`
-    .dialog-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 14px 20px;
-      background: linear-gradient(135deg, #0f2027 0%, #15303c 50%, #0d5c63 100%);
-      color: #ffffff;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-
-      .header-info {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-      .pdf-icon {
-        color: #f87171;
-        font-size: 26px;
-        width: 26px;
-        height: 26px;
-      }
-      .html-icon {
-        color: #5eead4;
-        font-size: 26px;
-        width: 26px;
-        height: 26px;
-      }
-      .dialog-title {
-        margin: 0;
-        font-size: 1.15rem;
-        font-weight: 700;
-        color: #ffffff;
-        line-height: 1.2;
-      }
-      .header-actions {
-        display: flex;
-        gap: 4px;
-        button { color: #e2e8f0; }
-      }
-    }
-
-    .header-progress {
-      height: 3px;
-    }
-
-    .dialog-body {
-      padding: 0 !important;
-      height: 80vh;
-      min-width: 65vw;
-      background: #1e293b;
-      display: flex;
-      position: relative;
-      overflow: hidden !important;
-    }
-
-    .pdf-iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-      background: #ffffff;
-    }
-
-    .pdf-loading-state, .pdf-error-state {
-      margin: auto;
-      text-align: center;
-      padding: 40px 20px;
-      color: #cbd5e1;
-
-      h3 { margin: 12px 0 6px 0; color: #ffffff; font-size: 1.2rem; }
-      p { margin: 0 0 16px 0; font-size: 0.9rem; color: #94a3b8; max-width: 440px; }
-      .spinner-icon {
-        font-size: 48px;
-        width: 48px;
-        height: 48px;
-        color: #5eead4;
-        animation: pulse 1.5s infinite;
-      }
-      .error-icon {
-        font-size: 48px;
-        width: 48px;
-        height: 48px;
-        color: #f87171;
-      }
-    }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 0.8; }
-      50% { transform: scale(1.1); opacity: 1; }
-    }
-
-    .html-preview-wrapper {
-      width: 100%;
-      height: 100%;
+    .visor-dialog-container {
       display: flex;
       flex-direction: column;
-      background: #1e293b;
-      overflow: hidden !important;
-    }
-
-    .sheet-viewport {
-      flex: 1;
-      overflow-y: auto;
-      overflow-x: hidden !important;
-      padding: 24px 16px;
-      display: flex;
-      justify-content: center;
-      box-sizing: border-box;
-    }
-
-    .html-preview-container {
       width: 100%;
-      max-width: 780px;
-      min-height: 1050px;
+      height: 100%;
+      max-height: 88vh;
       background: #ffffff;
-      padding: 44px 48px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-      color: #1e293b;
-      font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif;
-      line-height: 1.6;
-      border-radius: 2px;
+      border-radius: 12px;
+      overflow: hidden;
       box-sizing: border-box;
-      overflow-x: hidden !important;
 
-      ::ng-deep {
-        * {
-          box-sizing: border-box;
-          max-width: 100%;
+      .dialog-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 20px;
+        background: linear-gradient(135deg, #0f2027 0%, #15303c 50%, #0d5c63 100%);
+        color: #ffffff;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        box-sizing: border-box;
+        flex-shrink: 0;
+
+        .header-left {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          min-width: 0;
         }
-        table {
-          width: 100% !important;
-          max-width: 100% !important;
-          border-collapse: collapse;
-          margin: 16px 0;
-          table-layout: fixed;
-          overflow-wrap: break-word;
-          word-break: break-word;
+
+        .icon-circle {
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.12);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+
+          mat-icon {
+            font-size: 22px;
+            width: 22px;
+            height: 22px;
+            color: #f87171;
+          }
+
+          &.html-circle mat-icon {
+            color: #5eead4;
+          }
         }
-        td, th {
-          border: 1px solid #cbd5e1;
-          padding: 8px 10px;
-          overflow-wrap: break-word;
-          word-break: break-word;
-        }
-        p {
-          margin-bottom: 12px;
-          line-height: 1.6;
-          overflow-wrap: break-word;
-          word-break: break-word;
-        }
-        h1, h2, h3, h4 {
-          color: #0f172a;
+
+        .dialog-title {
+          margin: 0;
+          font-size: 1.15rem;
           font-weight: 700;
+          color: #ffffff;
+          line-height: 1.2;
+          letter-spacing: 0.3px;
+        }
+
+        .btn-close {
+          color: #cbd5e1;
+          &:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.1);
+          }
         }
       }
-    }
 
-    .dialog-footer {
-      padding: 12px 20px;
-      border-top: 1px solid #e2e8f0;
-      background: #ffffff;
-      gap: 8px;
-    }
-
-    @media (max-width: 768px) {
-      .dialog-header {
-        padding: 10px 14px;
-        .dialog-title {
-          font-size: 1rem;
-        }
+      .header-progress {
+        height: 3px;
+        flex-shrink: 0;
       }
 
       .dialog-body {
-        min-width: 92vw;
-        height: 72vh;
+        flex: 1;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
+        overflow-y: auto;
+        overflow-x: hidden !important;
+        background: #1e293b;
+
+        &.html-body {
+          background: #ffffff !important;
+        }
       }
 
-      .html-preview-container {
-        padding: 20px 14px;
-        margin: 10px 0;
+      .pdf-iframe {
+        width: 100%;
+        height: 78vh;
+        border: none;
+        background: #ffffff;
+        display: block;
+      }
+
+      .visor-loading-state, .visor-error-state {
+        margin: auto;
+        text-align: center;
+        padding: 40px 20px;
+        color: #64748b;
+
+        h3 { margin: 12px 0 6px 0; color: #0f172a; font-size: 1.2rem; font-weight: 700; }
+        p { margin: 0 0 16px 0; font-size: 0.9rem; color: #64748b; max-width: 440px; }
+        .spinner-icon {
+          font-size: 48px;
+          width: 48px;
+          height: 48px;
+          color: #0d5c63;
+          animation: pulse 1.5s infinite;
+        }
+        .error-icon {
+          font-size: 48px;
+          width: 48px;
+          height: 48px;
+          color: #ef4444;
+        }
+      }
+
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 0.8; }
+        50% { transform: scale(1.1); opacity: 1; }
+      }
+
+      /* Hoja de documento completa */
+      .document-sheet {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 36px 44px;
+        background: #ffffff;
+        color: #1e293b;
+        font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif;
+        line-height: 1.6;
+        overflow-x: hidden !important;
+
+        .document-html-content {
+          width: 100%;
+          box-sizing: border-box;
+          overflow-x: hidden !important;
+
+          * {
+            box-sizing: border-box !important;
+            max-width: 100% !important;
+          }
+
+          .fondo-texto {
+            display: none !important;
+          }
+
+          .mi-contenido {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+          }
+
+          .contenedor {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+            margin-bottom: 8px;
+          }
+
+          #pageHeader {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+            margin-bottom: 14px;
+            font-size: 10pt;
+
+            .cite {
+              float: none !important;
+              font-weight: 600;
+            }
+          }
+
+          table {
+            width: 100% !important;
+            max-width: 100% !important;
+            border-collapse: collapse !important;
+            margin: 12px 0 !important;
+            table-layout: fixed !important;
+            overflow-wrap: break-word !important;
+            word-break: break-word !important;
+          }
+
+          td, th {
+            border: 1px solid #cbd5e1;
+            padding: 8px 12px;
+            overflow-wrap: break-word !important;
+            word-break: break-word !important;
+            vertical-align: top;
+          }
+
+          .datosGenerales {
+            font-weight: 700;
+            width: 120px;
+            background: #f8fafc;
+            color: #334155;
+          }
+
+          p {
+            margin-top: 0;
+            margin-bottom: 12px;
+            line-height: 1.65;
+            text-align: justify;
+            overflow-wrap: break-word !important;
+            word-break: break-word !important;
+          }
+
+          h1, h2, h3, h4, h5, h6 {
+            color: #0f172a;
+            font-weight: 700;
+            line-height: 1.3;
+          }
+
+          h2 {
+            font-size: 14pt;
+            letter-spacing: 0.5px;
+            margin: 16px 0;
+          }
+        }
+      }
+
+      .dialog-footer {
+        padding: 12px 20px;
+        border-top: 1px solid #e2e8f0;
+        background: #f8fafc;
+        display: flex;
+        justify-content: flex-end;
+        box-sizing: border-box;
+        flex-shrink: 0;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .visor-dialog-container {
+        .dialog-header {
+          padding: 10px 14px;
+          .dialog-title { font-size: 1rem; }
+        }
+        .document-sheet {
+          padding: 20px 16px !important;
+        }
       }
     }
   `]

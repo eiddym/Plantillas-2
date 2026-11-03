@@ -1036,8 +1036,10 @@ export class DocumentosListComponent implements OnInit {
       });
     } else {
       this.dialog.open(VisorPdfDialogComponent, {
-        width: '85vw',
-        maxWidth: '1000px',
+        width: '800px',
+        maxWidth: '96vw',
+        panelClass: 'modal-sin-padding',
+        autoFocus: false,
         data: {
           titulo: 'Vista Previa',
           idDocumento: doc.id_documento,

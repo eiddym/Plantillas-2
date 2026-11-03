@@ -264,6 +264,15 @@ mat-toolbar.mat-primary {
   }
 }
 
+.modal-sin-padding {
+  .mat-mdc-dialog-container .mdc-dialog__surface,
+  .mdc-dialog__surface {
+    padding: 0 !important;
+    overflow: hidden !important;
+    border-radius: 12px !important;
+  }
+}
+
 /* ==========================================================================
    CORRECCIÓN GLOBAL DE LIGADURAS MATERIAL ICONS
    ========================================================================== */
