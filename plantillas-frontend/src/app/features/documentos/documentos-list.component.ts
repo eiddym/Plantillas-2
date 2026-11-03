@@ -1039,7 +1039,7 @@ export class DocumentosListComponent implements OnInit {
         width: '85vw',
         maxWidth: '1000px',
         data: {
-          titulo: `Vista Previa HTML - ${doc.nombre || 'Borrador'}`,
+          titulo: 'Vista Previa',
           idDocumento: doc.id_documento,
           docCite: doc.nombre,
           esBorrador: true

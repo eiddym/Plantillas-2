@@ -36,17 +36,11 @@ export interface VisorPdfData {
         </mat-icon>
         <div>
           <h2 mat-dialog-title class="dialog-title">
-            {{ data.titulo || (data.esBorrador ? 'Vista Previa HTML' : 'Documento Oficial') }}
+            {{ data.titulo || (data.esBorrador ? 'Vista Previa' : 'Documento Oficial') }}
           </h2>
-          <span class="dialog-subtitle" *ngIf="data.docCite">
-            {{ data.esBorrador ? 'Borrador en curso (Vista Previa HTML — Sin valor legal ni membrete)' : ('CITE: ' + data.docCite) }}
-          </span>
         </div>
       </div>
       <div class="header-actions">
-        <button mat-icon-button (click)="imprimir()" matTooltip="Imprimir" [disabled]="loading() || !!errorMessage()">
-          <mat-icon>print</mat-icon>
-        </button>
         <button mat-icon-button mat-dialog-close matTooltip="Cerrar">
           <mat-icon>close</mat-icon>
         </button>
@@ -59,8 +53,8 @@ export interface VisorPdfData {
       @if (loading()) {
         <div class="pdf-loading-state">
           <mat-icon class="spinner-icon">hourglass_top</mat-icon>
-          <h3>{{ data.esBorrador ? 'Generando Vista Previa HTML...' : 'Generando Documento Oficial...' }}</h3>
-          <p>{{ data.esBorrador ? 'Cargando contenido de redacción del borrador en formato HTML.' : 'Compilando plantilla, sellos digitales y código QR de verificación institucional.' }}</p>
+          <h3>{{ data.esBorrador ? 'Cargando Vista Previa...' : 'Generando Documento Oficial...' }}</h3>
+          <p>{{ data.esBorrador ? 'Preparando visualización del documento.' : 'Compilando sellos digitales y código QR de verificación institucional.' }}</p>
         </div>
       } @else if (errorMessage()) {
         <div class="pdf-error-state">
@@ -80,10 +74,6 @@ export interface VisorPdfData {
         </iframe>
       } @else if (safeHtml) {
         <div class="html-preview-wrapper">
-          <div class="borrador-info-bar" *ngIf="data.esBorrador">
-            <mat-icon>info</mat-icon>
-            <span>VISTA PREVIA HTML (DOCUMENTO EN BORRADOR) — La versión oficial con membrete institucional, metadatos y código QR se reserva al estado APROBADO.</span>
-          </div>
           <div class="sheet-viewport">
             <div
               [innerHTML]="safeHtml"
@@ -94,15 +84,14 @@ export interface VisorPdfData {
       }
     </mat-dialog-content>
 
-    <mat-dialog-actions align="end" class="dialog-footer">
-      <button mat-stroked-button mat-dialog-close>Cerrar</button>
-      @if (downloadUrl() && !data.esBorrador) {
+    @if (downloadUrl() && !data.esBorrador) {
+      <mat-dialog-actions align="end" class="dialog-footer">
         <a mat-raised-button color="primary" [href]="downloadUrl()" [download]="getDownloadFileName()">
           <mat-icon>download</mat-icon>
           <span>Descargar PDF</span>
         </a>
-      }
-    </mat-dialog-actions>
+      </mat-dialog-actions>
+    }
   `,
   styles: [`
     .dialog-header {
@@ -110,8 +99,9 @@ export interface VisorPdfData {
       justify-content: space-between;
       align-items: center;
       padding: 14px 20px;
-      background: #0a192f;
+      background: linear-gradient(135deg, #0f2027 0%, #15303c 50%, #0d5c63 100%);
       color: #ffffff;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 
       .header-info {
         display: flex;
@@ -119,16 +109,16 @@ export interface VisorPdfData {
         gap: 12px;
       }
       .pdf-icon {
-        color: #ef4444;
-        font-size: 28px;
-        width: 28px;
-        height: 28px;
+        color: #f87171;
+        font-size: 26px;
+        width: 26px;
+        height: 26px;
       }
       .html-icon {
-        color: #38bdf8;
-        font-size: 28px;
-        width: 28px;
-        height: 28px;
+        color: #5eead4;
+        font-size: 26px;
+        width: 26px;
+        height: 26px;
       }
       .dialog-title {
         margin: 0;
@@ -137,14 +127,10 @@ export interface VisorPdfData {
         color: #ffffff;
         line-height: 1.2;
       }
-      .dialog-subtitle {
-        font-size: 0.78rem;
-        color: #94a3b8;
-      }
       .header-actions {
         display: flex;
         gap: 4px;
-        button { color: #cbd5e1; }
+        button { color: #e2e8f0; }
       }
     }
 
@@ -154,11 +140,12 @@ export interface VisorPdfData {
 
     .dialog-body {
       padding: 0 !important;
-      height: 78vh;
+      height: 80vh;
       min-width: 65vw;
       background: #1e293b;
       display: flex;
       position: relative;
+      overflow: hidden !important;
     }
 
     .pdf-iframe {
@@ -180,7 +167,7 @@ export interface VisorPdfData {
         font-size: 48px;
         width: 48px;
         height: 48px;
-        color: #38bdf8;
+        color: #5eead4;
         animation: pulse 1.5s infinite;
       }
       .error-icon {
@@ -201,68 +188,63 @@ export interface VisorPdfData {
       height: 100%;
       display: flex;
       flex-direction: column;
-      background: #334155;
-      overflow: hidden;
-    }
-
-    .borrador-info-bar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 9px 16px;
-      background: #fef3c7;
-      color: #92400e;
-      border-bottom: 1px solid #fde68a;
-      font-size: 0.82rem;
-      font-weight: 600;
-      flex-shrink: 0;
-
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-        color: #d97706;
-      }
+      background: #1e293b;
+      overflow: hidden !important;
     }
 
     .sheet-viewport {
       flex: 1;
       overflow-y: auto;
+      overflow-x: hidden !important;
       padding: 24px 16px;
       display: flex;
       justify-content: center;
+      box-sizing: border-box;
     }
 
     .html-preview-container {
       width: 100%;
-      max-width: 820px;
+      max-width: 780px;
       min-height: 1050px;
       background: #ffffff;
-      padding: 48px 56px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      padding: 44px 48px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
       color: #1e293b;
       font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif;
       line-height: 1.6;
       border-radius: 2px;
       box-sizing: border-box;
+      overflow-x: hidden !important;
 
       ::ng-deep {
+        * {
+          box-sizing: border-box;
+          max-width: 100%;
+        }
+        table {
+          width: 100% !important;
+          max-width: 100% !important;
+          border-collapse: collapse;
+          margin: 16px 0;
+          table-layout: fixed;
+          overflow-wrap: break-word;
+          word-break: break-word;
+        }
+        td, th {
+          border: 1px solid #cbd5e1;
+          padding: 8px 10px;
+          overflow-wrap: break-word;
+          word-break: break-word;
+        }
         p {
           margin-bottom: 12px;
           line-height: 1.6;
+          overflow-wrap: break-word;
+          word-break: break-word;
         }
         h1, h2, h3, h4 {
           color: #0f172a;
           font-weight: 700;
-        }
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          margin: 16px 0;
-        }
-        td, th {
-          border: 1px solid #cbd5e1;
-          padding: 8px 12px;
         }
       }
     }
@@ -284,30 +266,12 @@ export interface VisorPdfData {
 
       .dialog-body {
         min-width: 92vw;
-        height: 68vh;
+        height: 72vh;
       }
 
       .html-preview-container {
         padding: 20px 14px;
         margin: 10px 0;
-      }
-    }
-
-    @media print {
-      .dialog-header, .dialog-footer, .header-progress, .borrador-info-bar {
-        display: none !important;
-      }
-      .dialog-body {
-        background: #ffffff !important;
-        height: auto !important;
-      }
-      .sheet-viewport {
-        padding: 0 !important;
-      }
-      .html-preview-container {
-        box-shadow: none !important;
-        padding: 0 !important;
-        max-width: 100% !important;
       }
     }
   `]
@@ -398,7 +362,7 @@ export class VisorPdfDialogComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.loading.set(false);
         this.errorMessage.set(
-          err.error?.mensaje || err.message || 'No se pudo generar el documento PDF. Por favor verifique que el borrador tenga todos los datos requeridos.'
+          err.error?.mensaje || err.message || 'No se pudo generar el documento PDF.'
         );
         this.cdr.markForCheck();
       }
@@ -411,10 +375,6 @@ export class VisorPdfDialogComponent implements OnInit, OnDestroy {
     } else if (this.data.docCite) {
       this.cargarPdfDinamico(this.data.docCite, true);
     }
-  }
-
-  imprimir(): void {
-    window.print();
   }
 
   getDownloadFileName(): string {
