@@ -40,7 +40,7 @@ export interface NuevoDocumentoDialogData {
         </div>
         <div>
           <h2 mat-dialog-title class="dialog-title">{{ data?.tituloDialogo || 'Seleccionar Plantilla Oficial' }}</h2>
-          <p class="dialog-sub">{{ data?.subtituloDialogo || (data?.citeReferido ? ('Documento en respuesta a: ' + data?.citeReferido) : 'Elija el tipo de documento institucional que desea redactar') }}</p>
+          <p class="dialog-sub">{{ getSubtitulo() }}</p>
         </div>
       </div>
       <button mat-icon-button mat-dialog-close matTooltip="Cerrar" class="close-btn">
@@ -317,7 +317,7 @@ export class NuevoDocumentoDialogComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
   private readonly cdr = inject(ChangeDetectorRef);
 
-  constructor(@Optional() @Inject(MAT_DIALOG_DATA) public data?: NuevoDocumentoDialogData) {}
+  constructor(@Optional() @Inject(MAT_DIALOG_DATA) public data?: NuevoDocumentoDialogData) { }
 
   readonly loading = signal(true);
   readonly creando = signal(false);
@@ -347,6 +347,12 @@ export class NuevoDocumentoDialogComponent implements OnInit {
     });
   }
 
+  getSubtitulo(): string {
+    if (this.data?.subtituloDialogo) return this.data.subtituloDialogo;
+    if (this.data?.citeReferido) return `Documento en respuesta a: ${this.data.citeReferido}`;
+    return 'Elija el tipo de documento institucional que desea redactar';
+  }
+
   onFilter(event: Event): void {
     const val = (event.target as HTMLInputElement).value || '';
     this.filterText.set(val.trim().toLowerCase());
@@ -356,7 +362,7 @@ export class NuevoDocumentoDialogComponent implements OnInit {
     const f = this.filterText();
     const list = this.plantillas();
     if (!f) return list;
-    return list.filter(p => 
+    return list.filter(p =>
       (p.nombre && p.nombre.toLowerCase().includes(f)) ||
       (p.abreviacion && p.abreviacion.toLowerCase().includes(f))
     );

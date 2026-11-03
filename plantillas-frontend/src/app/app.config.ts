@@ -1,4 +1,4 @@
-import { ApplicationConfig, importProvidersFrom } from '@angular/core';
+import { ApplicationConfig, ErrorHandler, importProvidersFrom } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
@@ -9,12 +9,14 @@ import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { CUSTOM_FORMLY_TYPES } from './shared/formly-types';
 import { TINYMCE_SCRIPT_SRC } from '@tinymce/tinymce-angular';
+import { GlobalErrorHandler } from './core/errors/global-error-handler';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes, withComponentInputBinding()),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideAnimationsAsync(),
+    { provide: ErrorHandler, useClass: GlobalErrorHandler },
     { provide: TINYMCE_SCRIPT_SRC, useValue: '/tinymce/tinymce.min.js' },
     importProvidersFrom(
       FormlyMaterialModule,
