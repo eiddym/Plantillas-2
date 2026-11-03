@@ -1028,6 +1028,10 @@ export class DocumentosListComponent implements OnInit {
       this.dialog.open(VisorPdfDialogComponent, {
         width: '85vw',
         maxWidth: '1200px',
+        height: '92vh',
+        maxHeight: '94vh',
+        panelClass: 'modal-sin-padding',
+        autoFocus: false,
         data: {
           titulo: `${doc.nombre} - ${doc.ref || 'Documento Oficial'}`,
           docCite: doc.nombre,
@@ -1036,9 +1040,11 @@ export class DocumentosListComponent implements OnInit {
       });
     } else {
       this.dialog.open(VisorPdfDialogComponent, {
-        width: '800px',
-        maxWidth: '96vw',
-        panelClass: 'modal-sin-padding',
+        height: '92vh',
+        maxHeight: '94vh',
+        width: 'auto',
+        maxWidth: '95vw',
+        panelClass: ['modal-sin-padding', 'modal-vista-previa-escala'],
         autoFocus: false,
         data: {
           titulo: 'Vista Previa',

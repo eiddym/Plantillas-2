@@ -1024,12 +1024,18 @@ module.exports = app => {
         datos.model_actual['cite-0'].fecha = util.formatearFecha(datos.model_actual['cite-0'].fecha);
       }
 
+      let tipoHoja = 'Letter';
+      if (Array.isArray(plantillaJson) && plantillaJson.length > 0 && plantillaJson[0].templateOptions && plantillaJson[0].templateOptions.tipoHoja) {
+        tipoHoja = plantillaJson[0].templateOptions.tipoHoja;
+      }
+
       const resultadoHtml = await util.generarHtml(datos);
 
       return res.status(200).send(util.formatearMensaje("EXITO", "Vista previa HTML generada exitosamente.", {
         id_documento: doc.id_documento,
         nombre: doc.nombre,
         estado: doc.estado,
+        tipoHoja: tipoHoja,
         html: resultadoHtml.html
       }));
     } catch (err) {

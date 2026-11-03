@@ -273,6 +273,47 @@ mat-toolbar.mat-primary {
   }
 }
 
+.modal-vista-previa-escala {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: auto !important;
+  max-width: 95vw !important;
+  height: 92vh !important;
+  max-height: 94vh !important;
+
+  .mat-mdc-dialog-container {
+    padding: 0 !important;
+    background: transparent !important;
+    width: auto !important;
+    height: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+  }
+
+  .mat-mdc-dialog-container .mdc-dialog__surface,
+  .mdc-dialog__surface {
+    padding: 0 !important;
+    overflow: hidden !important;
+    border-radius: 12px !important;
+    background: #ffffff !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: auto !important;
+    max-width: 95vw !important;
+    height: 92vh !important;
+    max-height: 94vh !important;
+  }
+
+  app-visor-pdf-dialog {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    width: auto !important;
+  }
+}
+
 /* ==========================================================================
    CORRECCIÓN GLOBAL DE LIGADURAS MATERIAL ICONS
    ========================================================================== */

@@ -37,8 +37,36 @@ export interface VisorPdfData {
           <div class="icon-circle" [class.html-circle]="data.esBorrador">
             <mat-icon>{{ data.esBorrador ? 'description' : 'picture_as_pdf' }}</mat-icon>
           </div>
-          <h2 class="dialog-title">{{ data.titulo || (data.esBorrador ? 'Vista Previa' : 'Documento Oficial') }}</h2>
+          <div class="title-group">
+            <h2 class="dialog-title">{{ data.titulo || (data.esBorrador ? 'Vista Previa' : 'Documento Oficial') }}</h2>
+            <span class="sheet-dimension-tag" *ngIf="data.esBorrador">
+              {{ tipoHoja() === 'Oficio' ? 'OFICIO · 21.6 × 33.0 cm' : 'CARTA · 21.6 × 27.9 cm' }}
+            </span>
+          </div>
         </div>
+
+        <!-- Selector de Formato de Hoja (Carta / Oficio) para Borrador HTML -->
+        <div class="header-center" *ngIf="data.esBorrador">
+          <div class="format-pill-group">
+            <button 
+              type="button" 
+              class="format-pill-btn" 
+              [class.active]="tipoHoja() === 'Letter'" 
+              (click)="setTipoHoja('Letter')"
+              matTooltip="Ver en proporción Tamaño Carta (21.6 × 27.9 cm)">
+              Carta
+            </button>
+            <button 
+              type="button" 
+              class="format-pill-btn" 
+              [class.active]="tipoHoja() === 'Oficio'" 
+              (click)="setTipoHoja('Oficio')"
+              matTooltip="Ver en proporción Tamaño Oficio (21.6 × 33.0 cm)">
+              Oficio
+            </button>
+          </div>
+        </div>
+
         <button mat-icon-button (click)="dialogRef.close()" class="btn-close" matTooltip="Cerrar">
           <mat-icon>close</mat-icon>
         </button>
@@ -46,7 +74,7 @@ export interface VisorPdfData {
 
       <mat-progress-bar *ngIf="loading()" mode="indeterminate" class="header-progress"></mat-progress-bar>
 
-      <!-- Cuerpo del Visor -->
+      <!-- Cuerpo del Visor: Hoja Completa en Escala Pantalla -->
       <div class="dialog-body" [class.html-body]="data.esBorrador">
         @if (loading()) {
           <div class="visor-loading-state">
@@ -71,8 +99,8 @@ export interface VisorPdfData {
             title="Visor PDF Oficial">
           </iframe>
         } @else if (safeHtml) {
-          <!-- Hoja Completa Blanca sin espacios laterales oscuros -->
-          <div class="document-sheet">
+          <!-- Hoja Completa Física a Escala Pantalla -->
+          <div class="physical-sheet" [class.sheet-carta]="tipoHoja() === 'Letter'" [class.sheet-oficio]="tipoHoja() === 'Oficio'">
             <div [innerHTML]="safeHtml" class="document-html-content"></div>
           </div>
         }
@@ -90,38 +118,54 @@ export interface VisorPdfData {
     </div>
   `,
   styles: [`
+    :host {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      width: 100%;
+    }
+
     .visor-dialog-container {
       display: flex;
       flex-direction: column;
-      width: 100%;
-      height: 100%;
-      max-height: 88vh;
+      height: 92vh;
+      max-height: 94vh;
+      width: fit-content;
+      max-width: 95vw;
+      margin: 0 auto;
       background: #ffffff;
       border-radius: 12px;
       overflow: hidden;
       box-sizing: border-box;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+
+      &:not(.visor-html-mode) {
+        width: 85vw;
+        max-width: 1200px;
+      }
 
       .dialog-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 14px 20px;
+        padding: 10px 18px;
         background: linear-gradient(135deg, #0f2027 0%, #15303c 50%, #0d5c63 100%);
         color: #ffffff;
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         box-sizing: border-box;
         flex-shrink: 0;
+        gap: 12px;
 
         .header-left {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 10px;
           min-width: 0;
         }
 
         .icon-circle {
-          width: 36px;
-          height: 36px;
+          width: 34px;
+          height: 34px;
           border-radius: 8px;
           background: rgba(255, 255, 255, 0.12);
           display: flex;
@@ -130,9 +174,9 @@ export interface VisorPdfData {
           flex-shrink: 0;
 
           mat-icon {
-            font-size: 22px;
-            width: 22px;
-            height: 22px;
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
             color: #f87171;
           }
 
@@ -141,17 +185,74 @@ export interface VisorPdfData {
           }
         }
 
+        .title-group {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
         .dialog-title {
           margin: 0;
-          font-size: 1.15rem;
+          font-size: 1.05rem;
           font-weight: 700;
           color: #ffffff;
           line-height: 1.2;
           letter-spacing: 0.3px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .sheet-dimension-tag {
+          font-size: 0.65rem;
+          color: #5eead4;
+          font-weight: 600;
+          letter-spacing: 0.4px;
+          opacity: 0.9;
+        }
+
+        .header-center {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex: 1;
+        }
+
+        .format-pill-group {
+          display: inline-flex;
+          align-items: center;
+          background: rgba(0, 0, 0, 0.3);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          border-radius: 20px;
+          padding: 2px;
+          gap: 2px;
+
+          .format-pill-btn {
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+
+            &:hover {
+              color: #ffffff;
+            }
+
+            &.active {
+              background: #0d5c63;
+              color: #5eead4;
+              box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+            }
+          }
         }
 
         .btn-close {
           color: #cbd5e1;
+          flex-shrink: 0;
           &:hover {
             color: #ffffff;
             background: rgba(255, 255, 255, 0.1);
@@ -167,12 +268,14 @@ export interface VisorPdfData {
       .dialog-body {
         flex: 1;
         width: 100%;
+        min-height: 0;
         display: flex;
         flex-direction: column;
+        align-items: center;
         box-sizing: border-box;
         overflow-y: auto;
         overflow-x: hidden !important;
-        background: #1e293b;
+        background: #ffffff;
 
         &.html-body {
           background: #ffffff !important;
@@ -181,7 +284,7 @@ export interface VisorPdfData {
 
       .pdf-iframe {
         width: 100%;
-        height: 78vh;
+        height: calc(92vh - 120px);
         border: none;
         background: #ffffff;
         display: block;
@@ -215,21 +318,49 @@ export interface VisorPdfData {
         50% { transform: scale(1.1); opacity: 1; }
       }
 
-      /* Hoja de documento completa */
-      .document-sheet {
-        width: 100%;
+      /* Hoja Física a Escala Pantalla (Carta 21.6x27.9cm / Oficio 21.6x33.0cm) */
+      .physical-sheet {
+        height: calc(92vh - 56px);
+        max-height: calc(92vh - 56px);
         box-sizing: border-box;
-        padding: 36px 44px;
         background: #ffffff;
-        color: #1e293b;
-        font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif;
-        line-height: 1.6;
+        padding: 32px 38px 48px 38px;
+        overflow-y: auto;
         overflow-x: hidden !important;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        margin: 0 auto;
+
+        &::-webkit-scrollbar {
+          width: 6px;
+        }
+        &::-webkit-scrollbar-track {
+          background: #f1f5f9;
+        }
+        &::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 4px;
+        }
+
+        &.sheet-carta {
+          aspect-ratio: 216 / 279;
+          width: calc((92vh - 56px) * 0.7742);
+        }
+
+        &.sheet-oficio {
+          aspect-ratio: 216 / 330;
+          width: calc((92vh - 56px) * 0.6545);
+        }
 
         .document-html-content {
           width: 100%;
           box-sizing: border-box;
           overflow-x: hidden !important;
+          font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif;
+          line-height: 1.5;
+          color: #1e293b;
+          font-size: 9.5pt;
 
           * {
             box-sizing: border-box !important;
@@ -250,7 +381,7 @@ export interface VisorPdfData {
             width: 100% !important;
             max-width: 100% !important;
             box-sizing: border-box !important;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
           }
 
           #pageHeader {
@@ -258,8 +389,8 @@ export interface VisorPdfData {
             justify-content: space-between;
             align-items: flex-start;
             width: 100%;
-            margin-bottom: 14px;
-            font-size: 10pt;
+            margin-bottom: 12px;
+            font-size: 9.5pt;
 
             .cite {
               float: none !important;
@@ -271,15 +402,16 @@ export interface VisorPdfData {
             width: 100% !important;
             max-width: 100% !important;
             border-collapse: collapse !important;
-            margin: 12px 0 !important;
+            margin: 10px 0 !important;
             table-layout: fixed !important;
             overflow-wrap: break-word !important;
             word-break: break-word !important;
+            font-size: 9pt;
           }
 
           td, th {
             border: 1px solid #cbd5e1;
-            padding: 8px 12px;
+            padding: 6px 10px;
             overflow-wrap: break-word !important;
             word-break: break-word !important;
             vertical-align: top;
@@ -287,15 +419,15 @@ export interface VisorPdfData {
 
           .datosGenerales {
             font-weight: 700;
-            width: 120px;
+            width: 110px;
             background: #f8fafc;
             color: #334155;
           }
 
           p {
             margin-top: 0;
-            margin-bottom: 12px;
-            line-height: 1.65;
+            margin-bottom: 10px;
+            line-height: 1.55;
             text-align: justify;
             overflow-wrap: break-word !important;
             word-break: break-word !important;
@@ -304,19 +436,19 @@ export interface VisorPdfData {
           h1, h2, h3, h4, h5, h6 {
             color: #0f172a;
             font-weight: 700;
-            line-height: 1.3;
+            line-height: 1.25;
           }
 
           h2 {
-            font-size: 14pt;
-            letter-spacing: 0.5px;
-            margin: 16px 0;
+            font-size: 12.5pt;
+            letter-spacing: 0.3px;
+            margin: 12px 0;
           }
         }
       }
 
       .dialog-footer {
-        padding: 12px 20px;
+        padding: 10px 18px;
         border-top: 1px solid #e2e8f0;
         background: #f8fafc;
         display: flex;
@@ -326,14 +458,21 @@ export interface VisorPdfData {
       }
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 650px) {
       .visor-dialog-container {
+        width: 96vw !important;
+        max-width: 96vw !important;
+
         .dialog-header {
-          padding: 10px 14px;
-          .dialog-title { font-size: 1rem; }
+          padding: 8px 12px;
+          .dialog-title { font-size: 0.95rem; }
+          .format-pill-group .format-pill-btn { padding: 3px 8px; font-size: 0.7rem; }
         }
-        .document-sheet {
-          padding: 20px 16px !important;
+
+        .physical-sheet {
+          width: 100% !important;
+          aspect-ratio: unset !important;
+          padding: 16px 14px !important;
         }
       }
     }
@@ -347,6 +486,7 @@ export class VisorPdfDialogComponent implements OnInit, OnDestroy {
   readonly loading = signal(false);
   readonly errorMessage = signal('');
   readonly downloadUrl = signal('');
+  readonly tipoHoja = signal<'Letter' | 'Oficio'>('Letter');
   
   safePdfUrl: SafeResourceUrl | null = null;
   safeHtml: any = null;
@@ -382,6 +522,11 @@ export class VisorPdfDialogComponent implements OnInit, OnDestroy {
     }
   }
 
+  setTipoHoja(tipo: 'Letter' | 'Oficio'): void {
+    this.tipoHoja.set(tipo);
+    this.cdr.markForCheck();
+  }
+
   cargarHtmlDinamico(idOrCite: number | string): void {
     this.loading.set(true);
     this.errorMessage.set('');
@@ -392,6 +537,11 @@ export class VisorPdfDialogComponent implements OnInit, OnDestroy {
     this.documentosService.obtenerVistaPreviaHtml(idOrCite).subscribe({
       next: (res) => {
         this.loading.set(false);
+        if (res.datos?.tipoHoja === 'Oficio' || res.datos?.tipoHoja === 'Legal') {
+          this.tipoHoja.set('Oficio');
+        } else {
+          this.tipoHoja.set('Letter');
+        }
         const html = res.datos?.html || '<p class="text-muted">No se pudo cargar el contenido del borrador.</p>';
         this.safeHtml = this.sanitizer.bypassSecurityTrustHtml(html);
         this.cdr.markForCheck();
