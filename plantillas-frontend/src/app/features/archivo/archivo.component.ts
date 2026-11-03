@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ViewChild, ElementRef, HostListener, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -35,6 +35,7 @@ export interface DocumentoArchivo {
   id_documento: number;
   nombre: string;
   nombre_plantilla: string;
+  abreviacion?: string;
   categoria_institucional?: string;
   referencia?: string;
   estado: string;
@@ -158,7 +159,20 @@ export interface UnidadArchivo {
               <div class="visor-header">
                 <div class="visor-doc-info">
                   <span class="visor-badge-cite">{{ docSeleccionado()?.nombre }}</span>
-                  <span class="visor-doc-titulo">{{ docSeleccionado()?.nombre_plantilla || 'Documento Oficial Custodiado' }}</span>
+                  <span class="visor-doc-titulo">{{ docSeleccionado()?.nombre_plantilla || 'Documento Oficial Custodiado' }} · {{ tipoHojaVisor() === 'Oficio' ? 'OFICIO' : 'CARTA' }}</span>
+                </div>
+                <div class="visor-zoom-tools">
+                  <div class="zoom-pill-group">
+                    <button type="button" class="zoom-btn" (click)="ajustarZoomVisor(-0.1)" matTooltip="Reducir (Zoom -)">
+                      <mat-icon>remove</mat-icon>
+                    </button>
+                    <button type="button" class="zoom-btn zoom-mode-btn" [class.active]="modoEscalaVisor() === 'fit'" (click)="setModoFitVisor()" matTooltip="Ajustar hoja completa a la pantalla">
+                      <span>{{ modoEscalaVisor() === 'fit' ? 'Ajustar' : (porcentajeEscalaVisor() + '%') }}</span>
+                    </button>
+                    <button type="button" class="zoom-btn" (click)="ajustarZoomVisor(0.1)" matTooltip="Aumentar (Zoom +)">
+                      <mat-icon>add</mat-icon>
+                    </button>
+                  </div>
                 </div>
                 <div class="visor-actions">
                   <button mat-icon-button class="btn-visor-act" (click)="verPdf(docSeleccionado())" matTooltip="Abrir en Pantalla Completa">
@@ -188,8 +202,22 @@ export interface UnidadArchivo {
                     </button>
                   </div>
                 } @else if (htmlVisorSeguro()) {
-                  <div class="visor-html-wrapper">
-                    <div class="visor-html-sheet" [innerHTML]="htmlVisorSeguro()"></div>
+                  <div class="visor-sheet-viewport" #visorViewport>
+                    <div class="sheet-scaler-wrapper" [style.width.px]="scaledWidthVisor()" [style.height.px]="scaledHeightVisor()">
+                      <div 
+                        class="sheet-scaler" 
+                        [style.transform]="'scale(' + escalaVisor() + ')'"
+                        [style.transform-origin]="'top left'"
+                        [style.width.px]="816"
+                        [style.min-height.px]="tipoHojaVisor() === 'Oficio' ? 1248 : 1056">
+                        <div 
+                          class="physical-sheet" 
+                          [class.sheet-carta]="tipoHojaVisor() === 'Letter'" 
+                          [class.sheet-oficio]="tipoHojaVisor() === 'Oficio'">
+                          <div [innerHTML]="htmlVisorSeguro()" class="document-html-content"></div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 } @else if (urlPdfSegura()) {
                   <iframe [src]="urlPdfSegura()" class="pdf-local-iframe" title="Visor Documental Embebido"></iframe>
@@ -254,53 +282,42 @@ export interface UnidadArchivo {
                 <p>No se encontraron documentos cerrados para este criterio.</p>
               </div>
             } @else {
-              <div class="table-responsive">
-                <table mat-table [dataSource]="docsGeneralesFiltrados()" class="archivo-table">
-                  <!-- CITE -->
-                  <ng-container matColumnDef="cite">
-                    <th mat-header-cell *matHeaderCellDef>CITE Oficial</th>
-                    <td mat-cell *matCellDef="let d">
-                      <span class="cite-text">{{ d.nombre }}</span>
-                    </td>
-                  </ng-container>
+              <div class="doc-cards-list">
+                @for (d of docsGeneralesFiltrados(); track d.id_documento) {
+                  <div 
+                    class="doc-item-card" 
+                    [class.selected-card]="docSeleccionado()?.id_documento === d.id_documento"
+                    (click)="seleccionarDocumento(d)"
+                  >
+                    <!-- FILA 1: CITE Y METADATOS CLAVE -->
+                    <div class="doc-row-top">
+                      <div class="cite-group">
+                        <span class="cite-badge-mono">{{ d.nombre }}</span>
+                        <button mat-icon-button class="btn-copy-mini" (click)="copiarCite(d.nombre); $event.stopPropagation()" matTooltip="Copiar CITE">
+                          <mat-icon>content_copy</mat-icon>
+                        </button>
+                      </div>
 
-                  <!-- Tipo Dinámico -->
-                  <ng-container matColumnDef="tipo">
-                    <th mat-header-cell *matHeaderCellDef>Tipo</th>
-                    <td mat-cell *matCellDef="let d">
-                      <span class="tipo-tag">{{ d.nombre_plantilla || 'Documento Oficial' }}</span>
-                    </td>
-                  </ng-container>
+                      <div class="meta-badges-group">
+                        <span class="tipo-tag">{{ d.nombre_plantilla || 'Documento Oficial' }}</span>
+                        <span class="unit-tag">{{ d.usuario_creacion?.unidad?.nombre || 'Unidad Central' }}</span>
+                        <span class="date-badge">
+                          <mat-icon class="icon-date">event</mat-icon>
+                          {{ formatearFecha(d._fecha_creacion || d.fecha) }}
+                        </span>
+                      </div>
+                    </div>
 
-                  <!-- Asunto -->
-                  <ng-container matColumnDef="ref">
-                    <th mat-header-cell *matHeaderCellDef>Referencia / Asunto</th>
-                    <td mat-cell *matCellDef="let d">
-                      <span class="ref-text" [matTooltip]="obtenerReferencia(d)">{{ obtenerReferencia(d) }}</span>
-                    </td>
-                  </ng-container>
+                    <!-- FILA 2: REFERENCIA Y ACCIONES -->
+                    <div class="doc-row-bottom">
+                      <div class="doc-desc-container">
+                        <mat-icon class="desc-icon">subject</mat-icon>
+                        <span class="doc-desc-text" [matTooltip]="obtenerReferencia(d)">
+                          {{ obtenerReferencia(d) || 'Sin referencia o asunto registrado' }}
+                        </span>
+                      </div>
 
-                  <!-- Unidad Emisora -->
-                  <ng-container matColumnDef="unidad">
-                    <th mat-header-cell *matHeaderCellDef>Unidad Emisora</th>
-                    <td mat-cell *matCellDef="let d">
-                      <span class="unit-tag">{{ d.usuario_creacion?.unidad?.nombre || 'Unidad Central' }}</span>
-                    </td>
-                  </ng-container>
-
-                  <!-- Fecha -->
-                  <ng-container matColumnDef="fecha">
-                    <th mat-header-cell *matHeaderCellDef>Fecha</th>
-                    <td mat-cell *matCellDef="let d">
-                      <span class="date-text">{{ formatearFecha(d._fecha_creacion || d.fecha) }}</span>
-                    </td>
-                  </ng-container>
-
-                  <!-- Acciones -->
-                  <ng-container matColumnDef="acciones">
-                    <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                    <td mat-cell *matCellDef="let d">
-                      <div class="action-btn-row">
+                      <div class="action-btn-row" (click)="$event.stopPropagation()">
                         <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF) en Pantalla" class="btn-action pdf">
                           <mat-icon>picture_as_pdf</mat-icon>
                         </button>
@@ -321,12 +338,9 @@ export interface UnidadArchivo {
                           </button>
                         }
                       </div>
-                    </td>
-                  </ng-container>
-
-                  <tr mat-header-row *matHeaderRowDef="columnasGenerales"></tr>
-                  <tr mat-row *matRowDef="let row; columns: columnasGenerales;" class="data-row clickable-row" [class.selected-row]="docSeleccionado()?.id_documento === row.id_documento" (click)="seleccionarDocumento(row)"></tr>
-                </table>
+                    </div>
+                  </div>
+                }
               </div>
             }
           </div>
@@ -452,40 +466,44 @@ export interface UnidadArchivo {
                 <p>No hay documentos cerrados en esta unidad bajo el tipo seleccionado.</p>
               </div>
             } @else {
-              <div class="table-responsive">
-                <table mat-table [dataSource]="docsUnidadFiltrados()" class="archivo-table">
-                  <ng-container matColumnDef="cite">
-                    <th mat-header-cell *matHeaderCellDef>CITE</th>
-                    <td mat-cell *matCellDef="let d">
-                      <span class="cite-text">{{ d.nombre }}</span>
-                    </td>
-                  </ng-container>
+              <div class="doc-cards-list">
+                @for (d of docsUnidadFiltrados(); track d.id_documento) {
+                  <div 
+                    class="doc-item-card" 
+                    [class.selected-card]="docSeleccionado()?.id_documento === d.id_documento"
+                    (click)="seleccionarDocumento(d)"
+                  >
+                    <!-- FILA 1: CITE Y METADATOS CLAVE -->
+                    <div class="doc-row-top">
+                      <div class="cite-group">
+                        <span class="cite-badge-mono">{{ d.nombre }}</span>
+                        <button mat-icon-button class="btn-copy-mini" (click)="copiarCite(d.nombre); $event.stopPropagation()" matTooltip="Copiar CITE">
+                          <mat-icon>content_copy</mat-icon>
+                        </button>
+                      </div>
 
-                  <ng-container matColumnDef="tipo">
-                    <th mat-header-cell *matHeaderCellDef>Tipo</th>
-                    <td mat-cell *matCellDef="let d">
-                      <span class="tipo-tag">{{ d.nombre_plantilla }}</span>
-                    </td>
-                  </ng-container>
+                      <div class="meta-badges-group">
+                        <span class="tipo-tag">{{ d.nombre_plantilla }}</span>
+                        @if (d.usuario_creacion?.nombres) {
+                          <span class="unit-tag">Por: {{ d.usuario_creacion?.nombres }} {{ d.usuario_creacion?.apellidos }}</span>
+                        }
+                        <span class="date-badge">
+                          <mat-icon class="icon-date">event</mat-icon>
+                          {{ formatearFecha(d._fecha_creacion || d.fecha) }}
+                        </span>
+                      </div>
+                    </div>
 
-                  <ng-container matColumnDef="ref">
-                    <th mat-header-cell *matHeaderCellDef>Referencia</th>
-                    <td mat-cell *matCellDef="let d">
-                      <span class="ref-text" [matTooltip]="obtenerReferencia(d)">{{ obtenerReferencia(d) }}</span>
-                    </td>
-                  </ng-container>
+                    <!-- FILA 2: REFERENCIA Y ACCIONES -->
+                    <div class="doc-row-bottom">
+                      <div class="doc-desc-container">
+                        <mat-icon class="desc-icon">subject</mat-icon>
+                        <span class="doc-desc-text" [matTooltip]="obtenerReferencia(d)">
+                          {{ obtenerReferencia(d) || 'Sin referencia registrada' }}
+                        </span>
+                      </div>
 
-                  <ng-container matColumnDef="autor">
-                    <th mat-header-cell *matHeaderCellDef>Generado por</th>
-                    <td mat-cell *matCellDef="let d">
-                      {{ d.usuario_creacion?.nombres }} {{ d.usuario_creacion?.apellidos }}
-                    </td>
-                  </ng-container>
-
-                  <ng-container matColumnDef="acciones">
-                    <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                    <td mat-cell *matCellDef="let d">
-                      <div class="action-btn-row">
+                      <div class="action-btn-row" (click)="$event.stopPropagation()">
                         <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF) en Pantalla" class="btn-action pdf">
                           <mat-icon>picture_as_pdf</mat-icon>
                         </button>
@@ -506,12 +524,9 @@ export interface UnidadArchivo {
                           </button>
                         }
                       </div>
-                    </td>
-                  </ng-container>
-
-                  <tr mat-header-row *matHeaderRowDef="['cite', 'tipo', 'ref', 'autor', 'acciones']"></tr>
-                  <tr mat-row *matRowDef="let row; columns: ['cite', 'tipo', 'ref', 'autor', 'acciones'];" class="data-row clickable-row" [class.selected-row]="docSeleccionado()?.id_documento === row.id_documento" (click)="seleccionarDocumento(row)"></tr>
-                </table>
+                    </div>
+                  </div>
+                }
               </div>
             }
           </div>
@@ -525,41 +540,42 @@ export interface UnidadArchivo {
                 <span class="badge-cc-info">Remisión Directa Oficial</span>
               </div>
 
-              <div class="table-responsive">
-                <table mat-table [dataSource]="docsUnidadCopiaFiltrados()" class="archivo-table">
-                  <ng-container matColumnDef="cite">
-                    <th mat-header-cell *matHeaderCellDef>CITE</th>
-                    <td mat-cell *matCellDef="let d">
-                      <span class="cite-text">{{ d.nombre }}</span>
-                    </td>
-                  </ng-container>
+              <div class="doc-cards-list">
+                @for (d of docsUnidadCopiaFiltrados(); track d.id_documento) {
+                  <div 
+                    class="doc-item-card" 
+                    [class.selected-card]="docSeleccionado()?.id_documento === d.id_documento"
+                    (click)="seleccionarDocumento(d)"
+                  >
+                    <!-- FILA 1: CITE Y METADATOS CLAVE -->
+                    <div class="doc-row-top">
+                      <div class="cite-group">
+                        <span class="cite-badge-mono">{{ d.nombre }}</span>
+                        <button mat-icon-button class="btn-copy-mini" (click)="copiarCite(d.nombre); $event.stopPropagation()" matTooltip="Copiar CITE">
+                          <mat-icon>content_copy</mat-icon>
+                        </button>
+                      </div>
 
-                  <ng-container matColumnDef="tipo">
-                    <th mat-header-cell *matHeaderCellDef>Tipo</th>
-                    <td mat-cell *matCellDef="let d">
-                      <span class="tipo-tag tipo-tag-cc">{{ d.nombre_plantilla }}</span>
-                    </td>
-                  </ng-container>
+                      <div class="meta-badges-group">
+                        <span class="tipo-tag tipo-tag-cc">{{ d.nombre_plantilla }}</span>
+                        <span class="unit-tag">Origen: {{ d.usuario_creacion?.unidad?.nombre || 'Remitente Oficial' }}</span>
+                        <span class="date-badge">
+                          <mat-icon class="icon-date">event</mat-icon>
+                          {{ formatearFecha(d._fecha_creacion || d.fecha) }}
+                        </span>
+                      </div>
+                    </div>
 
-                  <ng-container matColumnDef="ref">
-                    <th mat-header-cell *matHeaderCellDef>Referencia</th>
-                    <td mat-cell *matCellDef="let d">
-                      <span class="ref-text" [matTooltip]="obtenerReferencia(d)">{{ obtenerReferencia(d) }}</span>
-                    </td>
-                  </ng-container>
+                    <!-- FILA 2: REFERENCIA Y ACCIONES -->
+                    <div class="doc-row-bottom">
+                      <div class="doc-desc-container">
+                        <mat-icon class="desc-icon">subject</mat-icon>
+                        <span class="doc-desc-text" [matTooltip]="obtenerReferencia(d)">
+                          {{ obtenerReferencia(d) || 'Sin referencia registrada' }}
+                        </span>
+                      </div>
 
-                  <ng-container matColumnDef="autor">
-                    <th mat-header-cell *matHeaderCellDef>Generado por / Unidad Emisora</th>
-                    <td mat-cell *matCellDef="let d">
-                      {{ d.usuario_creacion?.nombres }} {{ d.usuario_creacion?.apellidos }}
-                      <span *ngIf="d.usuario_creacion?.unidad?.abreviacion"> ({{ d.usuario_creacion.unidad.abreviacion }})</span>
-                    </td>
-                  </ng-container>
-
-                  <ng-container matColumnDef="acciones">
-                    <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                    <td mat-cell *matCellDef="let d">
-                      <div class="action-btn-row">
+                      <div class="action-btn-row" (click)="$event.stopPropagation()">
                         <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF) en Pantalla" class="btn-action pdf">
                           <mat-icon>picture_as_pdf</mat-icon>
                         </button>
@@ -570,12 +586,9 @@ export interface UnidadArchivo {
                           <mat-icon>download</mat-icon>
                         </button>
                       </div>
-                    </td>
-                  </ng-container>
-
-                  <tr mat-header-row *matHeaderRowDef="['cite', 'tipo', 'ref', 'autor', 'acciones']"></tr>
-                  <tr mat-row *matRowDef="let row; columns: ['cite', 'tipo', 'ref', 'autor', 'acciones'];" class="data-row clickable-row" [class.selected-row]="docSeleccionado()?.id_documento === row.id_documento" (click)="seleccionarDocumento(row)"></tr>
-                </table>
+                    </div>
+                  </div>
+                }
               </div>
             </div>
           }
@@ -653,76 +666,49 @@ export interface UnidadArchivo {
                 <p>Aún no se han promovido ni cargado documentos institucionales oficiales.</p>
               </div>
             } @else {
-              <div class="table-responsive">
-                <table mat-table [dataSource]="docsInstitucionales()" class="archivo-table">
-                  <!-- CITE con Copiado Rápido -->
-                  <ng-container matColumnDef="cite">
-                    <th mat-header-cell *matHeaderCellDef>CITE Oficial</th>
-                    <td mat-cell *matCellDef="let d">
-                      <div class="cite-cell">
+              <div class="doc-cards-list">
+                @for (d of docsInstitucionales(); track d.id_documento) {
+                  <div 
+                    class="doc-item-card" 
+                    [class.selected-card]="docSeleccionado()?.id_documento === d.id_documento"
+                    (click)="seleccionarDocumento(d)"
+                  >
+                    <!-- FILA 1: CITE Y METADATOS CLAVE -->
+                    <div class="doc-row-top">
+                      <div class="cite-group">
                         <span class="cite-badge-mono">{{ d.nombre }}</span>
-                        <button mat-icon-button class="btn-copy-mini" (click)="copiarCite(d.nombre); $event.stopPropagation()" matTooltip="Copiar CITE para referenciar en documentos">
+                        <button mat-icon-button class="btn-copy-mini" (click)="copiarCite(d.nombre); $event.stopPropagation()" matTooltip="Copiar CITE para referenciar">
                           <mat-icon>content_copy</mat-icon>
                         </button>
                       </div>
-                    </td>
-                  </ng-container>
 
-                  <!-- Documento / Sigla -->
-                  <ng-container matColumnDef="documento">
-                    <th mat-header-cell *matHeaderCellDef>Documento Institucional</th>
-                    <td mat-cell *matCellDef="let d">
-                      <div class="doc-title-box">
-                        <strong class="doc-main-name">{{ d.nombre_plantilla || obtenerTituloDoc(d) }}</strong>
+                      <div class="meta-badges-group">
+                        <span class="tipo-tag">{{ d.nombre_plantilla || obtenerTituloDoc(d) }}</span>
                         @if (d.abreviacion) {
                           <span class="sigla-tag">{{ d.abreviacion }}</span>
                         }
+                        <span class="cat-pill">{{ d.categoria_institucional || 'Normativa y Políticas' }}</span>
+                        <span class="version-badge" (click)="verVersiones(d); $event.stopPropagation()" matTooltip="Ver historial de versiones">
+                          v{{ obtenerVersionActual(d) }}
+                          <mat-icon class="icon-v">history</mat-icon>
+                        </span>
+                        <span class="date-badge">
+                          <mat-icon class="icon-date">event</mat-icon>
+                          {{ formatearFecha(d._fecha_creacion || d.fecha) }}
+                        </span>
                       </div>
-                    </td>
-                  </ng-container>
+                    </div>
 
-                  <!-- Referencia / Descripción -->
-                  <ng-container matColumnDef="ref">
-                    <th mat-header-cell *matHeaderCellDef>Descripción / Objeto</th>
-                    <td mat-cell *matCellDef="let d">
-                      <span class="ref-text" [matTooltip]="obtenerDescripcionDoc(d)">
-                        {{ obtenerDescripcionDoc(d) }}
-                      </span>
-                    </td>
-                  </ng-container>
+                    <!-- FILA 2: DESCRIPCIÓN Y ACCIONES -->
+                    <div class="doc-row-bottom">
+                      <div class="doc-desc-container">
+                        <mat-icon class="desc-icon">subject</mat-icon>
+                        <span class="doc-desc-text" [matTooltip]="obtenerDescripcionDoc(d)">
+                          {{ obtenerDescripcionDoc(d) || 'Documento institucional oficial en custodia' }}
+                        </span>
+                      </div>
 
-                  <!-- Categoría -->
-                  <ng-container matColumnDef="categoria">
-                    <th mat-header-cell *matHeaderCellDef>Categoría</th>
-                    <td mat-cell *matCellDef="let d">
-                      <span class="cat-pill">{{ d.categoria_institucional || 'Normativa y Políticas' }}</span>
-                    </td>
-                  </ng-container>
-
-                  <!-- Versión Actual -->
-                  <ng-container matColumnDef="version">
-                    <th mat-header-cell *matHeaderCellDef>Versión Actual</th>
-                    <td mat-cell *matCellDef="let d">
-                      <span class="version-badge" (click)="verVersiones(d)" matTooltip="Ver trazabilidad completa de versiones">
-                        v{{ obtenerVersionActual(d) }}
-                        <mat-icon class="icon-v">history</mat-icon>
-                      </span>
-                    </td>
-                  </ng-container>
-
-                  <!-- Fecha -->
-                  <ng-container matColumnDef="fecha">
-                    <th mat-header-cell *matHeaderCellDef>Fecha Custodia</th>
-                    <td mat-cell *matCellDef="let d">
-                      <span class="date-text">{{ formatearFecha(d._fecha_creacion || d.fecha) }}</span>
-                    </td>
-                  </ng-container>
-
-                  <!-- Acciones -->
-                  <ng-container matColumnDef="acciones">
-                    <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                    <td mat-cell *matCellDef="let d">
-                      <div class="action-btn-row">
+                      <div class="action-btn-row" (click)="$event.stopPropagation()">
                         <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF) en Pantalla" class="btn-action pdf">
                           <mat-icon>picture_as_pdf</mat-icon>
                         </button>
@@ -738,12 +724,9 @@ export interface UnidadArchivo {
                           </button>
                         }
                       </div>
-                    </td>
-                  </ng-container>
-
-                  <tr mat-header-row *matHeaderRowDef="columnasInstitucionales"></tr>
-                  <tr mat-row *matRowDef="let row; columns: columnasInstitucionales;" class="data-row clickable-row" [class.selected-row]="docSeleccionado()?.id_documento === row.id_documento" (click)="seleccionarDocumento(row)"></tr>
-                </table>
+                    </div>
+                  </div>
+                }
               </div>
             }
           </div>
@@ -1135,69 +1118,137 @@ export interface UnidadArchivo {
       mat-icon { color: #00b4db; font-size: 24px; width: 24px; height: 24px; }
     }
 
-    /* Tabla */
-    .table-responsive {
+    /* Listado en Dos Filas por Documento (Sin Scrollbar Horizontal) */
+    .doc-cards-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
       width: 100%;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      border-radius: 8px;
-      margin: 4px 0;
-
-      &::-webkit-scrollbar {
-        height: 6px;
-      }
-      &::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 3px;
-      }
     }
 
-    .archivo-table {
+    .doc-item-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
       width: 100%;
-      min-width: 680px;
-      border-collapse: collapse;
+      box-sizing: border-box;
 
-      th {
+      &:hover {
+        border-color: #0284c7;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
+        transform: translateY(-1px);
         background: #f8fafc;
-        color: #475569;
-        font-size: 11.5px;
-        font-weight: 700;
-        text-transform: uppercase;
-        padding: 12px 14px;
-        white-space: nowrap !important;
-        letter-spacing: 0.3px;
-        border-bottom: 2px solid #e2e8f0;
       }
 
-      td {
-        padding: 10px 14px;
-        font-size: 13px;
-        border-bottom: 1px solid #f1f5f9;
-        vertical-align: middle;
+      &.selected-card {
+        border-color: #0284c7;
+        background: #f0f9ff;
+        box-shadow: 0 4px 14px rgba(2, 132, 199, 0.12);
+
+        &::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: 4px;
+          background: #0284c7;
+          border-top-left-radius: 10px;
+          border-bottom-left-radius: 10px;
+        }
       }
     }
 
-    .cite-text {
+    .doc-row-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .cite-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .cite-badge-mono {
+      font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+      font-size: 13px;
       font-weight: 700;
-      color: #0f2027;
+      color: #0f172a;
+      background: #f1f5f9;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      letter-spacing: 0.5px;
+      white-space: nowrap !important;
+      word-break: keep-all !important;
+      display: inline-block;
+    }
+
+    .btn-copy-mini {
+      width: 28px !important;
+      height: 28px !important;
+      line-height: 28px !important;
+      color: #64748b;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+      &:hover { color: #0083b0; background: #e0f2fe; }
+    }
+
+    .meta-badges-group {
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
     .tipo-tag {
       background: #f1f5f9;
-      color: #475569;
+      color: #334155;
       padding: 3px 8px;
       border-radius: 6px;
       font-size: 11.5px;
       font-weight: 600;
+      white-space: nowrap;
+
+      &.tipo-tag-cc {
+        background: #faf5ff;
+        color: #7e22ce;
+        border: 1px solid #e9d5ff;
+      }
     }
 
-    .ref-text {
-      max-width: 320px;
+    .sigla-tag {
+      background: #e0e7ff;
+      color: #3730a3;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      display: inline-block;
-      color: #334155;
+    }
+
+    .cat-pill {
+      background: #fef3c7;
+      color: #b45309;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
     }
 
     .unit-tag {
@@ -1207,13 +1258,91 @@ export interface UnidadArchivo {
       border-radius: 6px;
       font-size: 11.5px;
       font-weight: 600;
+      white-space: nowrap;
     }
 
-    .date-text { color: #64748b; font-size: 12px; }
+    .version-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: #ecfdf5;
+      color: #059669;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 700;
+      border: 1px solid #a7f3d0;
+      cursor: pointer;
+      white-space: nowrap;
+
+      &:hover {
+        background: #d1fae5;
+      }
+
+      .icon-v {
+        font-size: 13px;
+        width: 13px;
+        height: 13px;
+      }
+    }
+
+    .date-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: #64748b;
+      font-size: 11.5px;
+      white-space: nowrap;
+
+      .icon-date {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+        color: #94a3b8;
+      }
+    }
+
+    .doc-row-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      width: 100%;
+    }
+
+    .doc-desc-container {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
+
+      .desc-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: #94a3b8;
+        margin-top: 1px;
+        flex-shrink: 0;
+      }
+
+      .doc-desc-text {
+        font-size: 12.5px;
+        color: #334155;
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
 
     .action-btn-row {
-      display: flex;
-      gap: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
     }
 
     .btn-action {
@@ -1499,56 +1628,6 @@ export interface UnidadArchivo {
       .icon-v { font-size: 14px; width: 14px; height: 14px; }
     }
 
-    /* CITE Cell y Copiado Rápido */
-    .cite-cell {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .cite-badge-mono {
-      font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-      font-size: 12.5px;
-      font-weight: 700;
-      color: #0f2027;
-      background: #f1f5f9;
-      padding: 3px 8px;
-      border-radius: 6px;
-      border: 1px solid #cbd5e1;
-    }
-
-    .btn-copy-mini {
-      width: 28px !important;
-      height: 28px !important;
-      line-height: 28px !important;
-      color: #64748b;
-      mat-icon { font-size: 16px; width: 16px; height: 16px; }
-      &:hover { color: #0083b0; background: #e0f2fe; }
-    }
-
-    .doc-title-box {
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-
-    .doc-main-name {
-      font-size: 13.5px;
-      color: #0f2027;
-      font-weight: 700;
-    }
-
-    .sigla-tag {
-      display: inline-block;
-      width: fit-content;
-      font-size: 11px;
-      font-weight: 800;
-      color: #0369a1;
-      background: #e0f2fe;
-      padding: 1px 6px;
-      border-radius: 4px;
-      text-transform: uppercase;
-    }
 
     /* Sugerencias Rápidas */
     .sugerencias-bar {
@@ -1911,47 +1990,215 @@ export interface UnidadArchivo {
       &.close:hover { background: rgba(239, 68, 68, 0.2) !important; color: #f87171 !important; }
     }
 
+    .visor-zoom-tools {
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .zoom-pill-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 2px 4px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .zoom-btn {
+      border: none;
+      background: transparent;
+      color: #94a3b8;
+      height: 24px;
+      padding: 0 6px;
+      border-radius: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.72rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+
+      mat-icon {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+      }
+
+      &:hover {
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.12);
+      }
+
+      &.zoom-mode-btn {
+        padding: 0 8px;
+        min-width: 58px;
+        &.active {
+          background: #0284c7;
+          color: #ffffff;
+        }
+      }
+    }
+
     .visor-iframe-wrapper {
       flex: 1;
       width: 100%;
       height: 100%;
-      background: #f1f5f9;
+      background: #94a3b8;
       overflow: hidden;
       position: relative;
       display: flex;
     }
 
-    .visor-html-wrapper {
-      flex: 1;
+    /* Viewport de Hoja a Escala Real */
+    .visor-sheet-viewport {
       width: 100%;
       height: 100%;
-      background: #f1f5f9;
-      overflow-y: auto;
-      overflow-x: hidden;
-      padding: 16px;
       box-sizing: border-box;
+      overflow: auto;
       display: flex;
       justify-content: center;
+      align-items: flex-start;
+      padding: 16px;
+      background: #cbd5e1;
+
+      &::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      &::-webkit-scrollbar-thumb {
+        background: #94a3b8;
+        border-radius: 3px;
+      }
     }
 
-    .visor-html-sheet {
-      width: 100%;
-      max-width: 816px;
-      background: #ffffff;
-      padding: 24px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-      border-radius: 4px;
+    .sheet-scaler-wrapper {
+      position: relative;
+      flex-shrink: 0;
+      margin: auto;
       box-sizing: border-box;
-      font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif;
-      font-size: 9.5pt;
-      line-height: 1.45;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.22), 0 2px 6px rgba(0, 0, 0, 0.12);
+      border-radius: 2px;
+      background: #ffffff;
+      transition: width 0.15s ease-out, height 0.15s ease-out;
+    }
+
+    .sheet-scaler {
+      position: absolute;
+      top: 0;
+      left: 0;
+      box-sizing: border-box;
+    }
+
+    .physical-sheet {
+      width: 816px;
+      box-sizing: border-box;
+      background: #ffffff;
+      padding: 38px 46px;
+      display: flex;
+      flex-direction: column;
       color: #1e293b;
 
-      * { box-sizing: border-box; }
-      p { margin-top: 0; margin-bottom: 10px; text-align: justify; }
-      img { max-width: 100% !important; height: auto !important; }
-      table { max-width: 100% !important; word-break: break-word !important; }
-      .bloque-cc-archivo { margin-top: 20px; font-size: 8.5pt; color: #475569; }
+      &.sheet-carta {
+        min-height: 1056px;
+      }
+
+      &.sheet-oficio {
+        min-height: 1248px;
+      }
+
+      .document-html-content {
+        width: 100%;
+        box-sizing: border-box;
+        font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif;
+        line-height: 1.5;
+        color: #1e293b;
+        font-size: 10.5pt;
+
+        * {
+          box-sizing: border-box !important;
+        }
+
+        .fondo-texto {
+          display: none !important;
+        }
+
+        .mi-contenido, .contenedor {
+          width: 100% !important;
+          max-width: 100% !important;
+          box-sizing: border-box !important;
+        }
+
+        #pageHeader {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          width: 100%;
+          margin-bottom: 16px;
+          font-size: 10pt;
+
+          .cite {
+            float: none !important;
+            font-weight: 600;
+          }
+        }
+
+        table {
+          width: 100% !important;
+          max-width: 100% !important;
+          border-collapse: collapse !important;
+          margin: 12px 0 !important;
+          table-layout: fixed !important;
+          overflow-wrap: break-word !important;
+          word-break: break-word !important;
+          font-size: 9.5pt;
+        }
+
+        td, th {
+          border: 1px solid #94a3b8;
+          padding: 7px 12px;
+          overflow-wrap: break-word !important;
+          word-break: break-word !important;
+          vertical-align: top;
+        }
+
+        .datosGenerales {
+          font-weight: 700;
+          width: 130px;
+          background: #f8fafc;
+          color: #334155;
+        }
+
+        p {
+          margin-top: 0;
+          margin-bottom: 12px;
+          line-height: 1.6;
+          text-align: justify;
+          overflow-wrap: break-word !important;
+          word-break: break-word !important;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+          color: #0f172a;
+          font-weight: 700;
+          line-height: 1.3;
+        }
+
+        h2 {
+          font-size: 13.5pt;
+          letter-spacing: 0.3px;
+          margin: 14px 0;
+          text-align: center;
+        }
+
+        .bloque-cc-archivo {
+          margin-top: 28px !important;
+          font-size: 9pt !important;
+          line-height: 1.4 !important;
+          color: #334155 !important;
+        }
+      }
     }
 
     .pdf-local-iframe {
@@ -2124,13 +2371,27 @@ export class ArchivoComponent implements OnInit {
   private readonly sanitizer = inject(DomSanitizer);
   private readonly dialog = inject(MatDialog);
   private readonly documentosService = inject(DocumentosService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
-  // Visor Local Embebido (Split Screen)
+  @ViewChild('visorViewport') visorViewport?: ElementRef<HTMLElement>;
+
+  // Visor Local Embebido (Split Screen con Hoja Física a Escala Real)
   readonly docSeleccionado = signal<DocumentoArchivo | null>(null);
   readonly urlPdfSegura = signal<SafeResourceUrl | null>(null);
   readonly htmlVisorSeguro = signal<SafeHtml | null>(null);
   readonly cargandoVisor = signal<boolean>(false);
   readonly errorVisor = signal<string | null>(null);
+  readonly tipoHojaVisor = signal<'Letter' | 'Oficio'>('Letter');
+  readonly escalaVisor = signal<number>(0.52);
+  readonly modoEscalaVisor = signal<'fit' | 'custom'>('fit');
+  readonly porcentajeEscalaVisor = computed(() => Math.round(this.escalaVisor() * 100));
+
+  readonly scaledWidthVisor = computed(() => Math.round(816 * this.escalaVisor()));
+  readonly scaledHeightVisor = computed(() => {
+    const canH = this.tipoHojaVisor() === 'Oficio' ? 1248 : 1056;
+    return Math.round(canH * this.escalaVisor());
+  });
+
   private currentObjectUrl: string | null = null;
   archivoPdfBase64: string | null = null;
 
@@ -2587,6 +2848,48 @@ export class ArchivoComponent implements OnInit {
     this.verVersiones(doc);
   }
 
+  @HostListener('window:resize')
+  onResize(): void {
+    if (this.docSeleccionado() && this.modoEscalaVisor() === 'fit') {
+      this.recalcularEscalaFitVisor();
+    }
+  }
+
+  recalcularEscalaFitVisor(): void {
+    if (this.modoEscalaVisor() !== 'fit') return;
+    const vp = this.visorViewport?.nativeElement;
+    if (!vp) return;
+    const availW = vp.clientWidth;
+    const availH = vp.clientHeight;
+    if (!availW || !availH) return;
+
+    const margen = 28;
+    const canW = 816;
+    const canH = this.tipoHojaVisor() === 'Oficio' ? 1248 : 1056;
+
+    const scaleW = (availW - margen) / canW;
+    const scaleH = (availH - margen) / canH;
+    let fit = Math.min(scaleW, scaleH);
+    fit = Math.max(0.3, Math.min(fit, 1.15));
+    fit = Math.round(fit * 1000) / 1000;
+
+    this.escalaVisor.set(fit);
+    this.cdr.markForCheck();
+  }
+
+  ajustarZoomVisor(delta: number): void {
+    this.modoEscalaVisor.set('custom');
+    const actual = this.escalaVisor();
+    const nuevo = Math.max(0.25, Math.min(+(actual + delta).toFixed(2), 1.8));
+    this.escalaVisor.set(nuevo);
+    this.cdr.markForCheck();
+  }
+
+  setModoFitVisor(): void {
+    this.modoEscalaVisor.set('fit');
+    this.recalcularEscalaFitVisor();
+  }
+
   seleccionarDocumento(doc: DocumentoArchivo): void {
     if (!doc || !doc.id_documento) return;
     if (typeof window !== 'undefined' && window.innerWidth < 1100) {
@@ -2607,8 +2910,15 @@ export class ArchivoComponent implements OnInit {
     this.documentosService.obtenerVistaPreviaHtml(doc.id_documento || doc.nombre).subscribe({
       next: (res) => {
         this.cargandoVisor.set(false);
+        if (res.datos?.tipoHoja === 'Oficio' || res.datos?.tipoHoja === 'Legal') {
+          this.tipoHojaVisor.set('Oficio');
+        } else {
+          this.tipoHojaVisor.set('Letter');
+        }
         const html = res.datos?.html || '<p class="text-muted">No se pudo cargar la visualización del documento.</p>';
         this.htmlVisorSeguro.set(this.sanitizer.bypassSecurityTrustHtml(html));
+        this.cdr.markForCheck();
+        setTimeout(() => this.recalcularEscalaFitVisor(), 60);
       },
       error: () => {
         // Fallback solo si es archivo adjunto base64
@@ -2625,12 +2935,14 @@ export class ArchivoComponent implements OnInit {
               this.currentObjectUrl = URL.createObjectURL(blob);
               this.urlPdfSegura.set(this.sanitizer.bypassSecurityTrustResourceUrl(`${this.currentObjectUrl}#toolbar=1&navpanes=0`));
               this.cargandoVisor.set(false);
+              this.cdr.markForCheck();
               return;
             }
           } catch (err) {}
         }
         this.cargandoVisor.set(false);
         this.errorVisor.set('No se pudo cargar la visualización del documento.');
+        this.cdr.markForCheck();
       }
     });
   }
