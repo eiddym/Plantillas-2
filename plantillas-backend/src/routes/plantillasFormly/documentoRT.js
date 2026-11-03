@@ -804,6 +804,7 @@ module.exports = app => {
           const pDataCache = fs.readFileSync(targetFilePath);
           if (pDataCache && pDataCache.length > 0) {
             res.set('Content-Type', 'application/pdf');
+            res.set('Content-Disposition', `inline; filename="${util.formatoNombreDoc(matchedDoc.nombre)}.pdf"`);
             return res.send(pDataCache);
           }
         }
@@ -838,6 +839,7 @@ module.exports = app => {
           }
           const pData2 = fs.readFileSync(fileToRead);
           res.set('Content-Type', 'application/pdf');
+          res.set('Content-Disposition', `inline; filename="${util.formatoNombreDoc(matchedDoc.nombre)}.pdf"`);
           res.send(pData2);
         });
       })
@@ -916,8 +918,14 @@ module.exports = app => {
         }
       }
 
-      // 3. Si es un documento institucional o MARABUNTA/... sin archivo físico adjunto previo, generar la ficha/custodia oficial en PDF
-      if (doc.es_institucional || (doc.nombre && doc.nombre.startsWith('MARABUNTA/'))) {
+      let tienePlantillaFormly = false;
+      try {
+        const pj = typeof doc.plantilla === 'string' ? JSON.parse(doc.plantilla) : doc.plantilla;
+        tienePlantillaFormly = Array.isArray(pj) && pj.length > 0;
+      } catch (_) {}
+
+      // 3. Solo si es un documento institucional externo sin plantilla Formly, generar la ficha/custodia oficial en PDF
+      if (!tienePlantillaFormly && (doc.es_institucional || (doc.grupo && doc.grupo === 'institucional'))) {
         let meta = {};
         try {
           if (doc.plantilla_valor) {

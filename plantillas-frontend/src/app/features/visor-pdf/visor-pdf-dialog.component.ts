@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { HttpClient } from '@angular/common/http';
 import { DocumentosService } from '../../core/services/documentos.service';
 
 export interface VisorPdfData {
@@ -625,6 +626,7 @@ export class VisorPdfDialogComponent implements OnInit, AfterViewInit, OnDestroy
 
   private readonly sanitizer = inject(DomSanitizer);
   private readonly documentosService = inject(DocumentosService);
+  private readonly http = inject(HttpClient);
   private readonly cdr = inject(ChangeDetectorRef);
 
   readonly loading = signal(false);
@@ -787,6 +789,28 @@ export class VisorPdfDialogComponent implements OnInit, AfterViewInit, OnDestroy
         this.cdr.markForCheck();
       },
       error: (err) => {
+        if (this.data.idDocumento) {
+          this.http.get(`/api/v1/documento/${this.data.idDocumento}/pdf`, { responseType: 'blob' }).subscribe({
+            next: (blob) => {
+              this.loading.set(false);
+              if (this.localBlobUrl) {
+                try { URL.revokeObjectURL(this.localBlobUrl); } catch {}
+              }
+              this.localBlobUrl = URL.createObjectURL(blob);
+              this.downloadUrl.set(this.localBlobUrl);
+              this.safePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.localBlobUrl);
+              this.cdr.markForCheck();
+            },
+            error: (errId) => {
+              this.loading.set(false);
+              this.errorMessage.set(
+                errId.error?.mensaje || errId.message || 'No se pudo generar el documento PDF.'
+              );
+              this.cdr.markForCheck();
+            }
+          });
+          return;
+        }
         this.loading.set(false);
         this.errorMessage.set(
           err.error?.mensaje || err.message || 'No se pudo generar el documento PDF.'

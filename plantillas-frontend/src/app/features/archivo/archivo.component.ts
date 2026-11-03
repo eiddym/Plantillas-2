@@ -19,6 +19,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { AuthService } from '../../core/auth/auth.service';
+import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component';
 
 export interface VersionArchivo {
   version: number;
@@ -304,11 +305,14 @@ export interface UnidadArchivo {
                   <th mat-header-cell *matHeaderCellDef>Acciones</th>
                   <td mat-cell *matCellDef="let d">
                     <div class="action-btn-row">
-                      <button mat-icon-button (click)="verDetalle(d)" matTooltip="Ver Trazabilidad y Versiones" class="btn-action">
-                        <mat-icon>visibility</mat-icon>
-                      </button>
-                      <button mat-icon-button (click)="descargarPdf(d)" matTooltip="Descargar Copia Digital" class="btn-action pdf">
+                      <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF) en Pantalla" class="btn-action pdf">
                         <mat-icon>picture_as_pdf</mat-icon>
+                      </button>
+                      <button mat-icon-button (click)="verDetalle(d)" matTooltip="Ver Trazabilidad y Versiones" class="btn-action">
+                        <mat-icon>history</mat-icon>
+                      </button>
+                      <button mat-icon-button (click)="descargarArchivoFisico(d)" matTooltip="Descargar Copia Digital (PDF)" class="btn-action">
+                        <mat-icon>download</mat-icon>
                       </button>
                       @if (puedePromover() && !d.es_institucional) {
                         <button 
@@ -375,11 +379,14 @@ export interface UnidadArchivo {
                                     <span class="mini-ref">{{ obtenerReferencia(doc) }}</span>
                                   </div>
                                   <div class="mini-actions">
-                                    <button mat-icon-button (click)="verDetalle(doc)" class="btn-action-mini">
-                                      <mat-icon>visibility</mat-icon>
-                                    </button>
-                                    <button mat-icon-button (click)="descargarPdf(doc)" class="btn-action-mini pdf">
+                                    <button mat-icon-button (click)="verPdf(doc)" matTooltip="Ver PDF en Pantalla" class="btn-action-mini pdf">
                                       <mat-icon>picture_as_pdf</mat-icon>
+                                    </button>
+                                    <button mat-icon-button (click)="verDetalle(doc)" matTooltip="Ver Trazabilidad" class="btn-action-mini">
+                                      <mat-icon>history</mat-icon>
+                                    </button>
+                                    <button mat-icon-button (click)="descargarArchivoFisico(doc)" matTooltip="Descargar Copia PDF" class="btn-action-mini">
+                                      <mat-icon>download</mat-icon>
                                     </button>
                                   </div>
                                 </div>
@@ -481,11 +488,14 @@ export interface UnidadArchivo {
                   <th mat-header-cell *matHeaderCellDef>Acciones</th>
                   <td mat-cell *matCellDef="let d">
                     <div class="action-btn-row">
-                      <button mat-icon-button (click)="verDetalle(d)" matTooltip="Ver Trazabilidad" class="btn-action">
-                        <mat-icon>visibility</mat-icon>
-                      </button>
-                      <button mat-icon-button (click)="descargarPdf(d)" matTooltip="Descargar Copia Digital" class="btn-action pdf">
+                      <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF) en Pantalla" class="btn-action pdf">
                         <mat-icon>picture_as_pdf</mat-icon>
+                      </button>
+                      <button mat-icon-button (click)="verDetalle(d)" matTooltip="Ver Trazabilidad" class="btn-action">
+                        <mat-icon>history</mat-icon>
+                      </button>
+                      <button mat-icon-button (click)="descargarArchivoFisico(d)" matTooltip="Descargar Copia Digital (PDF)" class="btn-action">
+                        <mat-icon>download</mat-icon>
                       </button>
                       @if (puedePromover() && !d.es_institucional) {
                         <button 
@@ -550,11 +560,14 @@ export interface UnidadArchivo {
                   <th mat-header-cell *matHeaderCellDef>Acciones</th>
                   <td mat-cell *matCellDef="let d">
                     <div class="action-btn-row">
-                      <button mat-icon-button (click)="verDetalle(d)" matTooltip="Ver Trazabilidad" class="btn-action">
-                        <mat-icon>visibility</mat-icon>
-                      </button>
-                      <button mat-icon-button (click)="descargarPdf(d)" matTooltip="Descargar Copia Digital" class="btn-action pdf">
+                      <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF) en Pantalla" class="btn-action pdf">
                         <mat-icon>picture_as_pdf</mat-icon>
+                      </button>
+                      <button mat-icon-button (click)="verDetalle(d)" matTooltip="Ver Trazabilidad" class="btn-action">
+                        <mat-icon>history</mat-icon>
+                      </button>
+                      <button mat-icon-button (click)="descargarArchivoFisico(d)" matTooltip="Descargar Copia Digital (PDF)" class="btn-action">
+                        <mat-icon>download</mat-icon>
                       </button>
                     </div>
                   </td>
@@ -592,7 +605,10 @@ export interface UnidadArchivo {
                           @for (sDoc of sub.agrupado_por_tipo[tKey]; track sDoc.id_documento) {
                             <div class="sub-doc-row">
                               <span>{{ sDoc.nombre }} - {{ obtenerReferencia(sDoc) }}</span>
-                              <button mat-icon-button (click)="descargarPdf(sDoc)" class="btn-action-mini pdf">
+                              <button mat-icon-button (click)="verPdf(sDoc)" matTooltip="Ver PDF en Pantalla" class="btn-action-mini pdf">
+                                <mat-icon>picture_as_pdf</mat-icon>
+                              </button>
+                              <button mat-icon-button (click)="descargarArchivoFisico(sDoc)" matTooltip="Descargar Copia PDF" class="btn-action-mini">
                                 <mat-icon>download</mat-icon>
                               </button>
                             </div>
@@ -705,11 +721,14 @@ export interface UnidadArchivo {
                   <th mat-header-cell *matHeaderCellDef>Acciones</th>
                   <td mat-cell *matCellDef="let d">
                     <div class="action-btn-row">
-                      <button mat-icon-button (click)="descargarPdf(d)" matTooltip="Descargar Copia Digital (PDF)" class="btn-action pdf">
+                      <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF) en Pantalla" class="btn-action pdf">
                         <mat-icon>picture_as_pdf</mat-icon>
                       </button>
                       <button mat-icon-button (click)="verVersiones(d)" matTooltip="Historial de Versiones y Trazabilidad" class="btn-action">
                         <mat-icon>history</mat-icon>
+                      </button>
+                      <button mat-icon-button (click)="descargarArchivoFisico(d)" matTooltip="Descargar Copia Digital (PDF)" class="btn-action">
+                        <mat-icon>download</mat-icon>
                       </button>
                       @if (puedeVersionar()) {
                         <button mat-icon-button (click)="abrirModalVersionar(d)" matTooltip="Subir Nueva Versión (v{{ obtenerVersionActual(d) + 1 }})" class="btn-action version">
@@ -890,7 +909,11 @@ export interface UnidadArchivo {
                     <strong>Versión Original Concluida</strong>
                     <span>Documento cerrado y archivado en formato digital oficial.</span>
                   </div>
-                  <button mat-flat-button class="btn-dl-v" (click)="descargarPdf(docVersionesVer())">
+                  <button mat-flat-button color="primary" class="btn-dl-v" (click)="verPdf(docVersionesVer())">
+                    <mat-icon>visibility</mat-icon>
+                    <span>Ver en Pantalla</span>
+                  </button>
+                  <button mat-stroked-button class="btn-dl-v" (click)="descargarArchivoFisico(docVersionesVer())">
                     <mat-icon>download</mat-icon>
                     <span>Descargar</span>
                   </button>
@@ -908,10 +931,16 @@ export interface UnidadArchivo {
                         <p class="v-obs">{{ ver.observacion }}</p>
                         <span class="v-user">Registrado por: {{ ver.usuario }}</span>
                       </div>
-                      <button mat-stroked-button class="btn-dl-v" (click)="descargarPdf(docVersionesVer())">
-                        <mat-icon>download</mat-icon>
-                        <span>Descargar</span>
-                      </button>
+                      <div class="version-action-btns">
+                        <button mat-flat-button color="primary" class="btn-dl-v" (click)="verPdf(docVersionesVer())">
+                          <mat-icon>visibility</mat-icon>
+                          <span>Ver</span>
+                        </button>
+                        <button mat-stroked-button class="btn-dl-v" (click)="descargarArchivoFisico(docVersionesVer())">
+                          <mat-icon>download</mat-icon>
+                          <span>Descargar</span>
+                        </button>
+                      </div>
                     </div>
                   }
                 </div>
@@ -1969,6 +1998,7 @@ export class ArchivoComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly snackBar = inject(MatSnackBar);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly dialog = inject(MatDialog);
 
   // Visor Local Embebido (Split Screen)
   readonly docSeleccionado = signal<DocumentoArchivo | null>(null);
@@ -2463,29 +2493,50 @@ export class ArchivoComponent implements OnInit {
       }
     }
 
-    // 2. Solicitar el PDF al backend mediante blob para evitar pantallas negras de iframe
-    this.http.get(`/api/v1/documento/${doc.id_documento}/pdf`, { responseType: 'blob' }).subscribe({
-      next: (blob) => {
-        if (blob.type === 'application/json' || blob.size < 100) {
-          const reader = new FileReader();
-          reader.onload = () => {
-            try {
-              const errJson = JSON.parse(reader.result as string);
-              this.errorVisor.set(errJson.mensaje || errJson.message || 'El documento no tiene un archivo PDF disponible.');
-            } catch {
+    // 2. Solicitar el PDF al backend mediante blob para evitar descargas o pantallas negras
+    const cargarBlobDirecto = (blob: Blob) => {
+      if (blob.type === 'application/json' || blob.size < 100) {
+        if (doc.nombre) {
+          this.http.post('/api/v1/plantillasFormly/documentoPDF', { cite: doc.nombre }, { responseType: 'blob' }).subscribe({
+            next: (blobCite) => {
+              this.currentObjectUrl = URL.createObjectURL(blobCite);
+              this.urlPdfSegura.set(this.sanitizer.bypassSecurityTrustResourceUrl(`${this.currentObjectUrl}#toolbar=1&navpanes=0`));
+              this.cargandoVisor.set(false);
+            },
+            error: () => {
+              this.cargandoVisor.set(false);
               this.errorVisor.set('El documento no tiene un archivo PDF disponible.');
             }
-            this.cargandoVisor.set(false);
-          };
-          reader.readAsText(blob);
+          });
           return;
         }
-
-        this.currentObjectUrl = URL.createObjectURL(blob);
-        this.urlPdfSegura.set(this.sanitizer.bypassSecurityTrustResourceUrl(`${this.currentObjectUrl}#toolbar=1&navpanes=0`));
         this.cargandoVisor.set(false);
-      },
+        this.errorVisor.set('El documento no tiene un archivo PDF disponible.');
+        return;
+      }
+
+      this.currentObjectUrl = URL.createObjectURL(blob);
+      this.urlPdfSegura.set(this.sanitizer.bypassSecurityTrustResourceUrl(`${this.currentObjectUrl}#toolbar=1&navpanes=0`));
+      this.cargandoVisor.set(false);
+    };
+
+    this.http.get(`/api/v1/documento/${doc.id_documento}/pdf`, { responseType: 'blob' }).subscribe({
+      next: (blob) => cargarBlobDirecto(blob),
       error: () => {
+        if (doc.nombre) {
+          this.http.post('/api/v1/plantillasFormly/documentoPDF', { cite: doc.nombre }, { responseType: 'blob' }).subscribe({
+            next: (blobCite) => {
+              this.currentObjectUrl = URL.createObjectURL(blobCite);
+              this.urlPdfSegura.set(this.sanitizer.bypassSecurityTrustResourceUrl(`${this.currentObjectUrl}#toolbar=1&navpanes=0`));
+              this.cargandoVisor.set(false);
+            },
+            error: () => {
+              this.cargandoVisor.set(false);
+              this.errorVisor.set('No se pudo cargar la vista previa del documento.');
+            }
+          });
+          return;
+        }
         this.cargandoVisor.set(false);
         this.errorVisor.set('No se pudo cargar la vista previa del documento. Intente nuevamente.');
       }
@@ -2510,9 +2561,32 @@ export class ArchivoComponent implements OnInit {
     this.errorVisor.set(null);
   }
 
-  descargarPdf(doc: any): void {
-    if (!doc || !doc.id_documento) return;
+  verPdf(doc: any): void {
+    if (!doc) return;
     this.seleccionarDocumento(doc);
+
+    const tituloDoc = doc.nombre 
+      ? `${doc.nombre} - ${doc.referencia || doc.nombre_plantilla || 'Documento Oficial'}`
+      : 'Documento Oficial';
+
+    this.dialog.open(VisorPdfDialogComponent, {
+      width: '85vw',
+      maxWidth: '1200px',
+      height: '92vh',
+      maxHeight: '94vh',
+      panelClass: 'modal-sin-padding',
+      autoFocus: false,
+      data: {
+        titulo: tituloDoc,
+        docCite: doc.nombre,
+        idDocumento: doc.id_documento,
+        esBorrador: false
+      }
+    });
+  }
+
+  descargarPdf(doc: any): void {
+    this.verPdf(doc);
   }
 
   descargarArchivoFisico(doc: any): void {
