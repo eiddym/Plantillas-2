@@ -90,14 +90,68 @@ interface PaletteItem {
         </form>
       </mat-card>
 
+      <!-- Barra de Modos de Visualización y Control de Paleta -->
+      <div class="workspace-view-controls">
+        <div class="view-controls-left">
+          <button 
+            type="button" 
+            mat-button 
+            class="btn-toggle-paleta" 
+            (click)="togglePaleta()" 
+            [matTooltip]="paletaColapsada() ? 'Expandir barra de componentes' : 'Colapsar barra de componentes para ganar espacio'"
+          >
+            <mat-icon>{{ paletaColapsada() ? 'keyboard_double_arrow_right' : 'keyboard_double_arrow_left' }}</mat-icon>
+            <span>{{ paletaColapsada() ? 'Expandir Paleta' : 'Colapsar Paleta' }}</span>
+          </button>
+        </div>
+
+        <div class="view-mode-tabs">
+          <button 
+            type="button" 
+            class="mode-btn" 
+            [class.active]="modoVistaLayout() === 'completa'" 
+            (click)="setModoVista('completa')"
+            matTooltip="Ver Lienzo y Vista Previa Lado a Lado"
+          >
+            <mat-icon>view_column</mat-icon>
+            <span>Vista Dividida</span>
+          </button>
+          <button 
+            type="button" 
+            class="mode-btn" 
+            [class.active]="modoVistaLayout() === 'estructura'" 
+            (click)="setModoVista('estructura')"
+            matTooltip="Solo Lienzo de Estructura"
+          >
+            <mat-icon>view_stream</mat-icon>
+            <span>Solo Estructura</span>
+          </button>
+          <button 
+            type="button" 
+            class="mode-btn" 
+            [class.active]="modoVistaLayout() === 'preview'" 
+            (click)="setModoVista('preview')"
+            matTooltip="Solo Vista Previa del Documento"
+          >
+            <mat-icon>visibility</mat-icon>
+            <span>Solo Vista Previa</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Workspace: Palette + Canvas + Live Preview -->
-      <div class="workspace-grid">
+      <div 
+        class="workspace-grid"
+        [class.paleta-colapsada]="paletaColapsada()"
+        [class.modo-estructura]="modoVistaLayout() === 'estructura'"
+        [class.modo-preview]="modoVistaLayout() === 'preview'"
+      >
         <!-- Palette Column -->
-        <mat-card class="palette-card">
+        <mat-card class="palette-card" [hidden]="modoVistaLayout() === 'preview'" [class.compacta]="paletaColapsada()">
           <mat-card-header>
             <mat-icon mat-card-avatar color="primary">widgets</mat-icon>
-            <mat-card-title>Componentes</mat-card-title>
-            <mat-card-subtitle>Haga clic o arrastre al lienzo</mat-card-subtitle>
+            <mat-card-title *ngIf="!paletaColapsada()">Componentes</mat-card-title>
+            <mat-card-subtitle *ngIf="!paletaColapsada()">Haga clic o arrastre al lienzo</mat-card-subtitle>
           </mat-card-header>
 
           <div
@@ -105,27 +159,29 @@ interface PaletteItem {
             #paletteList="cdkDropList"
             [cdkDropListData]="paletteItems"
             [cdkDropListConnectedTo]="[canvasList]"
-            class="palette-list">
+            class="palette-list"
+            [class.compacta]="paletaColapsada()">
             @for (item of paletteItems; track item.name) {
               <div 
                 cdkDrag 
                 class="palette-item"
+                [class.compacta]="paletaColapsada()"
                 (click)="agregarDirecto(item)"
-                matTooltip="Haga clic para agregar al final del documento"
+                [matTooltip]="paletaColapsada() ? item.name + ' (' + item.category + ')' : 'Haga clic para agregar al final del documento'"
               >
                 <mat-icon class="item-icon">{{ item.icon }}</mat-icon>
-                <div class="item-text">
+                <div class="item-text" *ngIf="!paletaColapsada()">
                   <span class="item-name">{{ item.name }}</span>
                   <span class="item-category">{{ item.category }}</span>
                 </div>
-                <mat-icon class="add-indicator">add_circle_outline</mat-icon>
+                <mat-icon class="add-indicator" *ngIf="!paletaColapsada()">add_circle_outline</mat-icon>
               </div>
             }
           </div>
         </mat-card>
 
         <!-- Canvas Column -->
-        <mat-card class="canvas-card">
+        <mat-card class="canvas-card" [hidden]="modoVistaLayout() === 'preview'">
           <mat-card-header>
             <mat-icon mat-card-avatar color="accent">view_stream</mat-icon>
             <mat-card-title>Estructura del Documento</mat-card-title>
@@ -261,7 +317,7 @@ interface PaletteItem {
         </mat-card>
 
         <!-- Preview Column -->
-        <mat-card class="preview-card">
+        <mat-card class="preview-card" [hidden]="modoVistaLayout() === 'estructura'">
           <mat-card-header>
             <mat-icon mat-card-avatar color="primary">visibility</mat-icon>
             <mat-card-title>Vista Previa del Documento</mat-card-title>
@@ -270,12 +326,14 @@ interface PaletteItem {
 
           <div class="preview-content">
             <div class="pagina-documento">
-              <!-- Cabecera Institucional Fija con CITE y Fecha -->
-              <div class="preview-fixed-header">
-                <span class="preview-cite">CITE: [Autogenerado al aprobar]</span>
-                <span class="preview-fecha">FECHA: [Fecha oficial]</span>
-              </div>
-              <div class="preview-header-line"></div>
+              <!-- Cabecera Institucional Fija con CITE y Fecha (si el esquema no incluye cite explícito) -->
+              @if (!tieneCampoCite()) {
+                <div class="preview-fixed-header">
+                  <span class="preview-cite">CITE: [Autogenerado al aprobar]</span>
+                  <span class="preview-fecha">FECHA: [Fecha oficial]</span>
+                </div>
+                <div class="preview-header-line"></div>
+              }
 
               @if (mostrarPreview && previewFields.length > 0) {
                 <form [formGroup]="previewForm">
@@ -354,16 +412,107 @@ interface PaletteItem {
     .meta-field { flex: 1; min-width: 280px; margin-bottom: -1.25em; }
     .meta-field-short { width: 180px; margin-bottom: -1.25em; }
 
+    .workspace-view-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn-toggle-paleta {
+      font-weight: 600;
+      color: #334155;
+      background: #f1f5f9;
+      border-radius: 8px;
+      padding: 0 12px;
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      &:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+      }
+    }
+
+    .view-mode-tabs {
+      display: inline-flex;
+      background: #e2e8f0;
+      padding: 3px;
+      border-radius: 8px;
+      gap: 2px;
+    }
+
+    .mode-btn {
+      border: none;
+      background: transparent;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #475569;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      &:hover {
+        color: #0f172a;
+      }
+
+      &.active {
+        background: #ffffff;
+        color: #0f2027;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+    }
+
     .workspace-grid {
       display: grid;
-      grid-template-columns: 290px 1fr 1fr;
+      grid-template-columns: 250px minmax(300px, 1fr) minmax(340px, 1.15fr);
       gap: 16px;
       align-items: start;
+      transition: grid-template-columns 0.25s ease;
+
+      &.paleta-colapsada {
+        grid-template-columns: 60px minmax(320px, 1fr) minmax(360px, 1.15fr);
+      }
+
+      &.modo-estructura {
+        grid-template-columns: 250px 1fr;
+        &.paleta-colapsada {
+          grid-template-columns: 60px 1fr;
+        }
+      }
+
+      &.modo-preview {
+        grid-template-columns: 1fr;
+        max-width: 900px;
+        margin: 0 auto;
+      }
     }
 
     .palette-card, .canvas-card, .preview-card {
       border-radius: 12px;
       min-height: 600px;
+    }
+
+    .palette-card.compacta {
+      padding: 4px;
+      mat-card-header {
+        padding: 8px 4px;
+        justify-content: center;
+      }
     }
 
     .palette-list {
@@ -373,6 +522,11 @@ interface PaletteItem {
       gap: 8px;
       max-height: 650px;
       overflow-y: auto;
+
+      &.compacta {
+        padding: 6px 2px;
+        align-items: center;
+      }
     }
     .palette-item {
       display: flex;
@@ -380,6 +534,22 @@ interface PaletteItem {
       gap: 10px;
       padding: 9px 12px;
       background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      cursor: grab;
+      font-weight: 500;
+      color: #37474f;
+      transition: background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+      position: relative;
+
+      &.compacta {
+        padding: 10px 6px;
+        justify-content: center;
+        width: 100%;
+        .item-icon {
+          margin: 0;
+        }
+      }
       border: 1px solid #e2e8f0;
       border-radius: 8px;
       cursor: pointer;
@@ -511,6 +681,13 @@ interface PaletteItem {
       border-radius: 8px;
       min-height: 400px;
     }
+    .preview-card {
+      position: sticky;
+      top: 16px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+    }
+
     .preview-placeholder {
       padding: 40px 10px;
       text-align: center;
@@ -523,21 +700,29 @@ interface PaletteItem {
       to { opacity: 1; transform: translateY(0); }
     }
 
-    @media (max-width: 1200px) {
+    @media (max-width: 1100px) {
       .workspace-grid {
-        grid-template-columns: 260px 1fr;
+        grid-template-columns: 60px minmax(280px, 1fr) minmax(320px, 1.15fr);
       }
-      .preview-card {
-        grid-column: span 2;
+      .palette-item .item-text, 
+      .palette-item .add-indicator, 
+      .palette-card mat-card-subtitle,
+      .palette-card mat-card-title {
+        display: none;
+      }
+      .palette-list {
+        padding: 6px 2px;
+        align-items: center;
+      }
+      .palette-item {
+        padding: 10px 6px;
+        justify-content: center;
       }
     }
 
-    @media (max-width: 800px) {
+    @media (max-width: 768px) {
       .workspace-grid {
         grid-template-columns: 1fr;
-      }
-      .preview-card {
-        grid-column: span 1;
       }
     }
   `]
@@ -552,7 +737,21 @@ export class PlantillaEditorComponent implements OnInit {
   readonly isEditing = signal(false);
   readonly saving = signal(false);
   readonly selectedFieldIndex = signal<number | null>(null);
+  readonly modoVistaLayout = signal<'completa' | 'estructura' | 'preview'>('completa');
+  readonly paletaColapsada = signal<boolean>(false);
   plantillaId: number | null = null;
+
+  togglePaleta(): void {
+    this.paletaColapsada.update(v => !v);
+  }
+
+  setModoVista(modo: 'completa' | 'estructura' | 'preview'): void {
+    this.modoVistaLayout.set(modo);
+  }
+
+  tieneCampoCite(): boolean {
+    return (this.canvasFields || []).some(f => f?.type === 'cite');
+  }
 
   readonly metaForm: FormGroup = this.fb.group({
     nombre: ['', [Validators.required]],
