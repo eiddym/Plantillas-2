@@ -175,6 +175,23 @@ module.exports = {
 
   },
 
+  esCircularInstructivoConvocatoria: (doc) => {
+    if (!doc) return false;
+    const nombreP = String(doc.nombre_plantilla || '').toLowerCase();
+    const abrev = String(doc.abreviacion || '').toUpperCase();
+    const titDoc = String(doc.titulo || doc.nombre || '').toLowerCase();
+    return (
+      nombreP.includes('circular') ||
+      nombreP.includes('instructivo') ||
+      nombreP.includes('convocatoria') ||
+      titDoc.includes('circular') ||
+      titDoc.includes('instructivo') ||
+      titDoc.includes('convocatoria') ||
+      ['C-A', 'CIR', 'I', 'INS', 'CONV'].includes(abrev) ||
+      !!doc.multiple
+    );
+  },
+
   documento_enviar: (modeloHistorialFlujo, doc, transaccion, pDirector) =>
   new Promise( (resolve, reject) => {
     let de = parseIdsSeguro(doc.de, doc.plantilla_valor, 'de', [Number(doc._usuario_creacion)]);
@@ -220,26 +237,55 @@ module.exports = {
       }
     }
 
-    doc.update({
-      de: JSON.stringify(_de),
-      via: JSON.stringify(via),
-      para: JSON.stringify(para),
-      via_actual: viaActual,
-      estado: 'ENVIADO',
-      _usuario_modificacion: doc._usuario_creacion,
-      aprobaron_de,
-    }, transaccion)
-    .then(doc =>
-      modeloHistorialFlujo.create({
-        id_documento:doc.id_documento,
-        accion: 'ENVIADO',
-        observacion: '',
-        estado: 'ACTIVO',
-        _usuario_creacion: doc._usuario_creacion,
+    const esDirecto = module.exports.esCircularInstructivoConvocatoria(doc);
+    let asignarCiteProm = Promise.resolve(null);
+
+    // Si es Circular, Instructivo o Convocatoria y no tiene CITE oficial, debe nacer con CITE al enviar
+    if (esDirecto && (!doc.nombre || !doc.nombre.includes('/'))) {
+      const dbModelos = doc.sequelize ? doc.sequelize.models : null;
+      if (dbModelos) {
+        asignarCiteProm = module.exports.obtenerCrearCite(dbModelos, doc, doc._usuario_creacion);
+      }
+    }
+
+    asignarCiteProm.then((citeResp) => {
+      let estadoFinal = esDirecto ? 'DERIVADO' : 'ENVIADO';
+      let nombreFinal = doc.nombre;
+      let pValFinal = doc.plantilla_valor;
+      let fechaFinal = doc.fecha;
+
+      if (citeResp && citeResp.cite) {
+        nombreFinal = citeResp.cite;
+        pValFinal = JSON.stringify(citeResp.datosPlantilla || {});
+        fechaFinal = moment().tz('America/La_Paz').format();
+      }
+
+      return doc.update({
+        nombre: nombreFinal,
+        plantilla_valor: pValFinal,
+        fecha: fechaFinal,
+        de: JSON.stringify(_de),
+        via: JSON.stringify(via),
+        para: JSON.stringify(para),
+        via_actual: esDirecto ? null : viaActual,
+        estado: estadoFinal,
+        _usuario_modificacion: doc._usuario_creacion,
+        aprobaron_de,
       }, transaccion)
-    )
-    .then( resu =>  resolve(resu) )
-    .catch( e => reject(e) );
+      .then(docActualizado =>
+        modeloHistorialFlujo.create({
+          id_documento: docActualizado.id_documento,
+          accion: esDirecto ? 'EMITIDO_CON_CITE' : 'ENVIADO',
+          observacion: esDirecto 
+            ? `Documento oficial emitido con CITE ${nombreFinal} para acuse de recibo y archivo.`
+            : '',
+          estado: 'ACTIVO',
+          _usuario_creacion: docActualizado._usuario_creacion,
+        }, transaccion)
+      )
+      .then(resu => resolve(resu));
+    })
+    .catch(e => reject(e));
   }),
 
   /**

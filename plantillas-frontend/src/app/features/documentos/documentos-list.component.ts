@@ -762,14 +762,37 @@ export class DocumentosListComponent implements OnInit {
            this.authService.isMae();
   }
 
+  esDocumentoDirectoAcuse(d: Documento): boolean {
+    if (!d) return false;
+    const dAny = d as any;
+    const nomP = String(dAny.nombre_plantilla || '').toLowerCase();
+    const abrev = String(dAny.abreviacion || '').toUpperCase();
+    const nom = String(dAny.nombre || '').toLowerCase();
+    return (
+      nomP.includes('circular') ||
+      nomP.includes('instructivo') ||
+      nomP.includes('convocatoria') ||
+      nom.includes('circular') ||
+      nom.includes('instructivo') ||
+      nom.includes('convocatoria') ||
+      ['C-A', 'CIR', 'I', 'INS', 'CONV'].includes(abrev) ||
+      !!dAny.multiple
+    );
+  }
+
   puedeMarcarRecibido(d: Documento): boolean {
     if (!d || !d.id_documento) return false;
     const u: any = this.authService.currentUser();
     if (!u) return false;
     const dAny = d as any;
-    const esPendienteActual = Number(dAny.via_actual) === Number(u.id);
-    const esMasivo = !!(dAny.multiple || (dAny.abreviacion || '').toUpperCase() === 'CIR' || (dAny.nombre_plantilla || '').toUpperCase().includes('CIRCULAR'));
-    return esPendienteActual && esMasivo;
+    const idUs = Number(u.id || u.id_usuario);
+
+    if (this.esDocumentoDirectoAcuse(d)) {
+      const yaRecibio = Array.isArray(dAny.aprobaron_cd) && dAny.aprobaron_cd.includes(idUs);
+      return !yaRecibio;
+    }
+
+    return Number(dAny.via_actual) === idUs;
   }
 
   marcarRecibido(d: Documento): void {
@@ -1037,6 +1060,14 @@ export class DocumentosListComponent implements OnInit {
 
   puedeEditar(doc: Documento): boolean {
     if (!doc) return false;
+    const u: any = this.authService.currentUser();
+    const idUs = Number(u?.id || u?.id_usuario);
+
+    // Para circulares, instructivos y convocatorias con CITE oficial directo, los destinatarios solo dan check de recepción
+    if (this.esDocumentoDirectoAcuse(doc) && doc.nombre && doc.nombre.includes('/')) {
+      return Number(doc._usuario_creacion) === idUs && (doc.estado === 'NUEVO' || doc.estado === 'BORRADOR');
+    }
+
     if (doc.estado === 'ENVIADO' || doc.estado === 'DERIVADO' || doc.estado === 'NUEVO' || doc.estado === 'RECHAZADO' || doc.estado === 'BORRADOR') {
       return true;
     }
@@ -1072,14 +1103,14 @@ export class DocumentosListComponent implements OnInit {
       });
     } else {
       this.dialog.open(VisorPdfDialogComponent, {
-        height: '92vh',
+        height: '94vh',
         maxHeight: '94vh',
         width: 'auto',
-        maxWidth: '95vw',
+        maxWidth: '96vw',
         panelClass: ['modal-sin-padding', 'modal-vista-previa-escala'],
         autoFocus: false,
         data: {
-          titulo: 'Vista Previa',
+          titulo: doc.nombre ? `${doc.nombre} - ${doc.ref || 'Vista Previa'}` : 'Vista Previa',
           idDocumento: doc.id_documento,
           docCite: doc.nombre,
           esBorrador: true

@@ -278,8 +278,8 @@ mat-toolbar.mat-primary {
   justify-content: center !important;
   align-items: center !important;
   width: auto !important;
-  max-width: 95vw !important;
-  height: 92vh !important;
+  max-width: 96vw !important;
+  height: 94vh !important;
   max-height: 94vh !important;
 
   .mat-mdc-dialog-container {
@@ -300,9 +300,10 @@ mat-toolbar.mat-primary {
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45) !important;
     display: flex !important;
     flex-direction: column !important;
-    width: auto !important;
-    max-width: 95vw !important;
-    height: 92vh !important;
+    width: fit-content !important;
+    min-width: 580px !important;
+    max-width: 96vw !important;
+    height: 94vh !important;
     max-height: 94vh !important;
   }
 
@@ -310,7 +311,7 @@ mat-toolbar.mat-primary {
     display: flex !important;
     flex-direction: column !important;
     height: 100% !important;
-    width: auto !important;
+    width: 100% !important;
   }
 }
 

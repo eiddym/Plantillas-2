@@ -599,6 +599,28 @@ module.exports = app => {
         const estadoParam = String(req.query.estado || '');
         const incluyeRevisados = estadoParam.includes('APROBADO') || estadoParam.includes('CERRADO');
         const ccCondRevisados = (fidUnidad > 0 && incluyeRevisados) ? matchJsonUnidad('copia', fidUnidad) : [];
+        
+        // Documentos directos con CITE (Circular, Instructivo, Convocatoria) para acuse de recibo
+        const condCircularNoRecibido = {
+          [Op.and]: [
+            { estado: { [Op.in]: ['DERIVADO', 'ENVIADO'] } },
+            { nombre: { [Op.like]: '%/%' } },
+            {
+              [Op.or]: [
+                ...matchJsonId('para'),
+                ...matchJsonId('via'),
+                { para: { [Op.iLike]: '%todo el personal%' } }
+              ]
+            },
+            {
+              [Op.or]: [
+                { aprobaron_cd: { [Op.is]: null } },
+                sequelize.literal(`NOT (${idUs} = ANY(COALESCE("documento"."aprobaron_cd", ARRAY[]::integer[])))`)
+              ]
+            }
+          ]
+        };
+
         andConds.push({
           [Op.or]: incluyeRevisados
             ? [
@@ -611,6 +633,7 @@ module.exports = app => {
             : [
                 { via_actual: idUs },
                 { aprobador_cd_actual: idUs },
+                condCircularNoRecibido
               ]
         });
       } else if (bandeja === 'copia' || bandeja === 'cc') {
@@ -645,6 +668,7 @@ module.exports = app => {
                     ...matchJsonId('de'),
                     ...matchJsonId('para'),
                     ...matchJsonId('via'),
+                    sequelize.literal(`${idUs} = ANY(COALESCE("documento"."aprobaron_cd", ARRAY[]::integer[]))`)
                   ]
                 }
               ]
@@ -2336,12 +2360,19 @@ module.exports = app => {
         _usuario_creacion: idUs,
       });
 
-      if (Number(doc.via_actual) === idUs) {
-        await doc.update({
-          via_actual: null,
-          _usuario_modificacion: idUs
-        });
+      const actuales = Array.isArray(doc.aprobaron_cd) ? doc.aprobaron_cd.slice() : [];
+      if (!actuales.includes(idUs)) {
+        actuales.push(idUs);
       }
+
+      const updateData = {
+        aprobaron_cd: actuales,
+        _usuario_modificacion: idUs
+      };
+      if (Number(doc.via_actual) === idUs) {
+        updateData.via_actual = null;
+      }
+      await doc.update(updateData);
 
       return res.status(200).send(util.formatearMensaje("EXITO", "Acuse de recibo confirmado correctamente"));
     } catch (err) {
