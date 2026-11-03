@@ -65,7 +65,7 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
         <div class="scope-badges">
           <span class="scope-badge" [class.scope-admin]="esAdminOMae()">
             <mat-icon>{{ esAdminOMae() ? 'public' : 'person' }}</mat-icon>
-            <span>{{ esAdminOMae() ? 'Control MAE / Directivo' : 'Panel de Funcionario' }}</span>
+            <span>{{ esAdminOMae() ? 'Control MAE / Directivo' : 'Panel de Usuario' }}</span>
           </span>
         </div>
       </div>
@@ -258,12 +258,12 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
           </div>
         </mat-card>
 
-        <!-- Gráfico Semáforo de Antigüedad por Funcionario -->
+        <!-- Gráfico Semáforo de Antigüedad por Usuario -->
         <mat-card class="chart-panel mt-4">
           <div class="panel-header">
             <div class="panel-title">
               <mat-icon class="icon-semaforo">traffic</mat-icon>
-              <span>Semáforo de Antigüedad de Documentos en Bandeja de Funcionarios</span>
+              <span>Semáforo de Antigüedad de Documentos en Bandeja de Usuarios</span>
             </div>
             <div class="semaforo-legend">
               <span class="leg-item"><span class="dot bg-green"></span> &lt; 24h</span>
@@ -274,16 +274,16 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
           <app-echart [options]="chartSemaforoOptions()" [loading]="cargando()" height="320px"></app-echart>
         </mat-card>
 
-        <!-- Tabla de Funcionarios de la Unidad -->
+        <!-- Tabla de Usuarios de la Unidad -->
         <mat-card class="table-card mt-4">
           <div class="table-header-box">
-            <h3>Carga de Trabajo por Funcionario</h3>
+            <h3>Carga de Trabajo por Usuario</h3>
           </div>
           <div class="table-responsive">
             <table class="w-full data-table">
               <thead>
                 <tr>
-                  <th>FUNCIONARIO</th>
+                  <th>USUARIO</th>
                   <th>CARGO</th>
                   <th class="text-center">&lt; 24H (AL DÍA)</th>
                   <th class="text-center">1-3 DÍAS (ATENCIÓN)</th>
@@ -322,7 +322,7 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
                 </tr>
                 <tr *ngIf="unidadFuncionarios().length === 0">
                   <td colspan="7" class="text-center py-4 text-muted">
-                    No se encontraron funcionarios activos en esta unidad.
+                    No se encontraron usuarios activos en esta unidad.
                   </td>
                 </tr>
               </tbody>
@@ -479,7 +479,7 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
 
             <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search-user-field">
               <mat-icon matPrefix>search</mat-icon>
-              <input matInput [(ngModel)]="searchFilter" placeholder="Buscar funcionario...">
+              <input matInput [(ngModel)]="searchFilter" placeholder="Buscar usuario...">
             </mat-form-field>
           </div>
         </mat-card>
@@ -489,7 +489,7 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
           <div class="table-responsive">
             <table mat-table [dataSource]="datosHistoricosFiltrados()" class="w-full monitoreo-table">
               <ng-container matColumnDef="funcionario">
-                <th mat-header-cell *matHeaderCellDef>FUNCIONARIO</th>
+                <th mat-header-cell *matHeaderCellDef>USUARIO</th>
                 <td mat-cell *matCellDef="let row">
                   <div class="user-cell">
                     <div class="user-mini-avatar">{{ row.nombres ? row.nombres[0].toUpperCase() : 'U' }}</div>
@@ -1014,7 +1014,7 @@ export class MonitoreoComponent implements OnInit {
   readonly chartSemaforoOptions = signal<echarts.EChartsOption | null>(null);
   unidadSeleccionadaId: number = 1;
 
-  // Metadatos Personales (Auto-Monitoreo del Funcionario)
+  // Metadatos Personales (Auto-Monitoreo del Usuario)
   readonly personalResumen = signal<any>(null);
   readonly personalPendientes = signal<any[]>([]);
   readonly chartGaugeOptions = signal<echarts.EChartsOption | null>(null);
@@ -1184,7 +1184,7 @@ export class MonitoreoComponent implements OnInit {
   }
 
   /**
-   * Carga balance de carga y semáforo de antigüedad por funcionario de una unidad
+   * Carga balance de carga y semáforo de antigüedad por usuario de una unidad
    */
   cargarMetricasUnidad(): void {
     this.cargando.set(true);

@@ -103,7 +103,7 @@ import { SeguridadService, UsuarioAdmin } from '../../core/services/seguridad.se
             <mat-icon>share</mat-icon>
             <strong>Compartir Catálogo con Compañeros / Jefatura ({{ usuariosSeleccionados().length }})</strong>
           </div>
-          <p class="section-hint">Seleccione los funcionarios que tendrán acceso a este catálogo institucional:</p>
+          <p class="section-hint">Seleccione los usuarios que tendrán acceso a este catálogo institucional:</p>
 
           <div class="users-picker" *ngIf="!data?.soloLectura">
             <div class="users-scroll-list">
@@ -115,7 +115,7 @@ import { SeguridadService, UsuarioAdmin } from '../../core/services/seguridad.se
                 <mat-checkbox [checked]="isUsuarioSelected(u)" color="primary" (click)="$event.stopPropagation()" (change)="toggleUsuario(u)"></mat-checkbox>
                 <div class="user-item-meta">
                   <strong>{{ u.nombres }} {{ u.apellidos }}</strong>
-                  <span>{{ u.cargo || 'Funcionario' }} &bull; {{ u.email }}</span>
+                  <span>{{ u.cargo || 'Usuario' }} &bull; {{ u.email }}</span>
                 </div>
               </div>
             </div>
@@ -125,7 +125,7 @@ import { SeguridadService, UsuarioAdmin } from '../../core/services/seguridad.se
           <div class="users-chips-list" *ngIf="data?.soloLectura">
             <span *ngFor="let u of usuariosSeleccionados()" class="user-chip">
               <mat-icon>person</mat-icon>
-              <strong>{{ u.nombres }} {{ u.apellidos }} ({{ u.cargo || 'Funcionario' }})</strong>
+              <strong>{{ u.nombres }} {{ u.apellidos }} ({{ u.cargo || 'Usuario' }})</strong>
             </span>
             <p *ngIf="usuariosSeleccionados().length === 0" class="empty-hint">Catálogo de uso estrictamente personal (no compartido).</p>
           </div>

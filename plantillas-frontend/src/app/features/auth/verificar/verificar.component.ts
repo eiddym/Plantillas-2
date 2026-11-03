@@ -70,7 +70,7 @@ export interface VerificacionResultado {
           <div class="header-actions">
             <a routerLink="/auth/login" class="login-link">
               <mat-icon>lock_outline</mat-icon>
-              <span>Acceso Funcionarios</span>
+              <span>Acceso Usuarios</span>
             </a>
           </div>
         </div>
@@ -184,7 +184,7 @@ export interface VerificacionResultado {
                   </div>
                   <div class="signer-info">
                     <div class="signer-name">{{ f.nombres || '' }} {{ f.apellidos || '' }} {{ f.nombre_completo || '' }}</div>
-                    <div class="signer-cargo">{{ f.cargo || 'Funcionario Autorizado' }}</div>
+                    <div class="signer-cargo">{{ f.cargo || 'Usuario Autorizado' }}</div>
                     <div class="signer-meta" *ngIf="f.fecha || f.fecha_firma">
                       <span class="meta-label">Estampado Digital:</span>
                       <span class="meta-val">{{ (f.fecha || f.fecha_firma) | date:'dd/MM/yyyy HH:mm' }}</span>

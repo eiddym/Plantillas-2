@@ -122,7 +122,7 @@ export interface HitoHistorial {
                           {{ getActorInitial(h.nombres || h.usuario) }}
                         </span>
                       </div>
-                      <span class="actor-name">{{ h.nombres || h.usuario || 'Funcionario Institucional' }}</span>
+                      <span class="actor-name">{{ h.nombres || h.usuario || 'Usuario Institucional' }}</span>
                       <span class="actor-user" *ngIf="h.usuario">&#64;{{ h.usuario }}</span>
                     </div>
 

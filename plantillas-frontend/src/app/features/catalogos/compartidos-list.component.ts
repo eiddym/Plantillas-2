@@ -76,7 +76,7 @@ import { CatalogoDialogComponent } from './catalogo-dialog.component';
             <ng-container matColumnDef="propietario">
               <th mat-header-cell *matHeaderCellDef>PROPIETARIO</th>
               <td mat-cell *matCellDef="let c">
-                <span class="owner-tag">Funcionario #{{ c.propietario || c._usuario_creacion }}</span>
+                <span class="owner-tag">Usuario #{{ c.propietario || c._usuario_creacion }}</span>
               </td>
             </ng-container>
 

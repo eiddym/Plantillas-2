@@ -234,7 +234,7 @@ export interface UnidadArchivo {
           <!-- Buscador Rápido -->
           <div class="search-box-bar">
             <mat-form-field appearance="outline" class="search-input">
-              <mat-label>Buscar por CITE, asunto o funcionario emisor...</mat-label>
+              <mat-label>Buscar por CITE, asunto o usuario emisor...</mat-label>
               <input matInput [formControl]="filtroGeneralCtrl" placeholder="Ej. NOTA-001/2026, Informe...">
               <mat-icon matSuffix>search</mat-icon>
             </mat-form-field>
@@ -404,7 +404,7 @@ export interface UnidadArchivo {
             <div class="banner-unidad-info">
               <span class="badge-area">Área Asignada</span>
               <h2>{{ dataUnidadActual()?.unidad?.nombre || 'Mi Unidad Operativa' }}</h2>
-              <p>Acervo documental producido por funcionarios de esta unidad y sub-unidades jerárquicas dependientes.</p>
+              <p>Acervo documental producido por usuarios de esta unidad y sub-unidades jerárquicas dependientes.</p>
             </div>
             <div class="banner-unidad-stat">
               <span class="stat-number">{{ dataUnidadActual()?.total_documentos || 0 }}</span>

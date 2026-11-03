@@ -51,7 +51,7 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
         <div class="nav-actions">
           <a routerLink="/auth/login" mat-stroked-button class="btn-login-nav">
             <mat-icon>lock</mat-icon>
-            <span>Acceso Funcionarios</span>
+            <span>Acceso Usuarios</span>
           </a>
         </div>
       </nav>

@@ -81,7 +81,7 @@ interface UsuarioVirtualItem {
                       <span class="current-badge">Sesión Actual</span>
                     }
                   </div>
-                  <span class="user-cargo">{{ u.cargo || 'Funcionario Institucional' }}</span>
+                  <span class="user-cargo">{{ u.cargo || 'Usuario Institucional' }}</span>
                   <div class="meta-row">
                     <span class="type-tag" [class.tag-virtual]="u.virtual">
                       {{ u.virtual ? 'Usuario Virtual' : 'Titular Físico' }}

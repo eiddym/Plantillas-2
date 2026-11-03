@@ -180,7 +180,7 @@ module.exports = app => {
         funcionarios: funcionarios.map(f => ({
           id_usuario: f.id_usuario,
           nombreCompleto: `${f.nombres || ''} ${f.apellidos || ''}`.trim(),
-          cargo: f.cargo || 'Funcionario',
+          cargo: f.cargo || 'Usuario',
           pendientes: parseInt(f.pendientes || 0, 10),
           atendidos: parseInt(f.atendidos || 0, 10),
           semaforo: {

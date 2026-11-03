@@ -170,7 +170,7 @@ import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
               class="action-btn-save"
               (click)="togglePanelDerivar()"
               [disabled]="guardando() || !doc()"
-              matTooltip="Derivar documento a un funcionario o unidad dependiente"
+              matTooltip="Derivar documento a un usuario o unidad dependiente"
             >
               <mat-icon>alt_route</mat-icon>
               <span>Derivar</span>
@@ -412,7 +412,7 @@ import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
                 <div class="timeline-dot"></div>
                 <div class="timeline-content">
                   <strong>Redacción del Documento</strong>
-                  <p>Por: {{ obtenerTextoMeta('de') || 'Funcionario Solicitante' }}</p>
+                  <p>Por: {{ obtenerTextoMeta('de') || 'Usuario Solicitante' }}</p>
                   <small>{{ doc()?._fecha_creacion | date:'dd/MM/yyyy' }}</small>
                 </div>
               </div>

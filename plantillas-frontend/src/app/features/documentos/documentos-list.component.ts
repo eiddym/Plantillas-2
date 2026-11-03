@@ -950,7 +950,7 @@ export class DocumentosListComponent implements OnInit {
   }
 
   getParticipanteTexto(doc: Documento, campo: 'de' | 'para'): string {
-    const fallback = campo === 'de' ? 'Funcionario Solicitante' : 'Jefatura de Área';
+    const fallback = campo === 'de' ? 'Usuario Solicitante' : 'Jefatura de Área';
     if (!doc) return fallback;
 
     const fmtUser = (u: any): string => {

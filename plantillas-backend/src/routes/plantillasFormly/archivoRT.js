@@ -526,7 +526,7 @@ module.exports = app => {
         nombre_archivo: nombre_archivo || `${doc.nombre}_v${siguienteVersion}.pdf`,
         ruta: url_archivo || `/api/v1/documento/${doc.id_documento}/pdf?v=${siguienteVersion}`,
         fecha: new Date(),
-        usuario: `${auditUser.nombres || 'Funcionario'} ${auditUser.apellidos || ''}`.trim(),
+        usuario: `${auditUser.nombres || 'Usuario'} ${auditUser.apellidos || ''}`.trim(),
         observacion: observacion || `Nueva versión v${siguienteVersion} digitalizada`
       };
 

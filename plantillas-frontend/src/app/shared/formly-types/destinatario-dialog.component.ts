@@ -112,7 +112,7 @@ export interface DestinatarioDialogData {
           @if (usuariosFiltrados().length === 0) {
             <div class="empty-state">
               <mat-icon>person_off</mat-icon>
-              <p>No se encontraron funcionarios disponibles que cumplan el criterio jerárquico.</p>
+              <p>No se encontraron usuarios disponibles que cumplan el criterio jerárquico.</p>
             </div>
           } @else {
             <div class="user-card-list">
@@ -126,12 +126,12 @@ export interface DestinatarioDialogData {
                       A TODO EL PERSONAL / TODAS LAS UNIDADES
                     </div>
                     <div class="user-cargo">
-                      Circular Institucional / Difusión General a Todos los Funcionarios
+                      Circular Institucional / Difusión General a Todos los Usuarios
                     </div>
                     <div class="user-tags">
                       <span class="tag-unit tag-broadcast">
                         <mat-icon>groups</mat-icon>
-                        Envío masivo a todos los funcionarios activos
+                        Envío masivo a todos los usuarios activos
                       </span>
                     </div>
                   </div>
@@ -444,7 +444,7 @@ export class DestinatarioDialogComponent implements OnInit {
     if (this.esJefe(u)) return 'JEFE';
     const roles = u.usuario_rol || [];
     if (roles.length > 0) return roles[0].rol?.nombre || 'OPERADOR';
-    return 'FUNCIONARIO';
+    return 'USUARIO';
   }
 
   getUnidadNombre(fid_unidad?: number): string {
@@ -512,7 +512,7 @@ export class DestinatarioDialogComponent implements OnInit {
       }
     } else if (this.data.mode === 'CO_REMITENTE') {
       // Regla para DE (Trámites Conjuntos):
-      // Restringido estrictamente a funcionarios de su misma unidad
+      // Restringido estrictamente a usuarios de su misma unidad
       list = list.filter((u) => {
         const mismaUnidad = u.fid_unidad === currUnidad;
         if (!mismaUnidad) return false;
@@ -570,7 +570,7 @@ export class DestinatarioDialogComponent implements OnInit {
       todos_ids: ids,
       nombres: 'A TODO EL PERSONAL',
       apellidos: '',
-      cargo: 'Todas las Unidades y Funcionarios'
+      cargo: 'Todas las Unidades y Usuarios'
     });
   }
 
