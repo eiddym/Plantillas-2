@@ -325,6 +325,7 @@ export class FormlyFieldDocumentosRelacionadosComponent extends FieldType<FieldT
 
   verPdf(doc: any): void {
     if (!doc.id_documento) return;
+    const esAprobado = doc.estado === 'APROBADO' || doc.estado === 'CERRADO';
     this.dialog.open(VisorPdfDialogComponent, {
       width: '92vw',
       maxWidth: '1200px',
@@ -332,7 +333,9 @@ export class FormlyFieldDocumentosRelacionadosComponent extends FieldType<FieldT
       data: {
         titulo: doc.nombre || 'Documento Relacionado',
         docCite: doc.nombre,
-        pdfUrl: `/api/v1/plantillasFormly/documento/${doc.id_documento}/pdf`
+        idDocumento: doc.id_documento,
+        pdfUrl: esAprobado ? `/api/v1/plantillasFormly/documento/${doc.id_documento}/pdf` : undefined,
+        esBorrador: !esAprobado
       }
     });
   }

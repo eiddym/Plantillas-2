@@ -377,7 +377,10 @@
     <div class="mi-contenido">
     <div class="cuerpo-documento">
       <div class="reserva-qr"></div>
-      <% if (typeof html === 'undefined' || !html) { %>
+      <% 
+        var _esDocAprobado = (typeof doc !== 'undefined' && doc && (doc.estado === 'APROBADO' || doc.estado === 'CERRADO')) || (typeof estado !== 'undefined' && (estado === 'APROBADO' || estado === 'CERRADO'));
+        if ((typeof html === 'undefined' || !html) && _esDocAprobado) { 
+      %>
         <table class="pdf-page1-metadata" role="presentation" style="width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0 0 8pt 0;">
           <tr>
             <td class="pdf-meta-izq" style="width: 68%; vertical-align: top; text-align: left; font-size: 10pt; line-height: 1.35; color: #222;">
@@ -391,8 +394,8 @@
                 <div class="pdf-fecha" style="font-size: 9.5pt; font-weight: 600; line-height: 12pt; margin-bottom: 3px; color: #222; text-align: center;"><%= typeof pdf_fecha !== 'undefined' && pdf_fecha ? pdf_fecha : '' %></div>
                 <% if (typeof qr_base64 !== 'undefined' && qr_base64) { %>
                   <img src="<%= qr_base64 %>" alt="QR" style="width: 68px; height: 68px; display: block; margin: 0 auto;">
+                  <div class="pdf-qr-leyenda" style="font-size: 7.5pt; margin-top: 2px; color: #555; white-space: nowrap; text-align: center;">Escanear para verificar</div>
                 <% } %>
-                <div class="pdf-qr-leyenda" style="font-size: 7.5pt; margin-top: 2px; color: #555; white-space: nowrap; text-align: center;">Escanear para verificar</div>
               </div>
             </td>
           </tr>

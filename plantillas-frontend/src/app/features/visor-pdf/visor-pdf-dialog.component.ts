@@ -13,6 +13,8 @@ export interface VisorPdfData {
   pdfUrl?: string;
   docCite?: string;
   htmlContent?: string;
+  idDocumento?: number;
+  esBorrador?: boolean;
 }
 
 @Component({
@@ -29,10 +31,16 @@ export interface VisorPdfData {
   template: `
     <div class="dialog-header">
       <div class="header-info">
-        <mat-icon class="pdf-icon">picture_as_pdf</mat-icon>
+        <mat-icon [class.pdf-icon]="!data.esBorrador" [class.html-icon]="data.esBorrador">
+          {{ data.esBorrador ? 'description' : 'picture_as_pdf' }}
+        </mat-icon>
         <div>
-          <h2 mat-dialog-title class="dialog-title">{{ data.titulo || 'Vista Previa Oficial' }}</h2>
-          <span class="dialog-subtitle" *ngIf="data.docCite">CITE: {{ data.docCite }}</span>
+          <h2 mat-dialog-title class="dialog-title">
+            {{ data.titulo || (data.esBorrador ? 'Vista Previa HTML' : 'Documento Oficial') }}
+          </h2>
+          <span class="dialog-subtitle" *ngIf="data.docCite">
+            {{ data.esBorrador ? 'Borrador en curso (Vista Previa HTML — Sin valor legal ni membrete)' : ('CITE: ' + data.docCite) }}
+          </span>
         </div>
       </div>
       <div class="header-actions">
@@ -51,8 +59,8 @@ export interface VisorPdfData {
       @if (loading()) {
         <div class="pdf-loading-state">
           <mat-icon class="spinner-icon">hourglass_top</mat-icon>
-          <h3>Generando Documento Oficial...</h3>
-          <p>Compilando plantilla, sellos digitales y código QR de verificación institucional.</p>
+          <h3>{{ data.esBorrador ? 'Generando Vista Previa HTML...' : 'Generando Documento Oficial...' }}</h3>
+          <p>{{ data.esBorrador ? 'Cargando contenido de redacción del borrador en formato HTML.' : 'Compilando plantilla, sellos digitales y código QR de verificación institucional.' }}</p>
         </div>
       } @else if (errorMessage()) {
         <div class="pdf-error-state">
@@ -70,17 +78,25 @@ export interface VisorPdfData {
           class="pdf-iframe"
           title="Visor PDF Oficial">
         </iframe>
-      } @else if (data.htmlContent) {
-        <div
-          [innerHTML]="safeHtml"
-          class="html-preview-container">
+      } @else if (safeHtml) {
+        <div class="html-preview-wrapper">
+          <div class="borrador-info-bar" *ngIf="data.esBorrador">
+            <mat-icon>info</mat-icon>
+            <span>VISTA PREVIA HTML (DOCUMENTO EN BORRADOR) — La versión oficial con membrete institucional, metadatos y código QR se reserva al estado APROBADO.</span>
+          </div>
+          <div class="sheet-viewport">
+            <div
+              [innerHTML]="safeHtml"
+              class="html-preview-container sheet-preview">
+            </div>
+          </div>
         </div>
       }
     </mat-dialog-content>
 
     <mat-dialog-actions align="end" class="dialog-footer">
       <button mat-stroked-button mat-dialog-close>Cerrar</button>
-      @if (downloadUrl()) {
+      @if (downloadUrl() && !data.esBorrador) {
         <a mat-raised-button color="primary" [href]="downloadUrl()" [download]="getDownloadFileName()">
           <mat-icon>download</mat-icon>
           <span>Descargar PDF</span>
@@ -104,6 +120,12 @@ export interface VisorPdfData {
       }
       .pdf-icon {
         color: #ef4444;
+        font-size: 28px;
+        width: 28px;
+        height: 28px;
+      }
+      .html-icon {
+        color: #38bdf8;
         font-size: 28px;
         width: 28px;
         height: 28px;
@@ -153,7 +175,7 @@ export interface VisorPdfData {
       color: #cbd5e1;
 
       h3 { margin: 12px 0 6px 0; color: #ffffff; font-size: 1.2rem; }
-      p { margin: 0 0 16px 0; font-size: 0.9rem; color: #94a3b8; max-width: 420px; }
+      p { margin: 0 0 16px 0; font-size: 0.9rem; color: #94a3b8; max-width: 440px; }
       .spinner-icon {
         font-size: 48px;
         width: 48px;
@@ -174,15 +196,75 @@ export interface VisorPdfData {
       50% { transform: scale(1.1); opacity: 1; }
     }
 
-    .html-preview-container {
+    .html-preview-wrapper {
       width: 100%;
       height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: #334155;
+      overflow: hidden;
+    }
+
+    .borrador-info-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 16px;
+      background: #fef3c7;
+      color: #92400e;
+      border-bottom: 1px solid #fde68a;
+      font-size: 0.82rem;
+      font-weight: 600;
+      flex-shrink: 0;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: #d97706;
+      }
+    }
+
+    .sheet-viewport {
+      flex: 1;
       overflow-y: auto;
-      padding: 40px;
+      padding: 24px 16px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .html-preview-container {
+      width: 100%;
+      max-width: 820px;
+      min-height: 1050px;
       background: #ffffff;
-      max-width: 800px;
-      margin: 20px auto;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+      padding: 48px 56px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      color: #1e293b;
+      font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif;
+      line-height: 1.6;
+      border-radius: 2px;
+      box-sizing: border-box;
+
+      ::ng-deep {
+        p {
+          margin-bottom: 12px;
+          line-height: 1.6;
+        }
+        h1, h2, h3, h4 {
+          color: #0f172a;
+          font-weight: 700;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 16px 0;
+        }
+        td, th {
+          border: 1px solid #cbd5e1;
+          padding: 8px 12px;
+        }
+      }
     }
 
     .dialog-footer {
@@ -206,8 +288,26 @@ export interface VisorPdfData {
       }
 
       .html-preview-container {
-        padding: 16px 12px;
+        padding: 20px 14px;
         margin: 10px 0;
+      }
+    }
+
+    @media print {
+      .dialog-header, .dialog-footer, .header-progress, .borrador-info-bar {
+        display: none !important;
+      }
+      .dialog-body {
+        background: #ffffff !important;
+        height: auto !important;
+      }
+      .sheet-viewport {
+        padding: 0 !important;
+      }
+      .html-preview-container {
+        box-shadow: none !important;
+        padding: 0 !important;
+        max-width: 100% !important;
       }
     }
   `]
@@ -233,6 +333,8 @@ export class VisorPdfDialogComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     if (this.data.htmlContent) {
       this.safeHtml = this.sanitizer.bypassSecurityTrustHtml(this.data.htmlContent);
+    } else if (this.data.esBorrador || (this.data.idDocumento && !this.data.pdfUrl)) {
+      this.cargarHtmlDinamico(this.data.idDocumento || this.data.docCite!);
     } else if (this.data.pdfUrl && this.data.pdfUrl.startsWith('blob:')) {
       this.localBlobUrl = this.data.pdfUrl;
       this.downloadUrl.set(this.data.pdfUrl);
@@ -251,6 +353,30 @@ export class VisorPdfDialogComponent implements OnInit, OnDestroy {
         URL.revokeObjectURL(this.localBlobUrl);
       } catch {}
     }
+  }
+
+  cargarHtmlDinamico(idOrCite: number | string): void {
+    this.loading.set(true);
+    this.errorMessage.set('');
+    this.downloadUrl.set('');
+    this.safePdfUrl = null;
+    this.cdr.markForCheck();
+
+    this.documentosService.obtenerVistaPreviaHtml(idOrCite).subscribe({
+      next: (res) => {
+        this.loading.set(false);
+        const html = res.datos?.html || '<p class="text-muted">No se pudo cargar el contenido del borrador.</p>';
+        this.safeHtml = this.sanitizer.bypassSecurityTrustHtml(html);
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.errorMessage.set(
+          err.error?.mensaje || err.message || 'No se pudo obtener la vista previa HTML del borrador.'
+        );
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   cargarPdfDinamico(cite: string, force = false): void {
@@ -280,7 +406,9 @@ export class VisorPdfDialogComponent implements OnInit, OnDestroy {
   }
 
   reintentar(): void {
-    if (this.data.docCite) {
+    if (this.data.esBorrador || (this.data.idDocumento && !this.data.pdfUrl)) {
+      this.cargarHtmlDinamico(this.data.idDocumento || this.data.docCite!);
+    } else if (this.data.docCite) {
       this.cargarPdfDinamico(this.data.docCite, true);
     }
   }
@@ -294,4 +422,3 @@ export class VisorPdfDialogComponent implements OnInit, OnDestroy {
     return `${name.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
   }
 }
-

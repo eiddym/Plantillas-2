@@ -892,6 +892,11 @@ const historicoVectorT =(pVector,pObj,pModelo,pModeloHis, pIdUsuario, pTransacci
 }
 
 const generarDocumento = (pDatos, firma = false) => new Promise((resolve, reject) => {
+  // REGLA INSTITUCIONAL: La creación de PDF oficial y generación de metadatos está estrictamente reservada para documentos en estado APROBADO o CERRADO.
+  if (pDatos.doc && pDatos.doc.estado && !['APROBADO', 'CERRADO'].includes(pDatos.doc.estado)) {
+    return reject(new Error('La creación de PDF oficial y generación de metadatos está estrictamente reservada para documentos en estado APROBADO o CERRADO. Los borradores deben ser visualizados exclusivamente en HTML.'));
+  }
+
   const nombreDocumento = formatoNombreDoc(pDatos.doc.nombre);
   pDatos.nombre = `${nombreDocumento}.pdf`;
 
@@ -1073,8 +1078,18 @@ const generarDocumento = (pDatos, firma = false) => new Promise((resolve, reject
     });
   };
 
-  const citeQr = pDatos.pdf_cite || citeOficial || 'PLANTILLAS-UTEST/NI/00001/2026';
-  const codigoQr = pDatos.pdf_codigo || codigoVerif || `${(config && config.prefijo) || '1'}-${generarCodigo(8, 'A#')}`;
+  const citeQr = pDatos.pdf_cite || citeOficial || '';
+  const codigoQr = pDatos.pdf_codigo || codigoVerif || '';
+
+  if (!codigoQr) {
+    pDatos.codigo = '';
+    pDatos.codigoSeguridad = '';
+    pDatos.pdf_codigo = '';
+    pDatos.qr_url = '';
+    pDatos.qr_base64 = '';
+    return renderizarPdf();
+  }
+
   const urlVerif =
     `${rutaVerificacion}` +
     `?cite=${encodeURIComponent(citeQr)}` +
@@ -1378,17 +1393,30 @@ const generarHtml = (pDatos) => new Promise((resolve, reject) => {
   }
   citeOficial = citeOficial.replace(/\.pdf$/i, '');
 
+  const esBorrador = pDatos.es_borrador_html === true || (pDatos.doc && pDatos.doc.estado && !['APROBADO', 'CERRADO'].includes(pDatos.doc.estado));
+
   pDatos.pdf_cite = pDatos.doc && pDatos.doc.nombre
     ? String(pDatos.doc.nombre).replace(/\.pdf$/i, '')
-    : (citeOficial || 'PLANTILLAS -UTEST/NI/00002/2026');
+    : (citeOficial || 'BORRADOR');
 
-  pDatos.pdf_expediente = pDatos.exp !== undefined && pDatos.exp !== null && pDatos.exp !== ''
-    ? String(pDatos.exp)
-    : (pDatos.doc && pDatos.doc.grupo ? String(pDatos.doc.grupo) : '8');
+  if (esBorrador) {
+    pDatos.es_borrador_html = true;
+    pDatos.pdf_expediente = '';
+    pDatos.exp = '';
+    pDatos.pdf_codigo = '';
+    pDatos.codigoSeguridad = '';
+    pDatos.codigo = '';
+    pDatos.qr_url = '';
+    pDatos.qr_base64 = '';
+  } else {
+    pDatos.pdf_expediente = pDatos.exp !== undefined && pDatos.exp !== null && pDatos.exp !== ''
+      ? String(pDatos.exp)
+      : (pDatos.doc && pDatos.doc.grupo ? String(pDatos.doc.grupo) : '');
 
-  const codigoVerif = String(pDatos.codigo || pDatos.codigoSeguridad || pDatos.pdf_codigo || '1-MNFPW7LB').trim();
-  pDatos.pdf_codigo = codigoVerif;
-  pDatos.codigoSeguridad = codigoVerif;
+    const codigoVerif = String(pDatos.codigo || pDatos.codigoSeguridad || pDatos.pdf_codigo || '').trim();
+    pDatos.pdf_codigo = codigoVerif;
+    pDatos.codigoSeguridad = codigoVerif;
+  }
 
   const citeModel = pDatos.model_actual && pDatos.model_actual['cite-0'] ? pDatos.model_actual['cite-0'] : {};
   const posiblesFechas = [
@@ -1418,6 +1446,12 @@ const generarHtml = (pDatos) => new Promise((resolve, reject) => {
       }
     });
   };
+
+  if (esBorrador || !pDatos.pdf_codigo) {
+    pDatos.qr_url = '';
+    pDatos.qr_base64 = '';
+    return renderizarHtmlFinal();
+  }
 
   const urlConfigurada = (config && config.urlVerificar)
     ? String(config.urlVerificar).trim()

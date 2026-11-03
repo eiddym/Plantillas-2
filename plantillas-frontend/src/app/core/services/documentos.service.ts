@@ -95,8 +95,8 @@ export class DocumentosService {
     return this.http.put<ApiResponse<any>>(`${this.baseUrl}/documento/${id}/rechazar`, payload);
   }
 
-  obtenerVistaPreviaHtml(idDocumento: number): Observable<ApiResponse<{ html: string; nombre: string }>> {
-    return this.http.get<ApiResponse<{ html: string; nombre: string }>>(`${this.baseUrl}/documento/${idDocumento}/preview`);
+  obtenerVistaPreviaHtml(idOrCite: number | string): Observable<ApiResponse<{ html: string; nombre: string; estado?: string }>> {
+    return this.http.get<ApiResponse<{ html: string; nombre: string; estado?: string }>>(`${this.baseUrl}/documento/${encodeURIComponent(idOrCite)}/preview`);
   }
 
   desclasificarDocumento(id: number): Observable<ApiResponse<any>> {

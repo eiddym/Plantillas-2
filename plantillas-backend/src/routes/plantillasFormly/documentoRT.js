@@ -727,6 +727,15 @@ module.exports = app => {
           throw new Error(`No se pudo encontrar el documento ${rawCite}`);
         }
 
+        // REGLA INSTITUCIONAL: Solo los documentos APROBADOS o CERRADOS generan PDF oficial.
+        // Los borradores o documentos en curso deben visualizarse exclusivamente en HTML.
+        if (matchedDoc.estado !== 'APROBADO' && matchedDoc.estado !== 'CERRADO') {
+          return res.status(403).send(util.formatearMensaje(
+            "ERROR",
+            "Los documentos en borrador o en curso de revisión no generan PDF oficial ni metadatos institucionales. Su visualización es exclusivamente HTML."
+          ));
+        }
+
         const targetFileName = `${util.formatoNombreDoc(matchedDoc.nombre)}.pdf`;
         const targetFilePath = `${dirDocumento}${targetFileName}`;
 
@@ -801,6 +810,14 @@ module.exports = app => {
       }
       if (!doc) {
         return res.status(404).send(util.formatearMensaje("ERROR", "Documento no encontrado."));
+      }
+
+      // REGLA INSTITUCIONAL: Solo los documentos APROBADOS o CERRADOS generan PDF oficial.
+      if (doc.estado !== 'APROBADO' && doc.estado !== 'CERRADO') {
+        return res.status(403).send(util.formatearMensaje(
+          "ERROR",
+          "Los documentos en borrador o en curso de revisión no generan PDF oficial ni metadatos institucionales. Su visualización es exclusivamente HTML."
+        ));
       }
 
       // 1. Si tiene archivo_adjunto con base64 Data URL, enviarlo directamente
@@ -945,6 +962,85 @@ module.exports = app => {
 
   app.get('/api/v1/documento/:id/pdf', servirDocumentoPDFPorId);
   app.get('/api/v1/documentos/:id/pdf', servirDocumentoPDFPorId);
+
+  const obtenerPreviewHtml = async (req, res) => {
+    try {
+      const idOrCite = req.params.id || req.params.cite || req.query.cite;
+      let doc = null;
+      if (!isNaN(idOrCite)) {
+        doc = await modelos.documento.findByPk(Number(idOrCite));
+      }
+      if (!doc) {
+        doc = await modelos.documento.findOne({ where: { nombre: idOrCite } });
+      }
+      if (!doc) {
+        const docs = await modelos.documento.findAll({
+          where: { estado: { [Op.ne]: 'ELIMINADO' } }
+        });
+        doc = docs.find(d => 
+          d.nombre === idOrCite || 
+          util.formatoNombreDoc(d.nombre) === idOrCite || 
+          `${util.formatoNombreDoc(d.nombre)}.pdf` === idOrCite
+        );
+      }
+      if (!doc) {
+        return res.status(404).send(util.formatearMensaje("ERROR", "Documento no encontrado para vista previa."));
+      }
+
+      let plantillaJson = [];
+      let plantillaValorJson = {};
+      try {
+        plantillaJson = typeof doc.plantilla === 'string' ? JSON.parse(doc.plantilla) : (doc.plantilla || []);
+      } catch (e) {
+        plantillaJson = [];
+      }
+      try {
+        plantillaValorJson = typeof doc.plantilla_valor === 'string' ? JSON.parse(doc.plantilla_valor) : (doc.plantilla_valor || {});
+      } catch (e) {
+        plantillaValorJson = {};
+      }
+
+      const usuarioPeticion = req.body?.audit_usuario || req.user;
+      const datos = {
+        doc: {
+          id_documento: doc.id_documento,
+          nombre: doc.nombre,
+          plantilla: plantillaJson,
+          estado: doc.estado
+        },
+        form_actual: util.dataToView(plantillaJson, plantillaValorJson),
+        model_actual: plantillaValorJson,
+        audit_usuario: usuarioPeticion,
+        host: dirExternos,
+        grupo: doc.grupo,
+        // Borradores NO tienen código de verificación ni QR institucional
+        codigo: '',
+        pdf_codigo: '',
+        codigoSeguridad: '',
+        es_borrador_html: true
+      };
+
+      if (datos.model_actual && datos.model_actual['cite-0'] && datos.model_actual['cite-0'].fecha) {
+        datos.model_actual['cite-0'].fecha = util.formatearFecha(datos.model_actual['cite-0'].fecha);
+      }
+
+      const resultadoHtml = await util.generarHtml(datos);
+
+      return res.status(200).send(util.formatearMensaje("EXITO", "Vista previa HTML generada exitosamente.", {
+        id_documento: doc.id_documento,
+        nombre: doc.nombre,
+        estado: doc.estado,
+        html: resultadoHtml.html
+      }));
+    } catch (err) {
+      logger.error('Error al generar vista previa HTML:', err);
+      return res.status(500).send(util.formatearMensaje("ERROR", "Error al generar la vista previa HTML."));
+    }
+  };
+
+  app.get('/api/v1/plantillasFormly/documento/:id/preview', obtenerPreviewHtml);
+  app.get('/api/v1/plantillasFormly/documento/:id/vista-previa', obtenerPreviewHtml);
+  app.get('/api/v1/documento/:id/preview', obtenerPreviewHtml);
 
   app.post('/api/v1/plantillasFormly/multiple', (req, res) => {
     console.log('Iniciando la busqueda de documentos multiples', req.body.cite);

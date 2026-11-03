@@ -184,7 +184,7 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
                     <mat-icon>fingerprint</mat-icon>
                     <span>Firmar</span>
                   </button>
-                  <button mat-icon-button (click)="verPdf(d)" matTooltip="Vista previa PDF">
+                  <button mat-icon-button (click)="verPdf(d)" [matTooltip]="(d.estado === 'APROBADO' || d.estado === 'CERRADO') ? 'Ver Documento Oficial (PDF)' : 'Vista Previa HTML'">
                     <mat-icon>visibility</mat-icon>
                   </button>
                   <button mat-icon-button (click)="verHistorial(d)" matTooltip="Trazabilidad y Flujo" class="btn-history-action">
@@ -216,7 +216,7 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
                   <button *ngIf="puedeEditar(d)" mat-icon-button (click)="abrirWorkbench(d)" matTooltip="Editar / Revisar">
                     <mat-icon>edit_note</mat-icon>
                   </button>
-                  <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento">
+                  <button mat-icon-button (click)="verPdf(d)" [matTooltip]="(d.estado === 'APROBADO' || d.estado === 'CERRADO') ? 'Ver Documento Oficial (PDF)' : 'Vista Previa HTML'">
                     <mat-icon>visibility</mat-icon>
                   </button>
                   <button mat-icon-button (click)="verHistorial(d)" matTooltip="Trazabilidad y Flujo" class="btn-history-action">
@@ -333,7 +333,7 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
             <ng-container matColumnDef="acciones">
               <th mat-header-cell *matHeaderCellDef class="text-right">ACCIONES</th>
               <td mat-cell *matCellDef="let d" class="text-right">
-                <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial">
+                <button mat-icon-button (click)="verPdf(d)" [matTooltip]="(d.estado === 'APROBADO' || d.estado === 'CERRADO') ? 'Ver Documento Oficial (PDF)' : 'Vista Previa HTML'">
                   <mat-icon>visibility</mat-icon>
                 </button>
                 <button mat-icon-button (click)="verHistorial(d)" matTooltip="Trazabilidad y Flujo" class="btn-history-action">
@@ -1021,15 +1021,31 @@ export class DocumentosListComponent implements OnInit {
   }
 
   verPdf(doc: Documento): void {
-    if (!doc.nombre) return;
-    this.dialog.open(VisorPdfDialogComponent, {
-      width: '85vw',
-      maxWidth: '1200px',
-      data: {
-        titulo: `${doc.nombre} - ${doc.ref || 'Documento Oficial'}`,
-        docCite: doc.nombre
-      }
-    });
+    if (!doc.nombre && !doc.id_documento) return;
+    const esAprobado = doc.estado === 'APROBADO' || doc.estado === 'CERRADO';
+
+    if (esAprobado) {
+      this.dialog.open(VisorPdfDialogComponent, {
+        width: '85vw',
+        maxWidth: '1200px',
+        data: {
+          titulo: `${doc.nombre} - ${doc.ref || 'Documento Oficial'}`,
+          docCite: doc.nombre,
+          esBorrador: false
+        }
+      });
+    } else {
+      this.dialog.open(VisorPdfDialogComponent, {
+        width: '85vw',
+        maxWidth: '1000px',
+        data: {
+          titulo: `Vista Previa HTML - ${doc.nombre || 'Borrador'}`,
+          idDocumento: doc.id_documento,
+          docCite: doc.nombre,
+          esBorrador: true
+        }
+      });
+    }
   }
 
   verHistorial(doc: any): void {

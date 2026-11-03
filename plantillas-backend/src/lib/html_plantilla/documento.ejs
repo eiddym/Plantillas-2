@@ -470,10 +470,12 @@
                   <div style="display:inline-block;">
                     <span><%= fecha %></span><br>
                     <span><%= cite %></span><br>
-                    <span>Expediente: <%= exp %></span>
-                    <% if(codigoSeguridad !== '') {%>
-                      <br><span>Código de verificación: <%= codigoSeguridad %></span><br>
-                    <%} %>
+                    <% if (typeof es_borrador_html === 'undefined' || !es_borrador_html) { %>
+                      <% if (exp) { %><span>Expediente: <%= exp %></span><br><% } %>
+                      <% if(codigoSeguridad !== '') {%>
+                        <span>Código de verificación: <%= codigoSeguridad %></span><br>
+                      <%} %>
+                    <% } %>
                   </div>
                   <div style="display:inline-block; float:right;">
                     <div style="width:140px;height:150px"></div>
@@ -485,13 +487,17 @@
                 <div id="pageHeader">
                   <div class="cite">
                     <%= cite %>
-                    <div class="expediente">
-                      Expediente : <%= exp %>
-                    </div>
-                    <% if (codigoSeguridad !== '') { %>
-                      <div class="expediente">
-                        Código de verificación : <%= codigoSeguridad %>
-                      </div><br>
+                    <% if (typeof es_borrador_html === 'undefined' || !es_borrador_html) { %>
+                      <% if (exp) { %>
+                        <div class="expediente">
+                          Expediente : <%= exp %>
+                        </div>
+                      <% } %>
+                      <% if (codigoSeguridad !== '') { %>
+                        <div class="expediente">
+                          Código de verificación : <%= codigoSeguridad %>
+                        </div><br>
+                      <% } %>
                     <% } %>
                   </div>
 
@@ -679,7 +685,7 @@ case 'lista': %>
                   <% } if(pItem.templateOptions.show.ref) { %>
                     <tr>
                       <td class="datosGenerales"><%= pItem.templateOptions.labelRef %></td>
-                      <td><%=pDatos[pItem.key].ref%><br /></td>
+                      <td><%= (datosGenerales && datosGenerales.ref) ? datosGenerales.ref : ((pDatos[pItem.key] && pDatos[pItem.key].ref) ? pDatos[pItem.key].ref : '') %><br /></td>
                     </tr>
                   <% } %>
                 </tbody>
