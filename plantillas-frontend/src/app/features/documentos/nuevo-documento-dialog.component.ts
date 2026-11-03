@@ -1,7 +1,7 @@
-import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, Optional, Inject, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -11,6 +11,13 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { PlantillaFormly, PlantillasService } from '../../core/services/plantillas.service';
 import { DocumentosService } from '../../core/services/documentos.service';
 import { AuthService } from '../../core/auth/auth.service';
+
+export interface NuevoDocumentoDialogData {
+  documentoPadreId?: number;
+  citeReferido?: string;
+  tituloDialogo?: string;
+  subtituloDialogo?: string;
+}
 
 @Component({
   selector: 'app-nuevo-documento-dialog',
@@ -32,8 +39,8 @@ import { AuthService } from '../../core/auth/auth.service';
           <mat-icon>post_add</mat-icon>
         </div>
         <div>
-          <h2 mat-dialog-title class="dialog-title">Seleccionar Plantilla Oficial</h2>
-          <p class="dialog-sub">Elija el tipo de documento institucional que desea redactar</p>
+          <h2 mat-dialog-title class="dialog-title">{{ data?.tituloDialogo || 'Seleccionar Plantilla Oficial' }}</h2>
+          <p class="dialog-sub">{{ data?.subtituloDialogo || (data?.citeReferido ? ('Documento en respuesta a: ' + data?.citeReferido) : 'Elija el tipo de documento institucional que desea redactar') }}</p>
         </div>
       </div>
       <button mat-icon-button mat-dialog-close matTooltip="Cerrar" class="close-btn">
@@ -310,6 +317,8 @@ export class NuevoDocumentoDialogComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
   private readonly cdr = inject(ChangeDetectorRef);
 
+  constructor(@Optional() @Inject(MAT_DIALOG_DATA) public data?: NuevoDocumentoDialogData) {}
+
   readonly loading = signal(true);
   readonly creando = signal(false);
   readonly plantillas = signal<PlantillaFormly[]>([]);
@@ -370,7 +379,7 @@ export class NuevoDocumentoDialogComponent implements OnInit {
     const currentUser = this.authService.currentUser();
     const usuarioId = currentUser?.id || 1;
 
-    const payload = {
+    const payload: any = {
       nombre: 'BORRADOR',
       nombre_plantilla: p.nombre,
       abreviacion: p.abreviacion,
@@ -380,6 +389,14 @@ export class NuevoDocumentoDialogComponent implements OnInit {
       fid_plantilla: p.id_plantilla_formly,
       _usuario_creacion: usuarioId
     };
+
+    if (this.data?.documentoPadreId) {
+      payload.documento_padre = this.data.documentoPadreId;
+    }
+    if (this.data?.citeReferido) {
+      payload.cites_referidos = [this.data.citeReferido];
+      payload.referencia = `En atención a ${this.data.citeReferido}`;
+    }
 
     this.documentosService.crearDocumento(payload).subscribe({
       next: (res) => {

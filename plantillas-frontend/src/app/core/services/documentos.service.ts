@@ -95,6 +95,10 @@ export class DocumentosService {
     return this.http.put<ApiResponse<any>>(`${this.baseUrl}/documento/${id}/rechazar`, payload);
   }
 
+  recibirDocumento(id: number): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.baseUrl}/documento/${id}/recibir`, {});
+  }
+
   obtenerVistaPreviaHtml(idOrCite: number | string): Observable<ApiResponse<{ html: string; nombre: string; estado?: string; tipoHoja?: string }>> {
     return this.http.get<ApiResponse<{ html: string; nombre: string; estado?: string; tipoHoja?: string }>>(`${this.baseUrl}/documento/${encodeURIComponent(idOrCite)}/preview`);
   }

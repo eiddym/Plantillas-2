@@ -17,6 +17,7 @@ import { FormlyFieldConfig, FormlyModule } from '@ngx-formly/core';
 import { Documento, DocumentosService } from '../../core/services/documentos.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component';
+import { NuevoDocumentoDialogComponent } from './nuevo-documento-dialog.component';
 import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
 
 @Component({
@@ -149,46 +150,109 @@ import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
 
           <!-- Acciones de Destinatario / Jefatura (Cuando el documento fue ENVIADO o DERIVADO al usuario actual) -->
           <ng-container *ngIf="esDestinatarioActual()">
-            <button
-              *ngIf="doc()?.estado === 'ENVIADO'"
-              type="button"
-              mat-stroked-button
-              color="warn"
-              class="action-btn-delete"
-              (click)="observarDocumento()"
-              [disabled]="guardando() || !doc()"
-              matTooltip="Observar y devolver el documento al remitente para corrección"
-            >
-              <mat-icon>feedback</mat-icon>
-              <span>Observar</span>
-            </button>
+            <!-- CASO 1: Acciones exclusivas de JEFATURA / MAE -->
+            <ng-container *ngIf="esJefeOMae()">
+              <!-- 4. Observar -->
+              <button
+                type="button"
+                mat-stroked-button
+                color="warn"
+                class="action-btn-delete"
+                (click)="observarDocumento()"
+                [disabled]="guardando() || !doc()"
+                matTooltip="Observar y devolver el documento al remitente para corrección con proveído"
+              >
+                <mat-icon>feedback</mat-icon>
+                <span>Observar</span>
+              </button>
 
-            <button
-              type="button"
-              mat-stroked-button
-              color="primary"
-              class="action-btn-save"
-              (click)="togglePanelDerivar()"
-              [disabled]="guardando() || !doc()"
-              matTooltip="Derivar documento a un usuario o unidad dependiente"
-            >
-              <mat-icon>alt_route</mat-icon>
-              <span>Derivar</span>
-            </button>
+              <!-- 2. Aprobar y Derivar -->
+              <button
+                type="button"
+                mat-stroked-button
+                color="primary"
+                class="action-btn-save"
+                (click)="togglePanelDerivar()"
+                [disabled]="guardando() || !doc()"
+                matTooltip="Aprobar el documento y derivarlo a un operador o unidad con proveído"
+              >
+                <mat-icon>alt_route</mat-icon>
+                <span>Aprobar y Derivar</span>
+              </button>
 
-            <button
-              *ngIf="doc()?.estado === 'ENVIADO'"
-              type="button"
-              mat-flat-button
-              color="primary"
-              class="action-btn-enviar"
-              (click)="aprobarDocumento()"
-              [disabled]="guardando() || !doc()"
-              matTooltip="Aprobar oficialmente el documento y generar CITE"
-            >
-              <mat-icon>verified</mat-icon>
-              <span>Aprobar</span>
-            </button>
+              <!-- 3. Aprobar y Crear -->
+              <button
+                type="button"
+                mat-stroked-button
+                class="action-btn-save"
+                style="color: #0d5c63; border-color: #0d5c63;"
+                (click)="aprobarYCrearRespuesta()"
+                [disabled]="guardando() || !doc()"
+                matTooltip="Aprobar documento con CITE oficial y abrir selector de plantillas para redactar respuesta vinculada"
+              >
+                <mat-icon>post_add</mat-icon>
+                <span>Aprobar y Crear</span>
+              </button>
+
+              <!-- 1. Aprobar y Cerrar -->
+              <button
+                type="button"
+                mat-flat-button
+                color="primary"
+                class="action-btn-enviar"
+                (click)="aprobarYCerrar()"
+                [disabled]="guardando() || !doc()"
+                matTooltip="Aprobar oficialmente el documento, generar CITE institucional y cerrar el flujo"
+              >
+                <mat-icon>check_circle</mat-icon>
+                <span>Aprobar y Cerrar</span>
+              </button>
+            </ng-container>
+
+            <!-- CASO 2: Acciones exclusivas de OPERADOR -->
+            <ng-container *ngIf="!esJefeOMae()">
+              <!-- Observar / Devolver por Incompetencia -->
+              <button
+                type="button"
+                mat-stroked-button
+                color="warn"
+                class="action-btn-delete"
+                (click)="observarOperador()"
+                [disabled]="guardando() || !doc()"
+                matTooltip="Devolver el documento indicando que no corresponde a sus funciones"
+              >
+                <mat-icon>undo</mat-icon>
+                <span>Observar (No Corresponde)</span>
+              </button>
+
+              <!-- Check de Recibido (para Circulares / Convocatorias masivas) -->
+              <button
+                *ngIf="esDocumentoMasivo()"
+                type="button"
+                mat-stroked-button
+                style="color: #059669; border-color: #059669;"
+                (click)="marcarRecibido()"
+                [disabled]="guardando() || !doc()"
+                matTooltip="Dar por recibido y archivar en Mis Documentos"
+              >
+                <mat-icon>task_alt</mat-icon>
+                <span>Marcar Recibido</span>
+              </button>
+
+              <!-- Responder con Nuevo Documento -->
+              <button
+                type="button"
+                mat-flat-button
+                color="primary"
+                class="action-btn-enviar"
+                (click)="responderConNuevoDocumento()"
+                [disabled]="guardando() || !doc()"
+                matTooltip="Aceptar la atención de este documento y redactar un nuevo documento en respuesta"
+              >
+                <mat-icon>reply</mat-icon>
+                <span>Responder con Nuevo</span>
+              </button>
+            </ng-container>
           </ng-container>
         </div>
       </header>
@@ -1309,6 +1373,28 @@ export class DocumentWorkbenchComponent implements OnInit {
     return Number(d.via_actual) === Number(u.id);
   });
 
+  readonly esJefeOMae = computed(() => {
+    const u: any = this.currentUser();
+    if (!u) return false;
+    if (u.es_mae) return true;
+    return this.authService.hasRole('JEFE') || 
+           this.authService.hasRole('MAE') || 
+           this.authService.hasRole('ADMIN') ||
+           (u.cargo || '').toUpperCase().includes('JEFE') ||
+           (u.cargo || '').toUpperCase().includes('DIRECTOR') ||
+           (u.cargo || '').toUpperCase().includes('RESPONSABLE') ||
+           (u.cargo || '').toUpperCase().includes('GERENTE');
+  });
+
+  readonly esDocumentoMasivo = computed(() => {
+    const d = this.doc() as any;
+    if (!d) return false;
+    if (d.multiple) return true;
+    const abrev = (d.abreviacion || '').toUpperCase();
+    const nombre = (d.nombre_plantilla || d.nombre || '').toUpperCase();
+    return abrev === 'CIR' || abrev === 'CONV' || nombre.includes('CIRCULAR') || nombre.includes('CONVOCATORIA');
+  });
+
   readonly form = new FormGroup({});
   model: Record<string, any> = {};
   formlyFields: FormlyFieldConfig[] = [];
@@ -1864,7 +1950,7 @@ export class DocumentWorkbenchComponent implements OnInit {
     });
   }
 
-  aprobarDocumento(): void {
+  aprobarDocumento(derivar = false): void {
     const d = this.doc();
     if (!d || !d.id_documento) return;
 
@@ -1873,7 +1959,7 @@ export class DocumentWorkbenchComponent implements OnInit {
     }
 
     this.guardando.set(true);
-    this.documentosService.aprobarDocumento(d.id_documento, { derivar: false }).subscribe({
+    this.documentosService.aprobarDocumento(d.id_documento, { derivar }).subscribe({
       next: () => {
         this.guardando.set(false);
         this.snackBar.open('Documento aprobado exitosamente', 'Aceptar', { duration: 4000 });
@@ -1882,6 +1968,120 @@ export class DocumentWorkbenchComponent implements OnInit {
       error: (err) => {
         this.guardando.set(false);
         this.snackBar.open(err.error?.mensaje || 'Error al aprobar el documento', 'Cerrar', { duration: 4000 });
+      }
+    });
+  }
+
+  aprobarYCerrar(): void {
+    const d = this.doc();
+    if (!d || !d.id_documento) return;
+
+    if (!confirm('¿Desea aprobar oficialmente este documento y generar su CITE institucional cerrando el flujo?')) {
+      return;
+    }
+
+    this.guardando.set(true);
+    this.documentosService.aprobarDocumento(d.id_documento, { derivar: false }).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.snackBar.open('Documento aprobado y cerrado exitosamente con CITE oficial', 'Aceptar', { duration: 4000 });
+        this.router.navigate(['/aprobacion']);
+      },
+      error: (err) => {
+        this.guardando.set(false);
+        this.snackBar.open(err.error?.mensaje || 'Error al aprobar y cerrar el documento', 'Cerrar', { duration: 4000 });
+      }
+    });
+  }
+
+  aprobarYCrearRespuesta(): void {
+    const d = this.doc();
+    if (!d || !d.id_documento) return;
+
+    if (!confirm('¿Desea aprobar este documento con CITE oficial y proceder a redactar la respuesta vinculada?')) {
+      return;
+    }
+
+    this.guardando.set(true);
+    this.documentosService.aprobarDocumento(d.id_documento, { derivar: false }).subscribe({
+      next: (res) => {
+        this.guardando.set(false);
+        this.snackBar.open('Documento base aprobado con CITE oficial', 'Aceptar', { duration: 3000 });
+        this.dialog.open(NuevoDocumentoDialogComponent, {
+          width: '760px',
+          maxWidth: '96vw',
+          data: {
+            documentoPadreId: d.id_documento,
+            citeReferido: res.datos?.nombre || d.nombre,
+            tituloDialogo: 'Seleccionar Plantilla para Documento de Respuesta',
+            subtituloDialogo: `Redactando respuesta vinculada a: ${res.datos?.nombre || d.nombre}`
+          }
+        });
+      },
+      error: (err) => {
+        this.guardando.set(false);
+        this.snackBar.open(err.error?.mensaje || 'Error al aprobar el documento base', 'Cerrar', { duration: 4000 });
+      }
+    });
+  }
+
+  responderConNuevoDocumento(): void {
+    const d = this.doc();
+    if (!d || !d.id_documento) return;
+
+    this.dialog.open(NuevoDocumentoDialogComponent, {
+      width: '760px',
+      maxWidth: '96vw',
+      data: {
+        documentoPadreId: d.id_documento,
+        citeReferido: d.nombre,
+        tituloDialogo: 'Seleccionar Plantilla de Respuesta / Informe de Atención',
+        subtituloDialogo: `Atendiendo instrucción de: ${d.nombre}`
+      }
+    });
+  }
+
+  observarOperador(): void {
+    const d = this.doc();
+    if (!d || !d.id_documento) return;
+
+    const motivo = prompt('Indique el motivo o justificación por el cual no corresponde atender este documento:');
+    if (!motivo || !motivo.trim()) return;
+
+    const u = this.currentUser() as any;
+    const observadoPor = u ? `${u.nombres || u.first_name || ''} ${u.apellidos || u.last_name || ''}`.trim() || u.username : 'Operador';
+
+    this.guardando.set(true);
+    this.documentosService.rechazarDocumento(d.id_documento, {
+      observaciones: `Devuelto por operador (No Corresponde): ${motivo.trim()}`,
+      observado_por: observadoPor
+    }).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.snackBar.open('Documento devuelto a jefatura para su reasignación', 'Aceptar', { duration: 4000 });
+        this.router.navigate(['/documentos']);
+      },
+      error: (err) => {
+        this.guardando.set(false);
+        this.snackBar.open(err.error?.mensaje || 'Error al devolver el documento', 'Cerrar', { duration: 4000 });
+      }
+    });
+  }
+
+  marcarRecibido(): void {
+    const d = this.doc();
+    if (!d || !d.id_documento) return;
+
+    this.guardando.set(true);
+    this.documentosService.recibirDocumento(d.id_documento).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.snackBar.open('Acuse de recibo confirmado. Documento archivado en Mis Documentos.', 'Aceptar', { duration: 4000 });
+        this.router.navigate(['/documentos']);
+      },
+      error: (err) => {
+        this.guardando.set(false);
+        this.snackBar.open(err.error?.mensaje || 'Error al registrar acuse de recibo', 'Cerrar', { duration: 4000 });
       }
     });
   }

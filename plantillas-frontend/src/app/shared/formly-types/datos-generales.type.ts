@@ -787,7 +787,14 @@ export class FormlyFieldDatosGeneralesComponent extends FieldType<FieldTypeConfi
 
   private isUserJefe(u: any): boolean {
     if (!u) return false;
-    const roles = u.usuario_rol || [];
-    return roles.some((r: any) => (r.rol?.nombre || '').toUpperCase() === 'JEFE');
+    if (u.es_mae) return true;
+    const roles: any[] = u.usuario_rol || u.roles || [];
+    const tieneRolJefe = roles.some((r: any) => {
+      const nom = (r.rol?.nombre || r.nombre || '').toUpperCase();
+      return nom === 'JEFE' || nom === 'ADMIN';
+    });
+    if (tieneRolJefe) return true;
+    const cargo = (u.cargo || '').toUpperCase();
+    return cargo.includes('JEFE') || cargo.includes('DIRECTOR') || cargo.includes('RESPONSABLE') || cargo.includes('GERENTE');
   }
 }

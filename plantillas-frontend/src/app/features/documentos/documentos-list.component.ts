@@ -223,6 +223,15 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
                     <mat-icon>history</mat-icon>
                   </button>
                   <button 
+                    *ngIf="puedeMarcarRecibido(d)" 
+                    mat-icon-button 
+                    (click)="marcarRecibido(d)" 
+                    matTooltip="Confirmar acuse de recibo y archivar"
+                    style="color: #059669;"
+                  >
+                    <mat-icon>task_alt</mat-icon>
+                  </button>
+                  <button 
                     *ngIf="puedePromover() && d.estado === 'CERRADO'" 
                     mat-icon-button 
                     (click)="promoverAInstitucional(d)" 
@@ -751,6 +760,29 @@ export class DocumentosListComponent implements OnInit {
            this.authService.hasRole('MAE') || 
            this.authService.hasRole('ADMIN') || 
            this.authService.isMae();
+  }
+
+  puedeMarcarRecibido(d: Documento): boolean {
+    if (!d || !d.id_documento) return false;
+    const u: any = this.authService.currentUser();
+    if (!u) return false;
+    const dAny = d as any;
+    const esPendienteActual = Number(dAny.via_actual) === Number(u.id);
+    const esMasivo = !!(dAny.multiple || (dAny.abreviacion || '').toUpperCase() === 'CIR' || (dAny.nombre_plantilla || '').toUpperCase().includes('CIRCULAR'));
+    return esPendienteActual && esMasivo;
+  }
+
+  marcarRecibido(d: Documento): void {
+    if (!d || !d.id_documento) return;
+    this.documentosService.recibirDocumento(d.id_documento).subscribe({
+      next: () => {
+        this.snackBar.open('Acuse de recibo confirmado. Documento archivado en Mis Documentos.', 'Aceptar', { duration: 3500 });
+        this.cargarDocumentos();
+      },
+      error: (err) => {
+        this.snackBar.open(err.error?.mensaje || 'Error al confirmar acuse de recibo', 'Cerrar', { duration: 4000 });
+      }
+    });
   }
 
   promoverAInstitucional(d: Documento): void {

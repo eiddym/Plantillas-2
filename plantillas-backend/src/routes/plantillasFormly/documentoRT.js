@@ -2201,52 +2201,92 @@ module.exports = app => {
   app.put('/api/v1/plantillasFormly/documento/:id/rechazar',  (req, res) => {
     const idDocumento = req.params.id;
     const usuarioModificacion = req.body.audit_usuario.id_usuario;
-    // const usuarioModificacion = req.body.usuario;
     const observaciones = req.body.observaciones;
     const observadoPor = req.body.observado_por;
     let usuarioNotificar = null;
-    let doc=null;
+    let doc = null;
     sequelize.transaction().then(t => {
       const tr = { transaction: t };
-      documento.findByPk(idDocumento).then(doc => {
+      documento.findByPk(idDocumento).then(docResp => {
+        if (!docResp) throw new Error("Documento no encontrado");
+        if (Number(usuarioModificacion) !== Number(docResp.via_actual)) {
+          throw new Error("Usted no cuenta con la autorizacion para observar este documento");
+        }
+        if (docResp.estado !== 'ENVIADO' && docResp.estado !== 'DERIVADO') {
+          throw new Error("El documento no puede ser modificado en su estado actual");
+        }
 
-        if(usuarioModificacion !== doc.via_actual) throw new Error("Usted no cuenta con la autorizacion");
-        if(doc.estado!=='ENVIADO') throw new Error("El documento no puede ser modificado");
+        const nuevoDestino = (docResp.estado === 'DERIVADO') ? docResp._usuario_creacion : null;
 
-          return doc.update({
-          estado : 'RECHAZADO',
-          observaciones : `Observado por: ${observadoPor} - Observaciones: ${observaciones}`,
-          aprobaron_de : [],
+        return docResp.update({
+          estado: 'RECHAZADO',
+          observaciones: `Observado por: ${observadoPor} - Observaciones: ${observaciones}`,
+          via_actual: nuevoDestino,
+          aprobaron_de: [],
           _usuario_modificacion: usuarioModificacion,
-        },
-        {where: {id_documento: idDocumento}, transaction: t})
+        }, { where: { id_documento: idDocumento }, transaction: t });
       })
       .then(docum => {
-        doc=docum.dataValues;
-        usuarioNotificar=docum.dataValues._usuario_creacion;
+        doc = docum.dataValues;
+        usuarioNotificar = docum.dataValues._usuario_creacion;
         return historial_flujo.create({
-            id_documento:docum.id_documento,
-            accion: 'RECHAZADO',
-            observacion: docum.observaciones,
-            estado: 'ACTIVO',
-            _usuario_creacion: usuarioModificacion,
-        },tr)
+          id_documento: docum.id_documento,
+          accion: 'RECHAZADO',
+          observacion: docum.observaciones,
+          estado: 'ACTIVO',
+          _usuario_creacion: usuarioModificacion,
+        }, tr);
       })
       .then(() =>
-        notificar.enviar(modelos, doc,'observado',{})
-        .then(pRespuesta => {
-          console.log("Notificacion enviada");
-          return
-        })
+        notificar.enviar(modelos, doc, 'observado', {})
+        .catch(pError => console.log("[NOTIF OBS]", pError))
       )
       .then(() => t.commit())
       .then(() =>
         res.send(util.formatearMensaje("EXITO", "El documento fue observado correctamente"))) 
       .catch(error => {
-        t.rollback();
-        res.status(412).send(util.formatearMensaje("ERROR", error));
+        t.rollback().catch(() => {});
+        res.status(412).send(util.formatearMensaje("ERROR", error.message || error));
       });
     });
+  });
+
+  app.put('/api/v1/plantillasFormly/documento/:id/recibir', async (req, res) => {
+    try {
+      const idDocumento = req.params.id;
+      const auditUser = req.body.audit_usuario || req.user || {};
+      const idUs = Number(auditUser.id_usuario || auditUser.id || 0);
+      if (!idUs) {
+        return res.status(401).send(util.formatearMensaje("ERROR", "Usuario no autenticado"));
+      }
+
+      const doc = await documento.findByPk(idDocumento);
+      if (!doc) {
+        return res.status(404).send(util.formatearMensaje("ERROR", "Documento no encontrado"));
+      }
+
+      const nombrePersona = `${auditUser.nombres || ''} ${auditUser.apellidos || ''}`.trim() || auditUser.usuario || `Usuario ${idUs}`;
+      
+      await historial_flujo.create({
+        id_documento: idDocumento,
+        accion: 'APROBADO',
+        observacion: `Acuse de recibo confirmado por: ${nombrePersona}`,
+        estado: 'ACTIVO',
+        _usuario_creacion: idUs,
+      });
+
+      if (Number(doc.via_actual) === idUs) {
+        await doc.update({
+          via_actual: null,
+          _usuario_modificacion: idUs
+        });
+      }
+
+      return res.status(200).send(util.formatearMensaje("EXITO", "Acuse de recibo confirmado correctamente"));
+    } catch (err) {
+      logger.error('Error al confirmar recepción de documento:', err);
+      return res.status(500).send(util.formatearMensaje("ERROR", err.message || err));
+    }
   });
 
 /**

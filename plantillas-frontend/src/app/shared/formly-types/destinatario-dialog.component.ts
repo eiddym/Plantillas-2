@@ -40,10 +40,10 @@ export interface DestinatarioDialogData {
           </h2>
           <p class="header-subtitle">
             <span *ngIf="data.mode === 'PARA' && isCurrentUserJefeOrMae()">
-              <strong>Regla Jerárquica:</strong> Listando exclusivamente autoridades pares (Jefes/MAE) y jefes de unidades dependientes.
+              <strong>Regla Jerárquica:</strong> Listando exclusivamente autoridades pares (Jefes/MAE) y dependientes de su unidad.
             </span>
             <span *ngIf="data.mode === 'PARA' && !isCurrentUserJefeOrMae()">
-              <strong>Conducto Regular:</strong> Seleccione la autoridad de destino. El sistema asignará el VÍA institucional de forma automática.
+              <strong>Conducto Regular:</strong> Solo puede enviar a su Jefe Inmediato o a Jefes de otras unidades (con VÍA obligatorio hacia arriba).
             </span>
             <span *ngIf="data.mode === 'CO_REMITENTE'">
               <strong>Firma Conjunta:</strong> Listando compañeros de su misma unidad ({{ getUnidadNombre(data.currentUser?.fid_unidad) }}) y de igual rango.
@@ -116,7 +116,7 @@ export interface DestinatarioDialogData {
             </div>
           } @else {
             <div class="user-card-list">
-              @if (data.mode === 'PARA') {
+              @if (data.mode === 'PARA' && isCurrentUserJefeOrMae()) {
                 <div class="user-card card-broadcast" (click)="seleccionarTodos()">
                   <div class="avatar-circle avatar-broadcast">
                     <mat-icon>campaign</mat-icon>
@@ -431,12 +431,23 @@ export class DestinatarioDialogComponent implements OnInit {
   }
 
   esJefe(u: any): boolean {
-    const roles = u.usuario_rol || [];
-    return roles.some((r: any) => (r.rol?.nombre || '').toUpperCase() === 'JEFE');
+    if (!u) return false;
+    if (u.es_mae) return true;
+    const roles: any[] = u.usuario_rol || u.roles || [];
+    const tieneRolJefe = roles.some((r: any) => {
+      const nom = (r.rol?.nombre || r.nombre || '').toUpperCase();
+      return nom === 'JEFE' || nom === 'ADMIN';
+    });
+    if (tieneRolJefe) return true;
+    const cargo = (u.cargo || '').toUpperCase();
+    return cargo.includes('JEFE') || cargo.includes('DIRECTOR') || cargo.includes('RESPONSABLE') || cargo.includes('GERENTE');
   }
 
   esMae(u: any): boolean {
-    return (u.cargo || '').toUpperCase().includes('MAE') || (u.cargo || '').toUpperCase().includes('DIRECTORA GENERAL');
+    if (!u) return false;
+    if (u.es_mae) return true;
+    const cargo = (u.cargo || '').toUpperCase();
+    return cargo.includes('MAE') || cargo.includes('DIRECTOR GENERAL') || cargo.includes('DIRECTORA GENERAL') || cargo.includes('PRESIDENTE');
   }
 
   getRolPrincipal(u: any): string {
