@@ -821,6 +821,9 @@ export class DashboardComponent implements OnInit {
   readonly totalRoles = signal<number>(7);
   readonly totalMenus = signal<number>(21);
   readonly totalUnidades = signal<number>(1);
+  readonly totalArchivoGeneral = signal<number>(0);
+  readonly totalArchivoUnidad = signal<number>(0);
+  readonly totalArchivoInstitucional = signal<number>(0);
 
   readonly saludo = computed(() => {
     const hora = new Date().getHours();
@@ -863,10 +866,10 @@ export class DashboardComponent implements OnInit {
     'ventanilla/externa': { icon: 'cloud_download', color: 'blue', desc: 'Radicación de correspondencia externa', countSignal: () => 0 },
     'ventanilla/interna': { icon: 'edit_document', color: 'indigo', desc: 'Ventanilla de correspondencia interna', countSignal: () => 0 },
     'ventanilla-unica': { icon: 'inbox', color: 'blue', desc: 'Radicación de correspondencia externa', countSignal: () => 0 },
-    'archivo': { icon: 'inventory_2', color: 'orange', desc: 'Archivo digital emitido', countSignal: () => 0 },
-    'archivo/general': { icon: 'public', color: 'teal', desc: 'Fondo normativo y resoluciones', countSignal: () => 0 },
-    'archivo/unidad': { icon: 'domain', color: 'blue', desc: 'Fondo documental de la unidad', countSignal: () => 0 },
-    'archivo/institucional': { icon: 'manage_search', color: 'orange', desc: 'Buscador maestro de expedientes', countSignal: () => 0 }
+    'archivo': { icon: 'inventory_2', color: 'orange', desc: 'Archivo digital emitido', countSignal: () => this.totalArchivoInstitucional() + this.totalArchivoGeneral() + this.totalArchivoUnidad() },
+    'archivo/general': { icon: 'public', color: 'teal', desc: 'Fondo normativo y resoluciones', countSignal: () => this.totalArchivoGeneral() },
+    'archivo/unidad': { icon: 'domain', color: 'blue', desc: 'Fondo documental de la unidad', countSignal: () => this.totalArchivoUnidad() },
+    'archivo/institucional': { icon: 'manage_search', color: 'orange', desc: 'Buscador maestro de expedientes', countSignal: () => this.totalArchivoInstitucional() }
   };
 
   // Cápsula activa seleccionada (por defecto 'DOCUMENTOS' como en el modelo)
@@ -1030,6 +1033,33 @@ export class DashboardComponent implements OnInit {
         if (res.datos && res.datos.total !== undefined) {
           this.totalUnidades.set(res.datos.total);
         }
+      },
+      error: () => {}
+    });
+
+    // 6. Cargar contadores de archivo (Institucional, General, Unidad)
+    this.http.get<any>('/api/v1/archivo/institucional').subscribe({
+      next: (res) => {
+        const total = res.datos?.total !== undefined ? res.datos.total : (res.datos?.resultado?.length || 0);
+        this.totalArchivoInstitucional.set(total);
+      },
+      error: () => {}
+    });
+
+    this.http.get<any>('/api/v1/archivo/general').subscribe({
+      next: (res) => {
+        const total = res.datos?.total_documentos !== undefined ? res.datos.total_documentos : (res.datos?.documentos?.length || 0);
+        this.totalArchivoGeneral.set(total);
+      },
+      error: () => {}
+    });
+
+    const user = this.authService.currentUser() as any;
+    const unidadId = user?.fid_unidad || 1;
+    this.http.get<any>(`/api/v1/archivo/unidad/${unidadId}`).subscribe({
+      next: (res) => {
+        const total = res.datos?.total_documentos !== undefined ? res.datos.total_documentos : (res.datos?.documentos_propios?.length || 0);
+        this.totalArchivoUnidad.set(total);
       },
       error: () => {}
     });

@@ -651,20 +651,25 @@ export interface VisorPdfData {
 
     @media (max-width: 650px) {
       .visor-dialog-container {
-        width: 96vw !important;
-        max-width: 96vw !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
 
         .dialog-header {
-          padding: 8px 12px;
-          .dialog-title { font-size: 0.9rem; }
-          .title-group { max-width: 180px; }
-          .header-tools-row { gap: 4px; padding: 2px 4px; }
-          .format-pill-btn { padding: 3px 6px; font-size: 0.7rem; }
+          padding: 8px 10px;
+          flex-wrap: wrap;
+          .dialog-title { font-size: 0.85rem; }
+          .title-group { max-width: 160px; }
+          .header-tools-row { gap: 2px; padding: 2px 4px; }
+          .format-pill-btn { padding: 2px 6px; font-size: 0.65rem; }
           .zoom-pill-group .zoom-btn { padding: 2px 4px; }
+          .btn-dl-header { height: 28px; padding: 0 8px; font-size: 0.7rem; }
         }
 
         .sheet-viewport {
-          padding: 8px !important;
+          padding: 6px !important;
         }
       }
     }

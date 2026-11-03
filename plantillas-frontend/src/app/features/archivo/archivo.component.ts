@@ -150,12 +150,11 @@ export interface UnidadArchivo {
         </button>
       </nav>
 
-      <!-- Layout Split Screen: Visor a la Izquierda, Catálogo a la Derecha -->
-      <div class="archivo-split-layout">
-        <!-- MITAD IZQUIERDA: VISOR EMBEBIDO -->
-        <aside class="visor-embebido-panel" [class.tiene-doc]="docSeleccionado() !== null">
-          <div class="visor-card">
-            @if (docSeleccionado()) {
+      <!-- Layout: Catálogo Adaptativo y Visor Dinámico -->
+      <div class="archivo-split-layout" [class.con-visor]="docSeleccionado() !== null">
+        @if (docSeleccionado()) {
+          <aside class="visor-embebido-panel">
+            <div class="visor-card">
               <div class="visor-header">
                 <div class="visor-doc-info">
                   <span class="visor-badge-cite">{{ docSeleccionado()?.nombre }}</span>
@@ -196,21 +195,9 @@ export interface UnidadArchivo {
                   <iframe [src]="urlPdfSegura()" class="pdf-local-iframe" title="Visor Documental Embebido"></iframe>
                 }
               </div>
-            } @else {
-              <div class="visor-empty-state">
-                <div class="empty-icon-circle">
-                  <mat-icon>picture_as_pdf</mat-icon>
-                </div>
-                <h3 class="empty-title">Visor Documental Embebido</h3>
-                <p class="empty-text">Haga clic en el icono PDF o en cualquier fila del listado para previsualizar el documento de inmediato sin abandonar el sistema.</p>
-                <div class="empty-hint-pill">
-                  <mat-icon>touch_app</mat-icon>
-                  <span>Seleccione un documento del catálogo</span>
-                </div>
-              </div>
-            }
-          </div>
-        </aside>
+            </div>
+          </aside>
+        }
 
         <!-- MITAD DERECHA: CATÁLOGO Y FILTROS -->
         <main class="catalogo-panel">
@@ -267,78 +254,80 @@ export interface UnidadArchivo {
                 <p>No se encontraron documentos cerrados para este criterio.</p>
               </div>
             } @else {
-              <table mat-table [dataSource]="docsGeneralesFiltrados()" class="archivo-table">
-                <!-- CITE -->
-                <ng-container matColumnDef="cite">
-                  <th mat-header-cell *matHeaderCellDef>CITE Oficial</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span class="cite-text">{{ d.nombre }}</span>
-                  </td>
-                </ng-container>
+              <div class="table-responsive">
+                <table mat-table [dataSource]="docsGeneralesFiltrados()" class="archivo-table">
+                  <!-- CITE -->
+                  <ng-container matColumnDef="cite">
+                    <th mat-header-cell *matHeaderCellDef>CITE Oficial</th>
+                    <td mat-cell *matCellDef="let d">
+                      <span class="cite-text">{{ d.nombre }}</span>
+                    </td>
+                  </ng-container>
 
-                <!-- Tipo Dinámico -->
-                <ng-container matColumnDef="tipo">
-                  <th mat-header-cell *matHeaderCellDef>Tipo</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span class="tipo-tag">{{ d.nombre_plantilla || 'Documento Oficial' }}</span>
-                  </td>
-                </ng-container>
+                  <!-- Tipo Dinámico -->
+                  <ng-container matColumnDef="tipo">
+                    <th mat-header-cell *matHeaderCellDef>Tipo</th>
+                    <td mat-cell *matCellDef="let d">
+                      <span class="tipo-tag">{{ d.nombre_plantilla || 'Documento Oficial' }}</span>
+                    </td>
+                  </ng-container>
 
-                <!-- Asunto -->
-                <ng-container matColumnDef="ref">
-                  <th mat-header-cell *matHeaderCellDef>Referencia / Asunto</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span class="ref-text" [matTooltip]="obtenerReferencia(d)">{{ obtenerReferencia(d) }}</span>
-                  </td>
-                </ng-container>
+                  <!-- Asunto -->
+                  <ng-container matColumnDef="ref">
+                    <th mat-header-cell *matHeaderCellDef>Referencia / Asunto</th>
+                    <td mat-cell *matCellDef="let d">
+                      <span class="ref-text" [matTooltip]="obtenerReferencia(d)">{{ obtenerReferencia(d) }}</span>
+                    </td>
+                  </ng-container>
 
-                <!-- Unidad Emisora -->
-                <ng-container matColumnDef="unidad">
-                  <th mat-header-cell *matHeaderCellDef>Unidad Emisora</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span class="unit-tag">{{ d.usuario_creacion?.unidad?.nombre || 'Unidad Central' }}</span>
-                  </td>
-                </ng-container>
+                  <!-- Unidad Emisora -->
+                  <ng-container matColumnDef="unidad">
+                    <th mat-header-cell *matHeaderCellDef>Unidad Emisora</th>
+                    <td mat-cell *matCellDef="let d">
+                      <span class="unit-tag">{{ d.usuario_creacion?.unidad?.nombre || 'Unidad Central' }}</span>
+                    </td>
+                  </ng-container>
 
-                <!-- Fecha -->
-                <ng-container matColumnDef="fecha">
-                  <th mat-header-cell *matHeaderCellDef>Fecha</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span class="date-text">{{ formatearFecha(d._fecha_creacion || d.fecha) }}</span>
-                  </td>
-                </ng-container>
+                  <!-- Fecha -->
+                  <ng-container matColumnDef="fecha">
+                    <th mat-header-cell *matHeaderCellDef>Fecha</th>
+                    <td mat-cell *matCellDef="let d">
+                      <span class="date-text">{{ formatearFecha(d._fecha_creacion || d.fecha) }}</span>
+                    </td>
+                  </ng-container>
 
-                <!-- Acciones -->
-                <ng-container matColumnDef="acciones">
-                  <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                  <td mat-cell *matCellDef="let d">
-                    <div class="action-btn-row">
-                      <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF) en Pantalla" class="btn-action pdf">
-                        <mat-icon>picture_as_pdf</mat-icon>
-                      </button>
-                      <button mat-icon-button (click)="verDetalle(d)" matTooltip="Ver Trazabilidad y Versiones" class="btn-action">
-                        <mat-icon>history</mat-icon>
-                      </button>
-                      <button mat-icon-button (click)="descargarArchivoFisico(d)" matTooltip="Descargar Copia Digital (PDF)" class="btn-action">
-                        <mat-icon>download</mat-icon>
-                      </button>
-                      @if (puedePromover() && !d.es_institucional) {
-                        <button 
-                          mat-icon-button 
-                          (click)="promoverAInstitucional(d)" 
-                          matTooltip="Promover a Archivo Institucional"
-                          class="btn-action promote"
-                        >
-                          <mat-icon>verified</mat-icon>
+                  <!-- Acciones -->
+                  <ng-container matColumnDef="acciones">
+                    <th mat-header-cell *matHeaderCellDef>Acciones</th>
+                    <td mat-cell *matCellDef="let d">
+                      <div class="action-btn-row">
+                        <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF) en Pantalla" class="btn-action pdf">
+                          <mat-icon>picture_as_pdf</mat-icon>
                         </button>
-                      }
-                    </div>
-                  </td>
-                </ng-container>
+                        <button mat-icon-button (click)="verDetalle(d)" matTooltip="Ver Trazabilidad y Versiones" class="btn-action">
+                          <mat-icon>history</mat-icon>
+                        </button>
+                        <button mat-icon-button (click)="descargarArchivoFisico(d)" matTooltip="Descargar Copia Digital (PDF)" class="btn-action">
+                          <mat-icon>download</mat-icon>
+                        </button>
+                        @if (puedePromover() && !d.es_institucional) {
+                          <button 
+                            mat-icon-button 
+                            (click)="promoverAInstitucional(d)" 
+                            matTooltip="Promover a Archivo Institucional"
+                            class="btn-action promote"
+                          >
+                            <mat-icon>verified</mat-icon>
+                          </button>
+                        }
+                      </div>
+                    </td>
+                  </ng-container>
 
-                <tr mat-header-row *matHeaderRowDef="columnasGenerales"></tr>
-                <tr mat-row *matRowDef="let row; columns: columnasGenerales;" class="data-row clickable-row" [class.selected-row]="docSeleccionado()?.id_documento === row.id_documento" (click)="seleccionarDocumento(row)"></tr>
-              </table>
+                  <tr mat-header-row *matHeaderRowDef="columnasGenerales"></tr>
+                  <tr mat-row *matRowDef="let row; columns: columnasGenerales;" class="data-row clickable-row" [class.selected-row]="docSeleccionado()?.id_documento === row.id_documento" (click)="seleccionarDocumento(row)"></tr>
+                </table>
+              </div>
             }
           </div>
 
@@ -463,65 +452,67 @@ export interface UnidadArchivo {
                 <p>No hay documentos cerrados en esta unidad bajo el tipo seleccionado.</p>
               </div>
             } @else {
-              <table mat-table [dataSource]="docsUnidadFiltrados()" class="archivo-table">
-                <ng-container matColumnDef="cite">
-                  <th mat-header-cell *matHeaderCellDef>CITE</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span class="cite-text">{{ d.nombre }}</span>
-                  </td>
-                </ng-container>
+              <div class="table-responsive">
+                <table mat-table [dataSource]="docsUnidadFiltrados()" class="archivo-table">
+                  <ng-container matColumnDef="cite">
+                    <th mat-header-cell *matHeaderCellDef>CITE</th>
+                    <td mat-cell *matCellDef="let d">
+                      <span class="cite-text">{{ d.nombre }}</span>
+                    </td>
+                  </ng-container>
 
-                <ng-container matColumnDef="tipo">
-                  <th mat-header-cell *matHeaderCellDef>Tipo</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span class="tipo-tag">{{ d.nombre_plantilla }}</span>
-                  </td>
-                </ng-container>
+                  <ng-container matColumnDef="tipo">
+                    <th mat-header-cell *matHeaderCellDef>Tipo</th>
+                    <td mat-cell *matCellDef="let d">
+                      <span class="tipo-tag">{{ d.nombre_plantilla }}</span>
+                    </td>
+                  </ng-container>
 
-                <ng-container matColumnDef="ref">
-                  <th mat-header-cell *matHeaderCellDef>Referencia</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span class="ref-text" [matTooltip]="obtenerReferencia(d)">{{ obtenerReferencia(d) }}</span>
-                  </td>
-                </ng-container>
+                  <ng-container matColumnDef="ref">
+                    <th mat-header-cell *matHeaderCellDef>Referencia</th>
+                    <td mat-cell *matCellDef="let d">
+                      <span class="ref-text" [matTooltip]="obtenerReferencia(d)">{{ obtenerReferencia(d) }}</span>
+                    </td>
+                  </ng-container>
 
-                <ng-container matColumnDef="autor">
-                  <th mat-header-cell *matHeaderCellDef>Generado por</th>
-                  <td mat-cell *matCellDef="let d">
-                    {{ d.usuario_creacion?.nombres }} {{ d.usuario_creacion?.apellidos }}
-                  </td>
-                </ng-container>
+                  <ng-container matColumnDef="autor">
+                    <th mat-header-cell *matHeaderCellDef>Generado por</th>
+                    <td mat-cell *matCellDef="let d">
+                      {{ d.usuario_creacion?.nombres }} {{ d.usuario_creacion?.apellidos }}
+                    </td>
+                  </ng-container>
 
-                <ng-container matColumnDef="acciones">
-                  <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                  <td mat-cell *matCellDef="let d">
-                    <div class="action-btn-row">
-                      <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF) en Pantalla" class="btn-action pdf">
-                        <mat-icon>picture_as_pdf</mat-icon>
-                      </button>
-                      <button mat-icon-button (click)="verDetalle(d)" matTooltip="Ver Trazabilidad" class="btn-action">
-                        <mat-icon>history</mat-icon>
-                      </button>
-                      <button mat-icon-button (click)="descargarArchivoFisico(d)" matTooltip="Descargar Copia Digital (PDF)" class="btn-action">
-                        <mat-icon>download</mat-icon>
-                      </button>
-                      @if (puedePromover() && !d.es_institucional) {
-                        <button 
-                          mat-icon-button 
-                          (click)="promoverAInstitucional(d)" 
-                          matTooltip="Promover a Archivo Institucional"
-                          class="btn-action promote"
-                        >
-                          <mat-icon>verified</mat-icon>
+                  <ng-container matColumnDef="acciones">
+                    <th mat-header-cell *matHeaderCellDef>Acciones</th>
+                    <td mat-cell *matCellDef="let d">
+                      <div class="action-btn-row">
+                        <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF) en Pantalla" class="btn-action pdf">
+                          <mat-icon>picture_as_pdf</mat-icon>
                         </button>
-                      }
-                    </div>
-                  </td>
-                </ng-container>
+                        <button mat-icon-button (click)="verDetalle(d)" matTooltip="Ver Trazabilidad" class="btn-action">
+                          <mat-icon>history</mat-icon>
+                        </button>
+                        <button mat-icon-button (click)="descargarArchivoFisico(d)" matTooltip="Descargar Copia Digital (PDF)" class="btn-action">
+                          <mat-icon>download</mat-icon>
+                        </button>
+                        @if (puedePromover() && !d.es_institucional) {
+                          <button 
+                            mat-icon-button 
+                            (click)="promoverAInstitucional(d)" 
+                            matTooltip="Promover a Archivo Institucional"
+                            class="btn-action promote"
+                          >
+                            <mat-icon>verified</mat-icon>
+                          </button>
+                        }
+                      </div>
+                    </td>
+                  </ng-container>
 
-                <tr mat-header-row *matHeaderRowDef="['cite', 'tipo', 'ref', 'autor', 'acciones']"></tr>
-                <tr mat-row *matRowDef="let row; columns: ['cite', 'tipo', 'ref', 'autor', 'acciones'];" class="data-row clickable-row" [class.selected-row]="docSeleccionado()?.id_documento === row.id_documento" (click)="seleccionarDocumento(row)"></tr>
-              </table>
+                  <tr mat-header-row *matHeaderRowDef="['cite', 'tipo', 'ref', 'autor', 'acciones']"></tr>
+                  <tr mat-row *matRowDef="let row; columns: ['cite', 'tipo', 'ref', 'autor', 'acciones'];" class="data-row clickable-row" [class.selected-row]="docSeleccionado()?.id_documento === row.id_documento" (click)="seleccionarDocumento(row)"></tr>
+                </table>
+              </div>
             }
           </div>
 
@@ -534,56 +525,58 @@ export interface UnidadArchivo {
                 <span class="badge-cc-info">Remisión Directa Oficial</span>
               </div>
 
-              <table mat-table [dataSource]="docsUnidadCopiaFiltrados()" class="archivo-table">
-                <ng-container matColumnDef="cite">
-                  <th mat-header-cell *matHeaderCellDef>CITE</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span class="cite-text">{{ d.nombre }}</span>
-                  </td>
-                </ng-container>
+              <div class="table-responsive">
+                <table mat-table [dataSource]="docsUnidadCopiaFiltrados()" class="archivo-table">
+                  <ng-container matColumnDef="cite">
+                    <th mat-header-cell *matHeaderCellDef>CITE</th>
+                    <td mat-cell *matCellDef="let d">
+                      <span class="cite-text">{{ d.nombre }}</span>
+                    </td>
+                  </ng-container>
 
-                <ng-container matColumnDef="tipo">
-                  <th mat-header-cell *matHeaderCellDef>Tipo</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span class="tipo-tag tipo-tag-cc">{{ d.nombre_plantilla }}</span>
-                  </td>
-                </ng-container>
+                  <ng-container matColumnDef="tipo">
+                    <th mat-header-cell *matHeaderCellDef>Tipo</th>
+                    <td mat-cell *matCellDef="let d">
+                      <span class="tipo-tag tipo-tag-cc">{{ d.nombre_plantilla }}</span>
+                    </td>
+                  </ng-container>
 
-                <ng-container matColumnDef="ref">
-                  <th mat-header-cell *matHeaderCellDef>Referencia</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span class="ref-text" [matTooltip]="obtenerReferencia(d)">{{ obtenerReferencia(d) }}</span>
-                  </td>
-                </ng-container>
+                  <ng-container matColumnDef="ref">
+                    <th mat-header-cell *matHeaderCellDef>Referencia</th>
+                    <td mat-cell *matCellDef="let d">
+                      <span class="ref-text" [matTooltip]="obtenerReferencia(d)">{{ obtenerReferencia(d) }}</span>
+                    </td>
+                  </ng-container>
 
-                <ng-container matColumnDef="autor">
-                  <th mat-header-cell *matHeaderCellDef>Generado por / Unidad Emisora</th>
-                  <td mat-cell *matCellDef="let d">
-                    {{ d.usuario_creacion?.nombres }} {{ d.usuario_creacion?.apellidos }}
-                    <span *ngIf="d.usuario_creacion?.unidad?.abreviacion"> ({{ d.usuario_creacion.unidad.abreviacion }})</span>
-                  </td>
-                </ng-container>
+                  <ng-container matColumnDef="autor">
+                    <th mat-header-cell *matHeaderCellDef>Generado por / Unidad Emisora</th>
+                    <td mat-cell *matCellDef="let d">
+                      {{ d.usuario_creacion?.nombres }} {{ d.usuario_creacion?.apellidos }}
+                      <span *ngIf="d.usuario_creacion?.unidad?.abreviacion"> ({{ d.usuario_creacion.unidad.abreviacion }})</span>
+                    </td>
+                  </ng-container>
 
-                <ng-container matColumnDef="acciones">
-                  <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                  <td mat-cell *matCellDef="let d">
-                    <div class="action-btn-row">
-                      <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF) en Pantalla" class="btn-action pdf">
-                        <mat-icon>picture_as_pdf</mat-icon>
-                      </button>
-                      <button mat-icon-button (click)="verDetalle(d)" matTooltip="Ver Trazabilidad" class="btn-action">
-                        <mat-icon>history</mat-icon>
-                      </button>
-                      <button mat-icon-button (click)="descargarArchivoFisico(d)" matTooltip="Descargar Copia Digital (PDF)" class="btn-action">
-                        <mat-icon>download</mat-icon>
-                      </button>
-                    </div>
-                  </td>
-                </ng-container>
+                  <ng-container matColumnDef="acciones">
+                    <th mat-header-cell *matHeaderCellDef>Acciones</th>
+                    <td mat-cell *matCellDef="let d">
+                      <div class="action-btn-row">
+                        <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF) en Pantalla" class="btn-action pdf">
+                          <mat-icon>picture_as_pdf</mat-icon>
+                        </button>
+                        <button mat-icon-button (click)="verDetalle(d)" matTooltip="Ver Trazabilidad" class="btn-action">
+                          <mat-icon>history</mat-icon>
+                        </button>
+                        <button mat-icon-button (click)="descargarArchivoFisico(d)" matTooltip="Descargar Copia Digital (PDF)" class="btn-action">
+                          <mat-icon>download</mat-icon>
+                        </button>
+                      </div>
+                    </td>
+                  </ng-container>
 
-                <tr mat-header-row *matHeaderRowDef="['cite', 'tipo', 'ref', 'autor', 'acciones']"></tr>
-                <tr mat-row *matRowDef="let row; columns: ['cite', 'tipo', 'ref', 'autor', 'acciones'];" class="data-row clickable-row" [class.selected-row]="docSeleccionado()?.id_documento === row.id_documento" (click)="seleccionarDocumento(row)"></tr>
-              </table>
+                  <tr mat-header-row *matHeaderRowDef="['cite', 'tipo', 'ref', 'autor', 'acciones']"></tr>
+                  <tr mat-row *matRowDef="let row; columns: ['cite', 'tipo', 'ref', 'autor', 'acciones'];" class="data-row clickable-row" [class.selected-row]="docSeleccionado()?.id_documento === row.id_documento" (click)="seleccionarDocumento(row)"></tr>
+                </table>
+              </div>
             </div>
           }
 
@@ -660,96 +653,98 @@ export interface UnidadArchivo {
                 <p>Aún no se han promovido ni cargado documentos institucionales oficiales.</p>
               </div>
             } @else {
-              <table mat-table [dataSource]="docsInstitucionales()" class="archivo-table">
-                <!-- CITE con Copiado Rápido -->
-                <ng-container matColumnDef="cite">
-                  <th mat-header-cell *matHeaderCellDef>CITE Oficial</th>
-                  <td mat-cell *matCellDef="let d">
-                    <div class="cite-cell">
-                      <span class="cite-badge-mono">{{ d.nombre }}</span>
-                      <button mat-icon-button class="btn-copy-mini" (click)="copiarCite(d.nombre); $event.stopPropagation()" matTooltip="Copiar CITE para referenciar en documentos">
-                        <mat-icon>content_copy</mat-icon>
-                      </button>
-                    </div>
-                  </td>
-                </ng-container>
-
-                <!-- Documento / Sigla -->
-                <ng-container matColumnDef="documento">
-                  <th mat-header-cell *matHeaderCellDef>Documento Institucional</th>
-                  <td mat-cell *matCellDef="let d">
-                    <div class="doc-title-box">
-                      <strong class="doc-main-name">{{ d.nombre_plantilla || obtenerTituloDoc(d) }}</strong>
-                      @if (d.abreviacion) {
-                        <span class="sigla-tag">{{ d.abreviacion }}</span>
-                      }
-                    </div>
-                  </td>
-                </ng-container>
-
-                <!-- Referencia / Descripción -->
-                <ng-container matColumnDef="ref">
-                  <th mat-header-cell *matHeaderCellDef>Descripción / Objeto</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span class="ref-text" [matTooltip]="obtenerDescripcionDoc(d)">
-                      {{ obtenerDescripcionDoc(d) }}
-                    </span>
-                  </td>
-                </ng-container>
-
-                <!-- Categoría -->
-                <ng-container matColumnDef="categoria">
-                  <th mat-header-cell *matHeaderCellDef>Categoría</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span class="cat-pill">{{ d.categoria_institucional || 'Normativa y Políticas' }}</span>
-                  </td>
-                </ng-container>
-
-                <!-- Versión Actual -->
-                <ng-container matColumnDef="version">
-                  <th mat-header-cell *matHeaderCellDef>Versión Actual</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span class="version-badge" (click)="verVersiones(d)" matTooltip="Ver trazabilidad completa de versiones">
-                      v{{ obtenerVersionActual(d) }}
-                      <mat-icon class="icon-v">history</mat-icon>
-                    </span>
-                  </td>
-                </ng-container>
-
-                <!-- Fecha -->
-                <ng-container matColumnDef="fecha">
-                  <th mat-header-cell *matHeaderCellDef>Fecha Custodia</th>
-                  <td mat-cell *matCellDef="let d">
-                    <span class="date-text">{{ formatearFecha(d._fecha_creacion || d.fecha) }}</span>
-                  </td>
-                </ng-container>
-
-                <!-- Acciones -->
-                <ng-container matColumnDef="acciones">
-                  <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                  <td mat-cell *matCellDef="let d">
-                    <div class="action-btn-row">
-                      <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF) en Pantalla" class="btn-action pdf">
-                        <mat-icon>picture_as_pdf</mat-icon>
-                      </button>
-                      <button mat-icon-button (click)="verVersiones(d)" matTooltip="Historial de Versiones y Trazabilidad" class="btn-action">
-                        <mat-icon>history</mat-icon>
-                      </button>
-                      <button mat-icon-button (click)="descargarArchivoFisico(d)" matTooltip="Descargar Copia Digital (PDF)" class="btn-action">
-                        <mat-icon>download</mat-icon>
-                      </button>
-                      @if (puedeVersionar()) {
-                        <button mat-icon-button (click)="abrirModalVersionar(d)" matTooltip="Subir Nueva Versión (v{{ obtenerVersionActual(d) + 1 }})" class="btn-action version">
-                          <mat-icon>upgrade</mat-icon>
+              <div class="table-responsive">
+                <table mat-table [dataSource]="docsInstitucionales()" class="archivo-table">
+                  <!-- CITE con Copiado Rápido -->
+                  <ng-container matColumnDef="cite">
+                    <th mat-header-cell *matHeaderCellDef>CITE Oficial</th>
+                    <td mat-cell *matCellDef="let d">
+                      <div class="cite-cell">
+                        <span class="cite-badge-mono">{{ d.nombre }}</span>
+                        <button mat-icon-button class="btn-copy-mini" (click)="copiarCite(d.nombre); $event.stopPropagation()" matTooltip="Copiar CITE para referenciar en documentos">
+                          <mat-icon>content_copy</mat-icon>
                         </button>
-                      }
-                    </div>
-                  </td>
-                </ng-container>
+                      </div>
+                    </td>
+                  </ng-container>
 
-                <tr mat-header-row *matHeaderRowDef="columnasInstitucionales"></tr>
-                <tr mat-row *matRowDef="let row; columns: columnasInstitucionales;" class="data-row clickable-row" [class.selected-row]="docSeleccionado()?.id_documento === row.id_documento" (click)="seleccionarDocumento(row)"></tr>
-              </table>
+                  <!-- Documento / Sigla -->
+                  <ng-container matColumnDef="documento">
+                    <th mat-header-cell *matHeaderCellDef>Documento Institucional</th>
+                    <td mat-cell *matCellDef="let d">
+                      <div class="doc-title-box">
+                        <strong class="doc-main-name">{{ d.nombre_plantilla || obtenerTituloDoc(d) }}</strong>
+                        @if (d.abreviacion) {
+                          <span class="sigla-tag">{{ d.abreviacion }}</span>
+                        }
+                      </div>
+                    </td>
+                  </ng-container>
+
+                  <!-- Referencia / Descripción -->
+                  <ng-container matColumnDef="ref">
+                    <th mat-header-cell *matHeaderCellDef>Descripción / Objeto</th>
+                    <td mat-cell *matCellDef="let d">
+                      <span class="ref-text" [matTooltip]="obtenerDescripcionDoc(d)">
+                        {{ obtenerDescripcionDoc(d) }}
+                      </span>
+                    </td>
+                  </ng-container>
+
+                  <!-- Categoría -->
+                  <ng-container matColumnDef="categoria">
+                    <th mat-header-cell *matHeaderCellDef>Categoría</th>
+                    <td mat-cell *matCellDef="let d">
+                      <span class="cat-pill">{{ d.categoria_institucional || 'Normativa y Políticas' }}</span>
+                    </td>
+                  </ng-container>
+
+                  <!-- Versión Actual -->
+                  <ng-container matColumnDef="version">
+                    <th mat-header-cell *matHeaderCellDef>Versión Actual</th>
+                    <td mat-cell *matCellDef="let d">
+                      <span class="version-badge" (click)="verVersiones(d)" matTooltip="Ver trazabilidad completa de versiones">
+                        v{{ obtenerVersionActual(d) }}
+                        <mat-icon class="icon-v">history</mat-icon>
+                      </span>
+                    </td>
+                  </ng-container>
+
+                  <!-- Fecha -->
+                  <ng-container matColumnDef="fecha">
+                    <th mat-header-cell *matHeaderCellDef>Fecha Custodia</th>
+                    <td mat-cell *matCellDef="let d">
+                      <span class="date-text">{{ formatearFecha(d._fecha_creacion || d.fecha) }}</span>
+                    </td>
+                  </ng-container>
+
+                  <!-- Acciones -->
+                  <ng-container matColumnDef="acciones">
+                    <th mat-header-cell *matHeaderCellDef>Acciones</th>
+                    <td mat-cell *matCellDef="let d">
+                      <div class="action-btn-row">
+                        <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF) en Pantalla" class="btn-action pdf">
+                          <mat-icon>picture_as_pdf</mat-icon>
+                        </button>
+                        <button mat-icon-button (click)="verVersiones(d)" matTooltip="Historial de Versiones y Trazabilidad" class="btn-action">
+                          <mat-icon>history</mat-icon>
+                        </button>
+                        <button mat-icon-button (click)="descargarArchivoFisico(d)" matTooltip="Descargar Copia Digital (PDF)" class="btn-action">
+                          <mat-icon>download</mat-icon>
+                        </button>
+                        @if (puedeVersionar()) {
+                          <button mat-icon-button (click)="abrirModalVersionar(d)" matTooltip="Subir Nueva Versión (v{{ obtenerVersionActual(d) + 1 }})" class="btn-action version">
+                            <mat-icon>upgrade</mat-icon>
+                          </button>
+                        }
+                      </div>
+                    </td>
+                  </ng-container>
+
+                  <tr mat-header-row *matHeaderRowDef="columnasInstitucionales"></tr>
+                  <tr mat-row *matRowDef="let row; columns: columnasInstitucionales;" class="data-row clickable-row" [class.selected-row]="docSeleccionado()?.id_documento === row.id_documento" (click)="seleccionarDocumento(row)"></tr>
+                </table>
+              </div>
             }
           </div>
         </section>
@@ -1141,23 +1136,44 @@ export interface UnidadArchivo {
     }
 
     /* Tabla */
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 8px;
+      margin: 4px 0;
+
+      &::-webkit-scrollbar {
+        height: 6px;
+      }
+      &::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+      }
+    }
+
     .archivo-table {
       width: 100%;
+      min-width: 680px;
       border-collapse: collapse;
 
       th {
         background: #f8fafc;
         color: #475569;
-        font-size: 12px;
+        font-size: 11.5px;
         font-weight: 700;
         text-transform: uppercase;
-        padding: 14px 16px;
+        padding: 12px 14px;
+        white-space: nowrap !important;
+        letter-spacing: 0.3px;
+        border-bottom: 2px solid #e2e8f0;
       }
 
       td {
-        padding: 12px 16px;
+        padding: 10px 14px;
         font-size: 13px;
         border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
       }
     }
 
@@ -1793,15 +1809,26 @@ export interface UnidadArchivo {
     /* Split Layout para Visor Documental Embebido */
     .archivo-split-layout {
       display: grid;
-      grid-template-columns: minmax(420px, 46%) 1fr;
-      gap: 24px;
+      grid-template-columns: 1fr;
+      gap: 20px;
       align-items: start;
       margin-top: 8px;
+      width: 100%;
+      min-width: 0;
+
+      &.con-visor {
+        @media (min-width: 1100px) {
+          grid-template-columns: minmax(400px, 44%) minmax(0, 1fr);
+        }
+      }
     }
 
-    @media (max-width: 1100px) {
+    @media (max-width: 1099px) {
       .archivo-split-layout {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
+      }
+      .visor-embebido-panel {
+        display: none !important;
       }
     }
 
@@ -2032,6 +2059,61 @@ export interface UnidadArchivo {
       from { opacity: 0; transform: translateY(4px); }
       to { opacity: 1; transform: translateY(0); }
     }
+
+    @media (max-width: 768px) {
+      .archivo-topbar {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 14px !important;
+        padding: 16px !important;
+        border-radius: 12px !important;
+
+        .topbar-right {
+          width: 100%;
+          .btn-cargar-institucional {
+            width: 100%;
+            justify-content: center;
+          }
+        }
+      }
+
+      .topbar-left {
+        gap: 12px;
+      }
+
+      .topbar-icon {
+        width: 42px;
+        height: 42px;
+        mat-icon { font-size: 22px; width: 22px; height: 22px; }
+      }
+
+      .topbar-title {
+        font-size: 18px !important;
+      }
+
+      .topbar-sub {
+        font-size: 12px !important;
+      }
+
+      .nivel-tabs-bar {
+        overflow-x: auto !important;
+        padding-bottom: 6px !important;
+        flex-wrap: nowrap !important;
+        gap: 8px !important;
+        &::-webkit-scrollbar { display: none; }
+      }
+
+      .nivel-btn {
+        padding: 8px 12px !important;
+        font-size: 12px !important;
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
+      }
+
+      .content-card {
+        padding: 12px !important;
+      }
+    }
   `]
 })
 export class ArchivoComponent implements OnInit {
@@ -2153,6 +2235,7 @@ export class ArchivoComponent implements OnInit {
   }
 
   cambiarNivel(nivel: 'general' | 'unidad' | 'institucional'): void {
+    this.cerrarVisor();
     this.nivelActivo.set(nivel);
     this.cargarDatos();
   }
@@ -2506,6 +2589,10 @@ export class ArchivoComponent implements OnInit {
 
   seleccionarDocumento(doc: DocumentoArchivo): void {
     if (!doc || !doc.id_documento) return;
+    if (typeof window !== 'undefined' && window.innerWidth < 1100) {
+      this.verPdf(doc);
+      return;
+    }
     this.docSeleccionado.set(doc);
     this.cargandoVisor.set(true);
     this.errorVisor.set(null);
