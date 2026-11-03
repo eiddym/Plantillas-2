@@ -607,6 +607,7 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
     .badge-reservado { background: #fef3c7; color: #92400e; }
     .badge-confidencial { background: #f3e8ff; color: #7e22ce; }
     .badge-secreto { background: #fee2e2; color: #b91c1c; }
+    .badge-desclasificado { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 
     .badge-nuevo { background: #e0f2fe; color: #0284c7; }
     .badge-derivado { background: #fff7ed; color: #ea580c; }
@@ -1046,10 +1047,12 @@ export class DocumentosListComponent implements OnInit {
   }
 
   getClasificacionClass(clasificacion?: string): string {
-    switch (clasificacion) {
+    const c = (clasificacion || '').toUpperCase();
+    switch (c) {
       case 'RESERVADO': return 'badge-reservado';
       case 'CONFIDENCIAL': return 'badge-confidencial';
       case 'SECRETO': return 'badge-secreto';
+      case 'DESCLASIFICADO': return 'badge-desclasificado';
       default: return 'badge-ordinario';
     }
   }

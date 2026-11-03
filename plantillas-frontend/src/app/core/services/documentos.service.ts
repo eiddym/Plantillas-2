@@ -99,6 +99,10 @@ export class DocumentosService {
     return this.http.get<ApiResponse<{ html: string; nombre: string }>>(`${this.baseUrl}/documento/${idDocumento}/preview`);
   }
 
+  desclasificarDocumento(id: number): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/documento/${id}/desclasificar`, {});
+  }
+
   generarPdfDocumento(cite: string, force = false): Observable<Blob> {
     return this.http.post(`${this.baseUrl}/documentoPDF`, { cite, force }, { responseType: 'blob' });
   }

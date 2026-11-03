@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormGroup, ReactiveFormsModule, FormsModule } from '@angular/forms';
@@ -348,8 +348,42 @@ import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
             <div class="inspector-list">
               <div class="inspector-item">
                 <span class="item-label">Clasificación</span>
-                <span class="item-badge-clasif">{{ model['clasificacion'] || model['inputSelect'] || doc()?.clasificacion || 'RESERVADO' }}</span>
+                @if (puedeEditar()) {
+                  <select 
+                    class="select-clasif-inline" 
+                    [ngModel]="getClasificacionActual()" 
+                    (ngModelChange)="cambiarClasificacion($event)"
+                    matTooltip="Cambiar clasificación oficial del documento"
+                  >
+                    <option value="Reservado">RESERVADO</option>
+                    <option value="Confidencial">CONFIDENCIAL</option>
+                    <option value="Secreto">SECRETO</option>
+                    <option value="Desclasificado">DESCLASIFICADO</option>
+                  </select>
+                } @else {
+                  <span class="item-badge-clasif" [ngClass]="getClasificacionBadgeClass()">
+                    {{ getClasificacionActual() }}
+                  </span>
+                }
               </div>
+
+              <!-- Opción de Desclasificación para la MAE -->
+              @if (puedeDesclasificarMae()) {
+                <div class="desclasificar-action-box">
+                  <button 
+                    type="button" 
+                    mat-stroked-button 
+                    color="warn" 
+                    class="btn-desclasificar-mae" 
+                    (click)="desclasificarPorMae()" 
+                    [disabled]="guardando()"
+                    matTooltip="Como Máxima Autoridad Ejecutiva (MAE), puede desclasificar oficialmente este documento"
+                  >
+                    <mat-icon>lock_open</mat-icon>
+                    <span>Desclasificar Documento</span>
+                  </button>
+                </div>
+              }
               <div class="inspector-item">
                 <span class="item-label">Formato de Hoja</span>
                 <span class="item-badge-hoja" (click)="setTipoHoja(tipoHoja() === 'Oficio' ? 'Letter' : 'Oficio')" matTooltip="Haga clic para alternar Carta / Oficio">
@@ -1005,15 +1039,45 @@ import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
         color: #0f172a;
         font-weight: 600;
       }
+      .select-clasif-inline {
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 4px;
+        border: 1px solid #cbd5e1;
+        background: #f8fafc;
+        color: #0f172a;
+        cursor: pointer;
+        outline: none;
+        &:focus {
+          border-color: #0284c7;
+        }
+      }
       .item-badge-clasif {
         display: inline-block;
         font-size: 0.72rem;
         font-weight: 700;
-        background: #fef3c7;
-        color: #92400e;
-        padding: 2px 8px;
+        padding: 3px 8px;
         border-radius: 4px;
         width: fit-content;
+        text-transform: uppercase;
+        &.badge-reservado { background: #fef3c7; color: #92400e; }
+        &.badge-confidencial { background: #f3e8ff; color: #7e22ce; }
+        &.badge-secreto { background: #fee2e2; color: #b91c1c; }
+        &.badge-desclasificado { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+        &.badge-ordinario { background: #e0f2fe; color: #0369a1; }
+      }
+      .desclasificar-action-box {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px dashed #e2e8f0;
+      }
+      .btn-desclasificar-mae {
+        width: 100%;
+        font-size: 0.78rem !important;
+        font-weight: 700 !important;
+        height: 32px !important;
+        line-height: 30px !important;
       }
     }
 
@@ -1216,6 +1280,7 @@ export class DocumentWorkbenchComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   readonly currentUser = this.authService.currentUser;
   readonly doc = signal<Documento | null>(null);
@@ -1604,6 +1669,63 @@ export class DocumentWorkbenchComponent implements OnInit {
       referencia: refTexto,
       clasificacion: this.model['clasificacion'] || this.model['inputSelect'] || d.clasificacion || 'Reservado'
     };
+  }
+
+  getClasificacionActual(): string {
+    return this.model['clasificacion'] || this.model['inputSelect'] || this.doc()?.clasificacion || 'Reservado';
+  }
+
+  getClasificacionBadgeClass(): string {
+    const c = this.getClasificacionActual().toUpperCase();
+    switch (c) {
+      case 'RESERVADO': return 'badge-reservado';
+      case 'CONFIDENCIAL': return 'badge-confidencial';
+      case 'SECRETO': return 'badge-secreto';
+      case 'DESCLASIFICADO': return 'badge-desclasificado';
+      default: return 'badge-ordinario';
+    }
+  }
+
+  cambiarClasificacion(val: string): void {
+    this.model['clasificacion'] = val;
+    this.model['inputSelect'] = val;
+    this.cdr.markForCheck();
+  }
+
+  puedeEditar(): boolean {
+    const d = this.doc();
+    return this.modoEdicion() && (!d || ['NUEVO', 'OBSERVADO', 'RECHAZADO'].includes(d.estado || 'NUEVO'));
+  }
+
+  puedeDesclasificarMae(): boolean {
+    const d = this.doc();
+    if (!d || !d.id_documento) return false;
+    const esMae = this.authService.isMae() || this.authService.hasRole('MAE') || this.authService.hasRole('ADMIN');
+    const clasifActual = this.getClasificacionActual().toLowerCase();
+    const noEsDesclasificado = clasifActual !== 'desclasificado';
+    const estadoApto = ['APROBADO', 'CERRADO', 'ENVIADO', 'DERIVADO'].includes(d.estado);
+    return esMae && noEsDesclasificado && estadoApto;
+  }
+
+  desclasificarPorMae(): void {
+    const d = this.doc();
+    if (!d || !d.id_documento) return;
+    if (!confirm('¿Confirma que desea DESCLASIFICAR oficialmente este documento como Máxima Autoridad Ejecutiva (MAE)?')) {
+      return;
+    }
+    this.guardando.set(true);
+    this.documentosService.desclasificarDocumento(d.id_documento).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.snackBar.open('Documento desclasificado exitosamente por la MAE', 'Cerrar', { duration: 3500 });
+        this.cargarDocumento(Number(d.id_documento));
+      },
+      error: (err) => {
+        this.guardando.set(false);
+        const msg = err.error?.mensaje || err.message || 'Error al desclasificar el documento';
+        this.snackBar.open(msg, 'Cerrar', { duration: 4000 });
+      }
+    });
   }
 
   setTipoHoja(tipo: 'Letter' | 'Oficio'): void {

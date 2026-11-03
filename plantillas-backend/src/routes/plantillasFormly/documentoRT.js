@@ -362,12 +362,30 @@ module.exports = app => {
 
         if (clasif === 'Confidencial' || clasif === 'Secreto') {
           const idUs = Number(auditUser.id_usuario);
+          const uId = Number(auditUser.fid_unidad || 0);
           const esCreador = Number(pDocumento._usuario_creacion) === idUs;
-          const esDe = pDocumento.de && pDocumento.de.includes(`"${idUs}"`);
-          const esPara = pDocumento.para && pDocumento.para.includes(`"${idUs}"`);
+          const userInField = (fld) => {
+            if (!fld) return false;
+            if (typeof fld === 'string') {
+              try {
+                const arr = JSON.parse(fld);
+                if (Array.isArray(arr)) return arr.some(x => Number(x?.id_usuario || x?.id || x) === idUs);
+              } catch (_) {}
+              return fld.includes(`[${idUs}]`) || fld.includes(`[${idUs},`) || fld.includes(`,${idUs},`) || fld.includes(`,${idUs}]`) || fld.includes(`"${idUs}"`);
+            }
+            if (Array.isArray(fld)) return fld.some(x => Number(x?.id_usuario || x?.id || x) === idUs);
+            return false;
+          };
+          const esDe = userInField(pDocumento.de);
+          const esPara = userInField(pDocumento.para);
+          const esVia = userInField(pDocumento.via) || Number(pDocumento.via_actual) === idUs;
+          const esFirmante = Number(pDocumento.firmante_actual) === idUs;
+          const esCopiaUnidad = uId > 0 && typeof pDocumento.copia === 'string' && (
+            pDocumento.copia.includes(`[${uId}]`) || pDocumento.copia.includes(`[${uId},`) || pDocumento.copia.includes(`,${uId},`) || pDocumento.copia.includes(`,${uId}]`) || pDocumento.copia.includes(`"${uId}"`)
+          );
 
-          if (!esCreador && !esDe && !esPara && !esMaeOAdmin) {
-            return res.status(403).send(util.formatearMensaje("ERROR", `Acceso Denegado: Este documento tiene clasificación ${clasif.toUpperCase()} y su lectura está restringida.`));
+          if (!esCreador && !esDe && !esPara && !esVia && !esFirmante && !esCopiaUnidad && !esMaeOAdmin) {
+            return res.status(403).send(util.formatearMensaje("ERROR", `Acceso Denegado: Este documento tiene clasificación ${clasif.toUpperCase()} y su lectura está restringida a los participantes autorizados y la MAE.`));
           }
         }
 

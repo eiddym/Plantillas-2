@@ -352,10 +352,16 @@
       var codigoSeguridad = typeof codigo ==='undefined'? '': codigo;
         var entidad = typeof entidad === 'undefined' ? {} : entidad;
 
-      // Extraer Clasificación desde form_actual/model_actual
+      // Extraer Clasificación desde model_actual/doc/form_actual
       // para mostrarla en el bloque de cabecera del PDF
       var _cabClasificacion = '';
-      if (typeof form_actual !== 'undefined' && Array.isArray(form_actual)) {
+      if (typeof model_actual !== 'undefined' && model_actual) {
+        _cabClasificacion = model_actual.clasificacion || model_actual.inputSelect || '';
+      }
+      if (!_cabClasificacion && typeof doc !== 'undefined' && doc && doc.clasificacion) {
+        _cabClasificacion = doc.clasificacion;
+      }
+      if (!_cabClasificacion && typeof form_actual !== 'undefined' && Array.isArray(form_actual)) {
         for (var _ci = 0; _ci < form_actual.length; _ci++) {
           var _cItem = form_actual[_ci];
           if (!_cabClasificacion && _cItem.type === 'select' &&
