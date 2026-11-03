@@ -1097,6 +1097,13 @@ export class PlantillaEditorComponent implements OnInit {
 
   eliminarCampo(index: number, event: Event): void {
     event.stopPropagation();
+    const f = this.canvasFields[index];
+    const type = f?.type;
+    const label = (f?.templateOptions?.label || f?.templateOptions?.['labelx'] || '').toLowerCase();
+    if (type === 'ccArchivo' || label.includes('clasificaci')) {
+      this.snackBar.open('Este componente es indivisible y obligatorio para auditoría institucional.', 'Entendido', { duration: 4000 });
+      return;
+    }
     this.canvasFields.splice(index, 1);
     if (this.selectedFieldIndex() === index) {
       this.selectedFieldIndex.set(null);
@@ -1107,7 +1114,33 @@ export class PlantillaEditorComponent implements OnInit {
   }
 
   limpiarLienzo(): void {
-    this.canvasFields = [];
+    // Limpia el lienzo preservando los componentes indivisibles de auditoría
+    this.canvasFields = [
+      {
+        type: 'select',
+        key: 'inputSelect',
+        templateOptions: {
+          label: 'Clasificación',
+          multiple: false,
+          labelProp: 'value',
+          valueProp: 'id',
+          showItem: true,
+          options: [
+            { value: 'Reservado', id: 'Reservado' },
+            { value: 'Secreto', id: 'Secreto' },
+            { value: 'Confidencial', id: 'Confidencial' },
+            { value: 'Desclasificado', id: 'Desclasificado' }
+          ],
+          disabled: false,
+          required: true
+        }
+      },
+      {
+        type: 'ccArchivo',
+        key: 'ccArchivo',
+        templateOptions: { label: 'CC/Archivo:' }
+      }
+    ];
     this.selectedFieldIndex.set(null);
     this.actualizarPreview();
   }

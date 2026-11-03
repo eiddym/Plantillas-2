@@ -891,6 +891,71 @@ const historicoVectorT =(pVector,pObj,pModelo,pModeloHis, pIdUsuario, pTransacci
     });
 }
 
+function procesarMetadatosAuditoria(pDatos) {
+  // 1. Clasificación indivisible de auditoría
+  let clasifFinal = '';
+  if (pDatos.model_actual) {
+    clasifFinal = pDatos.model_actual.clasificacion || pDatos.model_actual.inputSelect || '';
+  }
+  if (!clasifFinal && pDatos.doc && pDatos.doc.clasificacion) {
+    clasifFinal = pDatos.doc.clasificacion;
+  }
+  if (!clasifFinal) {
+    clasifFinal = 'Reservado';
+  }
+  pDatos.clasificacion_final = clasifFinal;
+  if (pDatos.model_actual) {
+    pDatos.model_actual.clasificacion = clasifFinal;
+    pDatos.model_actual.inputSelect = clasifFinal;
+  }
+
+  // 2. Iniciales del usuario que crea el documento
+  let nombreCreador = '';
+  if (pDatos.doc && pDatos.doc.usuario_creacion) {
+    const uc = pDatos.doc.usuario_creacion;
+    nombreCreador = `${uc.nombres || ''} ${uc.apellidos || ''}`.trim() || uc.usuario || '';
+  } else if (pDatos.creador) {
+    nombreCreador = `${pDatos.creador.nombres || ''} ${pDatos.creador.apellidos || ''}`.trim() || pDatos.creador.usuario || '';
+  } else if (pDatos.audit_usuario) {
+    const au = pDatos.audit_usuario;
+    nombreCreador = `${au.nombres || au.first_name || ''} ${au.apellidos || au.last_name || ''}`.trim() || au.usuario || au.username || '';
+  }
+  if (!nombreCreador && pDatos.model_actual) {
+    const dg = pDatos.model_actual.datosGenerales || pDatos.model_actual['datosGenerales-0'];
+    if (dg && dg.de) {
+      const deArr = Array.isArray(dg.de) ? dg.de : [dg.de];
+      if (deArr[0]) {
+        nombreCreador = `${deArr[0].nombres || ''} ${deArr[0].apellidos || ''}`.trim() || deArr[0].nombre || '';
+      }
+    }
+  }
+
+  const calcularIniciales = (str) => {
+    if (!str) return 'SD';
+    const limpia = String(str).replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ ]/g, ' ').trim();
+    const palabras = limpia.split(/\s+/).filter(Boolean);
+    return palabras.map(p => p[0].toUpperCase()).join('') || 'SD';
+  };
+
+  const iniciales = calcularIniciales(nombreCreador);
+  pDatos.iniciales_creador = iniciales;
+
+  // 3. CC/Archivo indivisible (Iniciales del creador en primer línea, 'Cc.: archivo' debajo)
+  let ccVal = '';
+  if (pDatos.model_actual) {
+    ccVal = pDatos.model_actual.ccArchivo || pDatos.model_actual['ccArchivo-0'] || '';
+  }
+  let lineasCc = String(ccVal).replace(/undefined/gi, '').split('\n').map(l => l.trim()).filter(Boolean);
+  if (lineasCc.length > 0 && /^[A-ZÁÉÍÓÚÑ]{1,6}$/.test(lineasCc[0])) {
+    lineasCc.shift();
+  }
+  lineasCc = lineasCc.filter(l => !/^cc\.?:?\s*archivo/i.test(l));
+
+  const lineasFinales = [iniciales, 'Cc.: archivo', ...lineasCc];
+  pDatos.cc_lineas = lineasFinales;
+  pDatos.cc_archivo_texto = lineasFinales.join('\n');
+}
+
 const generarDocumento = (pDatos, firma = false) => new Promise((resolve, reject) => {
   // REGLA INSTITUCIONAL: La creación de PDF oficial y generación de metadatos está estrictamente reservada para documentos en estado APROBADO o CERRADO.
   if (pDatos.doc && pDatos.doc.estado && !['APROBADO', 'CERRADO'].includes(pDatos.doc.estado)) {
@@ -1043,6 +1108,8 @@ const generarDocumento = (pDatos, firma = false) => new Promise((resolve, reject
     pDatos.doc && pDatos.doc.fecha
   ];
   pDatos.pdf_fecha = posiblesFechas.find((valor) => valor) || '';
+
+  procesarMetadatosAuditoria(pDatos);
 
   const renderizarPdf = () => {
     pDatos.entidad = config.entidad || {};
@@ -1427,6 +1494,8 @@ const generarHtml = (pDatos) => new Promise((resolve, reject) => {
     pDatos.doc && pDatos.doc.fecha
   ];
   pDatos.pdf_fecha = posiblesFechas.find((valor) => valor) || '15 de Agosto de 2026';
+
+  procesarMetadatosAuditoria(pDatos);
 
   const renderizarHtmlFinal = () => {
     ejs.renderFile(rutaPlantilla, pDatos, (pError, pHtml) => {

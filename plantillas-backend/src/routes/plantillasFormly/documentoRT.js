@@ -150,8 +150,8 @@ module.exports = app => {
       }
     }
 
-    // Si viene fid_plantilla y falta nombre_plantilla o abreviacion, autocompletar desde plantilla_formly
-    if (req.body.fid_plantilla && (!req.body.nombre_plantilla || !req.body.abreviacion)) {
+    // Si viene fid_plantilla y falta plantilla, nombre_plantilla o abreviacion, autocompletar desde plantilla_formly
+    if (req.body.fid_plantilla && (!req.body.plantilla || !req.body.nombre_plantilla || !req.body.abreviacion)) {
       try {
         const plantillaEncontrada = await modelos.plantilla_formly.findByPk(req.body.fid_plantilla);
         if (plantillaEncontrada) {
@@ -167,7 +167,7 @@ module.exports = app => {
     sequelize.transaction().then(t => {
         const transaccion = { transaction: t };
         bl.verificarExternos(req.body)
-        .then(pValores => {
+        .then(async (pValores) => {
           if(pValores) req.body.plantilla_valor=pValores;
           if (req.body.plantilla_valor) {
             req.body.plantilla_valor = sanitizarHTML.sanitizarPlantillaValor(req.body.plantilla_valor);
@@ -212,6 +212,25 @@ module.exports = app => {
           req.body.copia = JSON.stringify(extractUnidadIdsPost(dgPost.copia || req.body.copia));
           if (dgPost.ref || req.body.ref || req.body.referencia) {
             req.body.referencia = dgPost.ref || req.body.ref || req.body.referencia;
+          }
+
+          // CC/Archivo con iniciales del creador y 'Cc.: archivo' como elemento indivisible de auditoría
+          try {
+            const usrCreador = await modelos.usuario.findByPk(idCreadorPost);
+            const nomCreador = usrCreador ? `${usrCreador.nombres || ''} ${usrCreador.apellidos || ''}`.trim() || usrCreador.usuario : '';
+            const calcInit = (s) => (s ? s.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ ]/g, ' ').split(/\s+/).filter(Boolean).map(p => p[0].toUpperCase()).join('') : 'SD');
+            const initPost = calcInit(nomCreador) || 'SD';
+            let ccPost = pValObj.ccArchivo || pValObj['ccArchivo-0'] || '';
+            let lineasPost = String(ccPost).replace(/undefined/gi, '').split('\n').map(l => l.trim()).filter(Boolean);
+            if (lineasPost.length > 0 && /^[A-ZÁÉÍÓÚÑ]{1,6}$/.test(lineasPost[0])) {
+              lineasPost.shift();
+            }
+            lineasPost = lineasPost.filter(l => !/^cc\.?:?\s*archivo/i.test(l));
+            const ccFinal = [initPost, 'Cc.: archivo', ...lineasPost].join('\n');
+            pValObj.ccArchivo = ccFinal;
+            pValObj['ccArchivo-0'] = ccFinal;
+          } catch (eCc) {
+            logger.warn('Error al computar iniciales CC/Archivo:', eCc.message);
           }
 
           req.body.plantilla_valor = JSON.stringify(pValObj);
@@ -705,11 +724,19 @@ module.exports = app => {
         where: {
           estado: { [Op.ne]: 'ELIMINADO' }
         },
-        include: [{
-          model: modelos.firma,
-          as: 'firma',
-          required: false
-        }]
+        include: [
+          {
+            model: modelos.firma,
+            as: 'firma',
+            required: false
+          },
+          {
+            model: modelos.usuario,
+            as: 'usuario_creacion',
+            attributes: ['id_usuario', 'nombres', 'apellidos', 'usuario'],
+            required: false
+          }
+        ]
       })
       .then(async (docList) => {
         let matchedDoc = docList.find(d => 
@@ -759,9 +786,15 @@ module.exports = app => {
 
         const datos = {
           doc: {
+            id_documento: matchedDoc.id_documento,
             nombre: matchedDoc.nombre,
             plantilla: matchedDoc.plantilla,
+            estado: matchedDoc.estado,
+            clasificacion: matchedDoc.clasificacion,
+            _usuario_creacion: matchedDoc._usuario_creacion,
+            usuario_creacion: matchedDoc.usuario_creacion
           },
+          creador: matchedDoc.usuario_creacion,
           form_actual: util.dataToView(JSON.parse(matchedDoc.plantilla), JSON.parse(matchedDoc.plantilla_valor)),
           model_actual: JSON.parse(matchedDoc.plantilla_valor),
           audit_usuario: usuarioPeticion,
@@ -966,16 +999,20 @@ module.exports = app => {
   const obtenerPreviewHtml = async (req, res) => {
     try {
       const idOrCite = req.params.id || req.params.cite || req.query.cite;
+      const inclUsuario = [
+        { model: modelos.usuario, as: 'usuario_creacion', attributes: ['id_usuario', 'nombres', 'apellidos', 'usuario'], required: false }
+      ];
       let doc = null;
       if (!isNaN(idOrCite)) {
-        doc = await modelos.documento.findByPk(Number(idOrCite));
+        doc = await modelos.documento.findByPk(Number(idOrCite), { include: inclUsuario });
       }
       if (!doc) {
-        doc = await modelos.documento.findOne({ where: { nombre: idOrCite } });
+        doc = await modelos.documento.findOne({ where: { nombre: idOrCite }, include: inclUsuario });
       }
       if (!doc) {
         const docs = await modelos.documento.findAll({
-          where: { estado: { [Op.ne]: 'ELIMINADO' } }
+          where: { estado: { [Op.ne]: 'ELIMINADO' } },
+          include: inclUsuario
         });
         doc = docs.find(d => 
           d.nombre === idOrCite || 
@@ -1006,8 +1043,12 @@ module.exports = app => {
           id_documento: doc.id_documento,
           nombre: doc.nombre,
           plantilla: plantillaJson,
-          estado: doc.estado
+          estado: doc.estado,
+          clasificacion: doc.clasificacion,
+          _usuario_creacion: doc._usuario_creacion,
+          usuario_creacion: doc.usuario_creacion
         },
+        creador: doc.usuario_creacion,
         form_actual: util.dataToView(plantillaJson, plantillaValorJson),
         model_actual: plantillaValorJson,
         audit_usuario: usuarioPeticion,
@@ -1792,7 +1833,7 @@ module.exports = app => {
           req.body.plantilla_valor = sanitizarHTML.sanitizarPlantillaValor(req.body.plantilla_valor);
         }
         return documento.findByPk(req.params.id)
-        .then( resp => {
+        .then(async (resp) => {
           xdoc = resp;
           const usuarioId = req.body.audit_usuario && req.body.audit_usuario.id_usuario;
           const esCreador = Number(xdoc._usuario_creacion) === Number(usuarioId);
@@ -1809,6 +1850,26 @@ module.exports = app => {
           req.body.clasificacion = newClasif;
           newVal.clasificacion = newClasif;
           newVal.inputSelect = newClasif;
+
+          // Preservar iniciales del creador y CC/Archivo como elemento indivisible de auditoría
+          try {
+            const usrCreadorOriginal = await modelos.usuario.findByPk(xdoc._usuario_creacion || 1);
+            const nomCreadorOrig = usrCreadorOriginal ? `${usrCreadorOriginal.nombres || ''} ${usrCreadorOriginal.apellidos || ''}`.trim() || usrCreadorOriginal.usuario : '';
+            const calcInit = (s) => (s ? s.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ ]/g, ' ').split(/\s+/).filter(Boolean).map(p => p[0].toUpperCase()).join('') : 'SD');
+            const initOrig = calcInit(nomCreadorOrig) || 'SD';
+
+            let ccPut = newVal.ccArchivo || newVal['ccArchivo-0'] || prevVal.ccArchivo || prevVal['ccArchivo-0'] || '';
+            let lineasPut = String(ccPut).replace(/undefined/gi, '').split('\n').map(l => l.trim()).filter(Boolean);
+            if (lineasPut.length > 0 && /^[A-ZÁÉÍÓÚÑ]{1,6}$/.test(lineasPut[0])) {
+              lineasPut.shift();
+            }
+            lineasPut = lineasPut.filter(l => !/^cc\.?:?\s*archivo/i.test(l));
+            const ccPutFinal = [initOrig, 'Cc.: archivo', ...lineasPut].join('\n');
+            newVal.ccArchivo = ccPutFinal;
+            newVal['ccArchivo-0'] = ccPutFinal;
+          } catch (eCcPut) {
+            logger.warn('Error al computar iniciales en PUT CC/Archivo:', eCcPut.message);
+          }
 
           const dgPut = newVal.datosGenerales || newVal['datosGenerales-0'] || prevVal.datosGenerales || prevVal['datosGenerales-0'] || {};
           if (newVal.datosGenerales && !newVal['datosGenerales-0']) {

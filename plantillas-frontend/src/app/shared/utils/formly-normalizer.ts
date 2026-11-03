@@ -19,7 +19,7 @@ export function normalizarEsquemaFormly(
 
   const clavesUsadas = new Set<string>();
 
-  return rawFields.map((field, index) => {
+  const normalized = rawFields.map((field, index) => {
     if (!field || typeof field !== 'object') {
       return { type: 'texto', templateOptions: { label: '' } };
     }
@@ -95,4 +95,53 @@ export function normalizarEsquemaFormly(
 
     return fieldCopy;
   });
+
+  // Garantizar componentes indivisibles de auditoría a nivel raíz (Clasificación y CC/Archivo)
+  if (!prefix) {
+    const tieneClasif = normalized.some(f => 
+      f.type === 'select' && ((f.templateOptions?.label || '').toLowerCase().includes('clasificaci'))
+    );
+    if (!tieneClasif) {
+      const idxCite = normalized.findIndex(f => f.type === 'cite');
+      const insertAt = idxCite >= 0 ? idxCite + 1 : 0;
+      normalized.splice(insertAt, 0, {
+        type: 'select',
+        key: 'inputSelect',
+        templateOptions: {
+          label: 'Clasificación',
+          multiple: false,
+          labelProp: 'value',
+          valueProp: 'id',
+          showItem: true,
+          options: [
+            { value: 'Reservado', id: 'Reservado' },
+            { value: 'Secreto', id: 'Secreto' },
+            { value: 'Confidencial', id: 'Confidencial' },
+            { value: 'Desclasificado', id: 'Desclasificado' }
+          ],
+          disabled: false,
+          required: true
+        }
+      });
+    }
+    if (!model['inputSelect'] && !model['clasificacion']) {
+      model['inputSelect'] = 'Reservado';
+      model['clasificacion'] = 'Reservado';
+    } else {
+      const val = model['clasificacion'] || model['inputSelect'] || 'Reservado';
+      model['inputSelect'] = val;
+      model['clasificacion'] = val;
+    }
+
+    const tieneCc = normalized.some(f => f.type === 'ccArchivo');
+    if (!tieneCc) {
+      normalized.push({
+        type: 'ccArchivo',
+        key: 'ccArchivo',
+        templateOptions: { label: 'CC/Archivo:' }
+      });
+    }
+  }
+
+  return normalized;
 }

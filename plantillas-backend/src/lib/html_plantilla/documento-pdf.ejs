@@ -353,9 +353,10 @@
         var entidad = typeof entidad === 'undefined' ? {} : entidad;
 
       // Extraer Clasificación desde model_actual/doc/form_actual
-      // para mostrarla en el bloque de cabecera del PDF
-      var _cabClasificacion = '';
-      if (typeof model_actual !== 'undefined' && model_actual) {
+      // para mostrarla en el bloque de cabecera del PDF como elemento indivisible de auditoría
+      var _ccArchivoRenderedPdf = false;
+      var _cabClasificacion = (typeof clasificacion_final !== 'undefined' && clasificacion_final) ? clasificacion_final : '';
+      if (!_cabClasificacion && typeof model_actual !== 'undefined' && model_actual) {
         _cabClasificacion = model_actual.clasificacion || model_actual.inputSelect || '';
       }
       if (!_cabClasificacion && typeof doc !== 'undefined' && doc && doc.clasificacion) {
@@ -372,6 +373,9 @@
           }
         }
       }
+      if (!_cabClasificacion) {
+        _cabClasificacion = 'Reservado';
+      }
     %>
     <div class="<%= (typeof marcaAgua !== 'undefined' && marcaAgua == true)? 'fondo-texto':'none' %>"></div>
     <div class="mi-contenido">
@@ -386,8 +390,8 @@
             <td class="pdf-meta-izq" style="width: 68%; vertical-align: top; text-align: left; font-size: 10pt; line-height: 1.35; color: #222;">
               <%= typeof pdf_cite !== 'undefined' && pdf_cite ? pdf_cite : (typeof doc !== 'undefined' && doc && doc.nombre ? doc.nombre.replace(/\.pdf$/i, '') : '') %><br>
               Expediente : <%= typeof pdf_expediente !== 'undefined' && pdf_expediente !== null ? pdf_expediente : (typeof exp !== 'undefined' ? exp : '') %><br>
-              Código de verificación : <%= typeof pdf_codigo !== 'undefined' && pdf_codigo ? pdf_codigo : (typeof codigoSeguridad !== 'undefined' ? codigoSeguridad : '') %><% if (_cabClasificacion) { %><br>
-              Clasificación : <%= _cabClasificacion %><% } %>
+              Código de verificación : <%= typeof pdf_codigo !== 'undefined' && pdf_codigo ? pdf_codigo : (typeof codigoSeguridad !== 'undefined' ? codigoSeguridad : '') %><br>
+              Clasificación : <%= _cabClasificacion %>
             </td>
             <td class="pdf-meta-der" style="width: 32%; vertical-align: top; text-align: right;" align="right">
               <div class="pdf-fecha-qr" style="display: inline-block; text-align: center;">
@@ -797,18 +801,20 @@
             }
             break;
           case 'ccArchivo':
-            if(datos[pItem.key]){
-              var valCc = String(datos[pItem.key]).replace(/undefined/gi, '');
-              var vectorDatos = valCc.split('\n') || [];
-              var htmlDatos = "";
-              for(var s = 0; s < vectorDatos.length; s++) {
-                if(s-1 === vectorDatos.length) htmlDatos += "<span>"+ vectorDatos[s]+"</span>";
-                else htmlDatos += "<span>"+ vectorDatos[s]+"</span><br>";
-              }              
-              %>
-              <div> <%- htmlDatos%> </div>
-                
-            <%}
+            _ccArchivoRenderedPdf = true;
+            var lineasCcPdf = (typeof cc_lineas !== 'undefined' && Array.isArray(cc_lineas) && cc_lineas.length > 0)
+              ? cc_lineas
+              : (datos[pItem.key] ? String(datos[pItem.key]).replace(/undefined/gi, '').split('\n').filter(Boolean) : []);
+            if (lineasCcPdf.length === 0) {
+              lineasCcPdf = [(typeof iniciales_creador !== 'undefined' ? iniciales_creador : 'SD'), 'Cc.: archivo'];
+            }
+            %>
+            <div class="bloque-cc-archivo" style="margin-top: 18px; font-size: 8.5pt; line-height: 1.35; color: #222; text-align: left;">
+              <% for(var s = 0; s < lineasCcPdf.length; s++) { %>
+                <span><%= lineasCcPdf[s] %></span><br>
+              <% } %>
+            </div>
+            <%
             break;
           case 'checkbox':
           case 'inputCheckBox': %>
@@ -1577,6 +1583,18 @@
       for (var i = 0; i< items.length; i++){ %>
         <div class="contenedor" >
           <%= obtenerCampo(items[i], model_actual,ruta, numeracion,host, html, marcaAgua, exp, codigoSeguridad) %>
+        </div>
+      <% } %>
+
+      <% if (typeof _ccArchivoRenderedPdf === 'undefined' || !_ccArchivoRenderedPdf) {
+           var lineasCcPdfDef = (typeof cc_lineas !== 'undefined' && Array.isArray(cc_lineas) && cc_lineas.length > 0)
+             ? cc_lineas
+             : [(typeof iniciales_creador !== 'undefined' ? iniciales_creador : 'SD'), 'Cc.: archivo'];
+      %>
+        <div class="bloque-cc-archivo" style="margin-top: 24px; font-size: 8.5pt; line-height: 1.35; color: #222; text-align: left;">
+          <% for (var s = 0; s < lineasCcPdfDef.length; s++) { %>
+            <span><%= lineasCcPdfDef[s] %></span><br>
+          <% } %>
         </div>
       <% } %>
     </div>

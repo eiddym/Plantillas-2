@@ -1743,6 +1743,28 @@ export class DocumentWorkbenchComponent implements OnInit {
     const refTexto = dg.ref || this.model['ref'] || (d as any).referencia || d.ref || '';
     const titDoc = this.obtenerTituloDocumento();
 
+    // Garantizar que clasificacion y ccArchivo queden registrados en this.model como elementos indivisibles de auditoría
+    const clasifFinal = this.model['clasificacion'] || this.model['inputSelect'] || d.clasificacion || 'Reservado';
+    this.model['clasificacion'] = clasifFinal;
+    this.model['inputSelect'] = clasifFinal;
+
+    const user = this.authService.currentUser();
+    let iniciales = 'SD';
+    if (user) {
+      const u = user as any;
+      const nom = `${u.first_name || u.nombres || ''} ${u.last_name || u.apellidos || ''}`.trim() || u.username || '';
+      iniciales = nom.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ ]/g, ' ').split(/\s+/).filter(Boolean).map((p: string) => p[0].toUpperCase()).join('') || 'SD';
+    }
+    let ccVal = this.model['ccArchivo'] || this.model['ccArchivo-0'] || '';
+    let lineasCc = String(ccVal).replace(/undefined/gi, '').split('\n').map((l: string) => l.trim()).filter(Boolean);
+    if (lineasCc.length > 0 && /^[A-ZÁÉÍÓÚÑ]{1,6}$/.test(lineasCc[0])) {
+      lineasCc.shift();
+    }
+    lineasCc = lineasCc.filter((l: string) => !/^cc\.?:?\s*archivo/i.test(l));
+    const ccFinal = [iniciales, 'Cc.: archivo', ...lineasCc].join('\n');
+    this.model['ccArchivo'] = ccFinal;
+    this.model['ccArchivo-0'] = ccFinal;
+
     return {
       nombre_plantilla: d.nombre_plantilla || (titDoc !== 'DOCUMENTO OFICIAL' ? titDoc : undefined),
       plantilla: plantillaActualizada,

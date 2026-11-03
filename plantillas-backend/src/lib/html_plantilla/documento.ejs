@@ -367,7 +367,13 @@
     <%
       if(html) marcaAgua = false;
       var codigoSeguridad = typeof codigo ==='undefined'? '': codigo;
-        var entidad = typeof entidad === 'undefined' ? {} : entidad;
+      var entidad = typeof entidad === 'undefined' ? {} : entidad;
+      var _ccArchivoRendered = false;
+      var _clasifDoc = (typeof clasificacion_final !== 'undefined' && clasificacion_final)
+        ? clasificacion_final
+        : ((typeof model_actual !== 'undefined' && model_actual && (model_actual.clasificacion || model_actual.inputSelect))
+          ? (model_actual.clasificacion || model_actual.inputSelect)
+          : ((typeof doc !== 'undefined' && doc && doc.clasificacion) ? doc.clasificacion : 'Reservado'));
     %>
     <div class="mi-contenido">
       <%# Funcion que retorna html de acuerdo al tipo de campo  %>
@@ -449,6 +455,7 @@
                 <div style="display:inline-block;">
                   <span><%= fecha %></span><br>
                   <span><%= cite %></span><br>
+                  <span style="font-size: 8.5pt; font-weight: 600; color: #444;">Clasificación : <%= _clasifDoc %></span><br>
                   <span>Expediente: <%= exp %>  </span>
                   <% if(codigoSeguridad !== '') { %>
                     <br><span>Código de verificación: <%= codigoSeguridad %>  </span>
@@ -470,6 +477,7 @@
                   <div style="display:inline-block;">
                     <span><%= fecha %></span><br>
                     <span><%= cite %></span><br>
+                    <span style="font-size: 8.5pt; font-weight: 600; color: #444;">Clasificación : <%= _clasifDoc %></span><br>
                     <% if (typeof es_borrador_html === 'undefined' || !es_borrador_html) { %>
                       <% if (exp) { %><span>Expediente: <%= exp %></span><br><% } %>
                       <% if(codigoSeguridad !== '') {%>
@@ -487,6 +495,9 @@
                 <div id="pageHeader">
                   <div class="cite">
                     <%= cite %>
+                    <div class="clasificacion" style="font-size: 8.5pt; font-weight: 600; color: #444; margin-top: 2px;">
+                      Clasificación : <%= _clasifDoc %>
+                    </div>
                     <% if (typeof es_borrador_html === 'undefined' || !es_borrador_html) { %>
                       <% if (exp) { %>
                         <div class="expediente">
@@ -828,6 +839,11 @@ case 'lista': %>
             </div>
             <%break;
           case 'select':
+            // Clasificación ya se muestra en el bloque de cabecera como elemento indivisible de auditoría, omitir en body
+            if (pItem.templateOptions && pItem.templateOptions.label &&
+                pItem.templateOptions.label.toLowerCase().indexOf('clasificaci') !== -1) {
+              break;
+            }
             var itemsM=pItem.templateOptions.options
             if(pItem.templateOptions.multiple){ %>
               <br><span class="etiqueta"><%= pItem.templateOptions.label%></span><br>
@@ -901,17 +917,20 @@ case 'lista': %>
             }
             break;
           case 'ccArchivo':
-            if(datos[pItem.key]){
-              var vectorDatos = String(datos[pItem.key]).replace(/undefined/gi, '').split('\n') || [];
-              var htmlDatos = "";
-              for(var s = 0; s < vectorDatos.length; s++) {
-                if(s-1 === vectorDatos.length) htmlDatos += "<span>"+ vectorDatos[s]+"</span>";
-                else htmlDatos += "<span>"+ vectorDatos[s]+"</span><br>";
-              }              
-              %>
-              <div> <%- htmlDatos%> </div>
-                
-            <%}
+            _ccArchivoRendered = true;
+            var lineasCcHtml = (typeof cc_lineas !== 'undefined' && Array.isArray(cc_lineas) && cc_lineas.length > 0)
+              ? cc_lineas
+              : (datos[pItem.key] ? String(datos[pItem.key]).replace(/undefined/gi, '').split('\n').filter(Boolean) : []);
+            if (lineasCcHtml.length === 0) {
+              lineasCcHtml = [(typeof iniciales_creador !== 'undefined' ? iniciales_creador : 'SD'), 'Cc.: archivo'];
+            }
+            %>
+            <div class="bloque-cc-archivo" style="margin-top: 18px; font-size: 8.5pt; line-height: 1.35; color: #222; text-align: left;">
+              <% for(var s = 0; s < lineasCcHtml.length; s++) { %>
+                <span><%= lineasCcHtml[s] %></span><br>
+              <% } %>
+            </div>
+            <%
             break;
           case 'checkbox':
           case 'inputCheckBox': %>
@@ -1684,12 +1703,38 @@ case 'lista': %>
         };
       };
 
-      var items = form_actual
-
+      var items = form_actual;
+      var _tieneCite = Array.isArray(items) && items.some(function(item) { return item && item.type === 'cite'; });
+      if (!_tieneCite) { %>
+        <div id="pageHeader" style="margin-bottom: 15px; overflow: hidden; display: block; font-family: 'Open Sans'; font-size: 10px;">
+          <div class="cite" style="float: left;">
+            <div style="font-weight: bold; font-size: 11px;"><%= typeof pdf_cite !== 'undefined' && pdf_cite ? pdf_cite : (doc.nombre ? doc.nombre.replace(/\.pdf$/i, '') : 'BORRADOR') %></div>
+            <div class="clasificacion" style="font-size: 8.5pt; font-weight: 600; color: #444; margin-top: 2px;">
+              Clasificación : <%= _clasifDoc %>
+            </div>
+          </div>
+          <div style="float: right; text-align: right; font-size: 9.5pt; color: #444;">
+            <%= typeof pdf_fecha !== 'undefined' ? pdf_fecha : '' %>
+          </div>
+          <div style="clear: both;"></div>
+        </div>
+      <% }
 
       for (var i = 0; i< items.length; i++){ %>
         <div class="contenedor" >
           <%= obtenerCampo(items[i], model_actual,ruta, numeracion,host, html, marcaAgua, exp, codigoSeguridad) %>
+        </div>
+      <% } %>
+
+      <% if (typeof _ccArchivoRendered === 'undefined' || !_ccArchivoRendered) {
+           var lineasCcDef = (typeof cc_lineas !== 'undefined' && Array.isArray(cc_lineas) && cc_lineas.length > 0)
+             ? cc_lineas
+             : [(typeof iniciales_creador !== 'undefined' ? iniciales_creador : 'SD'), 'Cc.: archivo'];
+      %>
+        <div class="bloque-cc-archivo" style="margin-top: 24px; font-size: 8.5pt; line-height: 1.35; color: #222; text-align: left;">
+          <% for (var s = 0; s < lineasCcDef.length; s++) { %>
+            <span><%= lineasCcDef[s] %></span><br>
+          <% } %>
         </div>
       <% } %>
     </div>

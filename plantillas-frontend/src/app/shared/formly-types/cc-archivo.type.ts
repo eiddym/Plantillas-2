@@ -69,22 +69,27 @@ export class FormlyFieldCcArchivoComponent extends FieldType<FieldTypeConfig> im
   private authService = inject(AuthService);
 
   ngOnInit(): void {
-    if (this.formControl && !this.formControl.value) {
+    if (this.formControl) {
       const user = this.authService.currentUser();
       let abreviacion = '';
       if (user) {
         const u = user as any;
-        const nombreCompleto = `${u.first_name || u.nombres || ''} ${u.last_name || u.apellidos || ''}`.trim();
+        const nombreCompleto = `${u.first_name || u.nombres || ''} ${u.last_name || u.apellidos || ''}`.trim() || u.username || '';
         abreviacion = this.generarAbreviacion(nombreCompleto);
       }
-      const valorInicial = abreviacion ? `${abreviacion}\nCc.: archivo` : 'Cc.: archivo';
-      this.formControl.setValue(valorInicial, { emitEvent: false });
+      if (!abreviacion) abreviacion = 'SD';
+
+      const valorActual = this.formControl.value ? String(this.formControl.value).trim() : '';
+      if (!valorActual) {
+        this.formControl.setValue(`${abreviacion}\nCc.: archivo`, { emitEvent: false });
+      }
     }
   }
 
   private generarAbreviacion(cadena: string): string {
-    const limpia = cadena.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ ]/g, '');
-    const palabras = limpia.toUpperCase().split(' ').filter(Boolean);
-    return palabras.map(p => p[0]).join('');
+    if (!cadena) return 'SD';
+    const limpia = cadena.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ ]/g, ' ').trim();
+    const palabras = limpia.toUpperCase().split(/\s+/).filter(Boolean);
+    return palabras.map(p => p[0]).join('') || 'SD';
   }
 }
