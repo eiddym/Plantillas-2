@@ -1370,7 +1370,10 @@ const generarHtml = (pDatos) => new Promise((resolve, reject) => {
   const nombreDocumento = formatoNombreDoc(pDatos.doc.nombre);
   pDatos.nombre = `${nombreDocumento}.pdf`;
   const rutaDocumento = `${dirDocumento}${pDatos.nombre}`;
-  const rutaPlantilla = `${__dirname}/html_plantilla/documento.ejs`;
+  const esOficial = (pDatos.doc && (pDatos.doc.estado === 'APROBADO' || pDatos.doc.estado === 'CERRADO')) || (!pDatos.es_borrador_html && pDatos.pdf_codigo);
+  const rutaPlantilla = esOficial 
+    ? `${__dirname}/html_plantilla/documento-pdf.ejs` 
+    : `${__dirname}/html_plantilla/documento.ejs`;
 
   const firstItemOptsHtml = (pDatos.form_actual && pDatos.form_actual[0] && pDatos.form_actual[0].templateOptions) || {};
   const numeracion = firstItemOptsHtml.numeracionPagina || false;

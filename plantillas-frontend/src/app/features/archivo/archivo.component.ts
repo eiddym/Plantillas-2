@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -19,6 +19,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { AuthService } from '../../core/auth/auth.service';
+import { DocumentosService } from '../../core/services/documentos.service';
 import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component';
 
 export interface VersionArchivo {
@@ -161,6 +162,9 @@ export interface UnidadArchivo {
                   <span class="visor-doc-titulo">{{ docSeleccionado()?.nombre_plantilla || 'Documento Oficial Custodiado' }}</span>
                 </div>
                 <div class="visor-actions">
+                  <button mat-icon-button class="btn-visor-act" (click)="verPdf(docSeleccionado())" matTooltip="Abrir en Pantalla Completa">
+                    <mat-icon>open_in_full</mat-icon>
+                  </button>
                   <button mat-icon-button class="btn-visor-act" (click)="descargarArchivoFisico(docSeleccionado())" matTooltip="Descargar Copia PDF">
                     <mat-icon>download</mat-icon>
                   </button>
@@ -183,6 +187,10 @@ export interface UnidadArchivo {
                       <mat-icon>refresh</mat-icon>
                       <span>Reintentar</span>
                     </button>
+                  </div>
+                } @else if (htmlVisorSeguro()) {
+                  <div class="visor-html-wrapper">
+                    <div class="visor-html-sheet" [innerHTML]="htmlVisorSeguro()"></div>
                   </div>
                 } @else if (urlPdfSegura()) {
                   <iframe [src]="urlPdfSegura()" class="pdf-local-iframe" title="Visor Documental Embebido"></iframe>
@@ -1880,9 +1888,43 @@ export interface UnidadArchivo {
       flex: 1;
       width: 100%;
       height: 100%;
-      background: #334155;
+      background: #f1f5f9;
       overflow: hidden;
       position: relative;
+      display: flex;
+    }
+
+    .visor-html-wrapper {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      background: #f1f5f9;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 16px;
+      box-sizing: border-box;
+      display: flex;
+      justify-content: center;
+    }
+
+    .visor-html-sheet {
+      width: 100%;
+      max-width: 816px;
+      background: #ffffff;
+      padding: 24px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif;
+      font-size: 9.5pt;
+      line-height: 1.45;
+      color: #1e293b;
+
+      * { box-sizing: border-box; }
+      p { margin-top: 0; margin-bottom: 10px; text-align: justify; }
+      img { max-width: 100% !important; height: auto !important; }
+      table { max-width: 100% !important; word-break: break-word !important; }
+      .bloque-cc-archivo { margin-top: 20px; font-size: 8.5pt; color: #475569; }
     }
 
     .pdf-local-iframe {
@@ -1999,10 +2041,12 @@ export class ArchivoComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly dialog = inject(MatDialog);
+  private readonly documentosService = inject(DocumentosService);
 
   // Visor Local Embebido (Split Screen)
   readonly docSeleccionado = signal<DocumentoArchivo | null>(null);
   readonly urlPdfSegura = signal<SafeResourceUrl | null>(null);
+  readonly htmlVisorSeguro = signal<SafeHtml | null>(null);
   readonly cargandoVisor = signal<boolean>(false);
   readonly errorVisor = signal<string | null>(null);
   private currentObjectUrl: string | null = null;
@@ -2465,6 +2509,7 @@ export class ArchivoComponent implements OnInit {
     this.docSeleccionado.set(doc);
     this.cargandoVisor.set(true);
     this.errorVisor.set(null);
+    this.htmlVisorSeguro.set(null);
     this.urlPdfSegura.set(null);
 
     if (this.currentObjectUrl) {
@@ -2472,73 +2517,33 @@ export class ArchivoComponent implements OnInit {
       this.currentObjectUrl = null;
     }
 
-    // 1. Si el documento ya cuenta con archivo adjunto en formato base64
-    if (doc.archivo_adjunto && typeof doc.archivo_adjunto === 'string' && doc.archivo_adjunto.startsWith('data:application/pdf')) {
-      try {
-        const base64Part = doc.archivo_adjunto.split('base64,')[1];
-        if (base64Part) {
-          const byteCharacters = atob(base64Part);
-          const byteNumbers = new Uint8Array(byteCharacters.length);
-          for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-          }
-          const blob = new Blob([byteNumbers], { type: 'application/pdf' });
-          this.currentObjectUrl = URL.createObjectURL(blob);
-          this.urlPdfSegura.set(this.sanitizer.bypassSecurityTrustResourceUrl(`${this.currentObjectUrl}#toolbar=1&navpanes=0`));
-          this.cargandoVisor.set(false);
-          return;
-        }
-      } catch (err) {
-        console.warn('Error decodificando archivo_adjunto local, solicitando al servidor:', err);
-      }
-    }
-
-    // 2. Solicitar el PDF al backend mediante blob para evitar descargas o pantallas negras
-    const cargarBlobDirecto = (blob: Blob) => {
-      if (blob.type === 'application/json' || blob.size < 100) {
-        if (doc.nombre) {
-          this.http.post('/api/v1/plantillasFormly/documentoPDF', { cite: doc.nombre }, { responseType: 'blob' }).subscribe({
-            next: (blobCite) => {
-              this.currentObjectUrl = URL.createObjectURL(blobCite);
-              this.urlPdfSegura.set(this.sanitizer.bypassSecurityTrustResourceUrl(`${this.currentObjectUrl}#toolbar=1&navpanes=0`));
-              this.cargandoVisor.set(false);
-            },
-            error: () => {
-              this.cargandoVisor.set(false);
-              this.errorVisor.set('El documento no tiene un archivo PDF disponible.');
-            }
-          });
-          return;
-        }
+    this.documentosService.obtenerVistaPreviaHtml(doc.id_documento || doc.nombre).subscribe({
+      next: (res) => {
         this.cargandoVisor.set(false);
-        this.errorVisor.set('El documento no tiene un archivo PDF disponible.');
-        return;
-      }
-
-      this.currentObjectUrl = URL.createObjectURL(blob);
-      this.urlPdfSegura.set(this.sanitizer.bypassSecurityTrustResourceUrl(`${this.currentObjectUrl}#toolbar=1&navpanes=0`));
-      this.cargandoVisor.set(false);
-    };
-
-    this.http.get(`/api/v1/documento/${doc.id_documento}/pdf`, { responseType: 'blob' }).subscribe({
-      next: (blob) => cargarBlobDirecto(blob),
+        const html = res.datos?.html || '<p class="text-muted">No se pudo cargar la visualización del documento.</p>';
+        this.htmlVisorSeguro.set(this.sanitizer.bypassSecurityTrustHtml(html));
+      },
       error: () => {
-        if (doc.nombre) {
-          this.http.post('/api/v1/plantillasFormly/documentoPDF', { cite: doc.nombre }, { responseType: 'blob' }).subscribe({
-            next: (blobCite) => {
-              this.currentObjectUrl = URL.createObjectURL(blobCite);
+        // Fallback solo si es archivo adjunto base64
+        if (doc.archivo_adjunto && typeof doc.archivo_adjunto === 'string' && doc.archivo_adjunto.startsWith('data:application/pdf')) {
+          try {
+            const base64Part = doc.archivo_adjunto.split('base64,')[1];
+            if (base64Part) {
+              const byteCharacters = atob(base64Part);
+              const byteNumbers = new Uint8Array(byteCharacters.length);
+              for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+              }
+              const blob = new Blob([byteNumbers], { type: 'application/pdf' });
+              this.currentObjectUrl = URL.createObjectURL(blob);
               this.urlPdfSegura.set(this.sanitizer.bypassSecurityTrustResourceUrl(`${this.currentObjectUrl}#toolbar=1&navpanes=0`));
               this.cargandoVisor.set(false);
-            },
-            error: () => {
-              this.cargandoVisor.set(false);
-              this.errorVisor.set('No se pudo cargar la vista previa del documento.');
+              return;
             }
-          });
-          return;
+          } catch (err) {}
         }
         this.cargandoVisor.set(false);
-        this.errorVisor.set('No se pudo cargar la vista previa del documento. Intente nuevamente.');
+        this.errorVisor.set('No se pudo cargar la visualización del documento.');
       }
     });
   }
@@ -2557,13 +2562,14 @@ export class ArchivoComponent implements OnInit {
     }
     this.docSeleccionado.set(null);
     this.urlPdfSegura.set(null);
+    this.htmlVisorSeguro.set(null);
     this.cargandoVisor.set(false);
     this.errorVisor.set(null);
   }
 
   verPdf(doc: any): void {
     if (!doc) return;
-    this.seleccionarDocumento(doc);
+    this.docSeleccionado.set(doc);
 
     const tituloDoc = doc.nombre 
       ? `${doc.nombre} - ${doc.referencia || doc.nombre_plantilla || 'Documento Oficial'}`

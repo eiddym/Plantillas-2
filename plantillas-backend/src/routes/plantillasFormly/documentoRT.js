@@ -1069,6 +1069,81 @@ module.exports = app => {
         plantillaValorJson = {};
       }
 
+      const tienePlantillaFormly = Array.isArray(plantillaJson) && plantillaJson.length > 0;
+      if (!tienePlantillaFormly && (doc.es_institucional || doc.grupo === 'institucional')) {
+        let meta = {};
+        try {
+          if (doc.plantilla_valor) {
+            meta = typeof doc.plantilla_valor === 'string' ? JSON.parse(doc.plantilla_valor) : doc.plantilla_valor;
+          }
+        } catch (e) {}
+
+        const tituloDoc = meta.nombre_documento || doc.nombre_plantilla || 'Documento Oficial Institucional';
+        const descDoc = meta.descripcion || doc.referencia || 'Documento bajo custodia del Archivo Central Institucional.';
+        const obsDoc = meta.observacion || 'Documento verificado y custodiado por Administración y MAE.';
+        const fechaReg = doc._fecha_creacion ? new Date(doc._fecha_creacion).toLocaleDateString('es-BO', { year: 'numeric', month: 'long', day: '2-digit' }) : '2026';
+
+        const htmlInstitucional = `
+          <div style="font-family: 'Helvetica Neue', Arial, sans-serif; padding: 20px; color: #1e293b; background: #fff;">
+            <div style="text-align: center; border-bottom: 3px double #0f172a; padding-bottom: 20px; margin-bottom: 30px;">
+              <div style="font-size: 14pt; font-weight: 800; letter-spacing: 1.5px; color: #0f172a; margin-bottom: 4px; text-transform: uppercase;">COOPERATIVA MINERA MARABUNTA R.L.</div>
+              <div style="font-size: 10pt; font-weight: 600; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">FONDO DOCUMENTAL & ARCHIVO INSTITUCIONAL</div>
+            </div>
+            <div style="text-align: center; margin: 25px auto;">
+              <div style="padding: 12px 24px; background: #f8fafc; border: 2px solid #0f172a; border-radius: 6px; display: inline-block;">
+                <span style="font-size: 9pt; font-weight: 700; color: #475569; letter-spacing: 1px; display: block;">CITE OFICIAL DE CUSTODIA</span>
+                <span style="font-size: 16pt; font-weight: 900; color: #0284c7; letter-spacing: 1.5px; display: block; margin-top: 4px;">${doc.nombre}</span>
+              </div>
+            </div>
+            <div style="background: #f1f5f9; border-left: 4px solid #0284c7; padding: 20px; border-radius: 4px; margin: 25px 0;">
+              <div style="margin-bottom: 12px;">
+                <span style="font-size: 9pt; font-weight: 700; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 2px;">Denominación del Documento Institucional:</span>
+                <span style="font-size: 12pt; font-weight: 600; color: #0f172a;">${tituloDoc}</span>
+              </div>
+              <div style="margin-top: 16px;">
+                <span style="font-size: 9pt; font-weight: 700; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 2px;">Objeto / Descripción Oficial:</span>
+                <p style="font-size: 11pt; font-weight: 400; color: #334155; line-height: 1.6; margin: 0;">${descDoc}</p>
+              </div>
+              ${obsDoc ? `
+              <div style="margin-top: 16px;">
+                <span style="font-size: 9pt; font-weight: 700; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 2px;">Observación / Registro de Digitalización:</span>
+                <p style="font-size: 11pt; font-weight: 400; color: #334155; line-height: 1.6; margin: 0;">${obsDoc}</p>
+              </div>` : ''}
+              <div style="margin-top: 16px;">
+                <span style="font-size: 9pt; font-weight: 700; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 2px;">Fecha de Registro y Custodia:</span>
+                <span style="font-size: 12pt; font-weight: 600; color: #0f172a;">${fechaReg}</span>
+              </div>
+            </div>
+            <div style="margin-top: 60px; border-top: 1px dashed #cbd5e1; padding-top: 20px; display: flex; justify-content: space-between; align-items: flex-end;">
+              <div style="border: 2px solid #0284c7; color: #0284c7; padding: 10px 18px; border-radius: 4px; font-weight: 800; font-size: 9pt; text-align: center; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">
+                CUSTODIA INSTITUCIONAL VÁLIDA<br>
+                ARCHIVO CENTRAL - MAE
+              </div>
+              <div style="font-size: 8.5pt; color: #94a3b8; text-align: right; max-width: 320px; line-height: 1.4;">
+                Documento oficial registrado en el catálogo institucional del Sistema de Gestión Documental. Referenciable y auditable en todas las dependencias.
+              </div>
+            </div>
+          </div>
+        `;
+
+        return res.status(200).send(util.formatearMensaje("EXITO", "Ficha de custodia institucional obtenida exitosamente.", {
+          id_documento: doc.id_documento,
+          nombre: doc.nombre,
+          estado: doc.estado,
+          tipoHoja: 'Letter',
+          html: htmlInstitucional
+        }));
+      }
+
+      const esOficial = doc.estado === 'APROBADO' || doc.estado === 'CERRADO';
+      let codigoDoc = '';
+      if (esOficial) {
+        const firmaFound = await modelos.firma.findOne({ where: { fid_documento: doc.id_documento } });
+        if (firmaFound && firmaFound.codigo) {
+          codigoDoc = firmaFound.codigo;
+        }
+      }
+
       const usuarioPeticion = req.body?.audit_usuario || req.user;
       const datos = {
         doc: {
@@ -1086,11 +1161,10 @@ module.exports = app => {
         audit_usuario: usuarioPeticion,
         host: dirExternos,
         grupo: doc.grupo,
-        // Borradores NO tienen código de verificación ni QR institucional
-        codigo: '',
-        pdf_codigo: '',
-        codigoSeguridad: '',
-        es_borrador_html: true
+        codigo: codigoDoc,
+        pdf_codigo: codigoDoc,
+        codigoSeguridad: codigoDoc,
+        es_borrador_html: !esOficial
       };
 
       if (datos.model_actual && datos.model_actual['cite-0'] && datos.model_actual['cite-0'].fecha) {

@@ -1098,6 +1098,7 @@ export class DocumentosListComponent implements OnInit {
         data: {
           titulo: `${doc.nombre} - ${doc.ref || 'Documento Oficial'}`,
           docCite: doc.nombre,
+          idDocumento: doc.id_documento,
           esBorrador: false
         }
       });

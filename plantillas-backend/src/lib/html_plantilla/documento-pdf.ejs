@@ -383,7 +383,7 @@
       <div class="reserva-qr"></div>
       <% 
         var _esDocAprobado = (typeof doc !== 'undefined' && doc && (doc.estado === 'APROBADO' || doc.estado === 'CERRADO')) || (typeof estado !== 'undefined' && (estado === 'APROBADO' || estado === 'CERRADO'));
-        if ((typeof html === 'undefined' || !html) && _esDocAprobado) { 
+        if (_esDocAprobado) { 
       %>
         <table class="pdf-page1-metadata" role="presentation" style="width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0 0 8pt 0;">
           <tr>
