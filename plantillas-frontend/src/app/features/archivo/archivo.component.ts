@@ -1924,8 +1924,8 @@ export interface UnidadArchivo {
       .visor-embebido-panel {
         position: relative !important;
         top: 0 !important;
-        height: 680px !important;
-        min-height: 480px !important;
+        height: auto !important;
+        max-height: 85vh !important;
         margin-bottom: 20px;
         order: -1;
       }
@@ -1934,19 +1934,20 @@ export interface UnidadArchivo {
     .visor-embebido-panel {
       position: sticky;
       top: 16px;
-      height: calc(100vh - 170px);
-      min-height: 600px;
+      height: fit-content;
+      max-height: calc(100vh - 120px);
       display: flex;
       flex-direction: column;
       z-index: 10;
     }
 
     .visor-card {
-      height: 100%;
-      background: #ffffff;
+      height: auto;
+      max-height: calc(100vh - 120px);
+      background: #1e293b;
       border-radius: 16px;
-      border: 1px solid rgba(226, 232, 240, 0.9);
-      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+      border: 1px solid rgba(226, 232, 240, 0.2);
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -2062,19 +2063,21 @@ export interface UnidadArchivo {
     }
 
     .visor-iframe-wrapper {
-      flex: 1;
       width: 100%;
-      height: 100%;
-      background: #94a3b8;
+      height: auto;
+      max-height: calc(100vh - 180px);
+      background: #0f172a;
       overflow: hidden;
       position: relative;
       display: flex;
+      flex-direction: column;
     }
 
     /* Viewport de Hoja a Escala Real */
     .visor-sheet-viewport {
       width: 100%;
-      height: 100%;
+      height: auto;
+      max-height: calc(100vh - 180px);
       box-sizing: border-box;
       overflow: auto;
       display: flex;
@@ -2267,13 +2270,15 @@ export interface UnidadArchivo {
     /* Visor Canvas Nativo (PDF.js sin iframe ni descarga) */
     .visor-canvas-viewport {
       width: 100%;
-      height: 100%;
+      height: auto;
+      max-height: calc(100vh - 180px);
       box-sizing: border-box;
-      overflow: auto;
+      overflow-y: auto;
+      overflow-x: hidden;
       display: flex;
       flex-direction: column;
-      background: #475569;
-      padding: 12px;
+      background: #0f172a;
+      padding: 10px 12px 14px;
       align-items: center;
 
       &::-webkit-scrollbar {
@@ -2281,7 +2286,7 @@ export interface UnidadArchivo {
         height: 6px;
       }
       &::-webkit-scrollbar-thumb {
-        background: #64748b;
+        background: #334155;
         border-radius: 3px;
       }
     }
@@ -2381,8 +2386,10 @@ export interface UnidadArchivo {
       justify-content: center;
       align-items: flex-start;
       width: 100%;
-      flex: 1;
+      height: auto;
       box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
     .pdf-rendered-canvas {
@@ -3139,39 +3146,15 @@ export class ArchivoComponent implements OnInit {
       this.currentObjectUrl = null;
     }
 
-    // 1. Si el documento tiene el PDF físico en base64 en archivo_adjunto
-    if (doc.archivo_adjunto && typeof doc.archivo_adjunto === 'string' && doc.archivo_adjunto.startsWith('data:application/pdf')) {
-      try {
-        const base64Part = doc.archivo_adjunto.split('base64,')[1];
-        if (base64Part) {
-          const byteCharacters = atob(base64Part);
-          const byteNumbers = new Uint8Array(byteCharacters.length);
-          for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-          }
-          this.cargarPdfEnCanvas(byteNumbers);
-          return;
-        }
-      } catch (err) {
-        console.error('Error procesando archivo adjunto base64:', err);
-      }
-    }
-
-    // 2. Si no tiene plantilla Formly interactiva (documento PDF escaneado / institucional subido)
+    // 1. Si no tiene plantilla Formly interactiva (documento PDF escaneado / institucional subido)
     const tieneFormly = this.tienePlantillaFormly(doc);
     if (!tieneFormly) {
-      this.http.get(`/api/v1/documento/${doc.id_documento}/pdf`, { responseType: 'arraybuffer' }).subscribe({
-        next: (buf: ArrayBuffer) => {
-          this.cargarPdfEnCanvas(new Uint8Array(buf));
-        },
-        error: () => {
-          this.cargarPreviewHtml(doc);
-        }
-      });
+      // Streaming progresivo directo con PDF.js vía HTTP Range (Carga instantánea de página 1)
+      this.cargarPdfEnCanvas(`/api/v1/documento/${doc.id_documento}/pdf`);
       return;
     }
 
-    // 3. Documento interactivo redactado en Formly
+    // 2. Documento interactivo redactado en Formly
     this.cargarPreviewHtml(doc);
   }
 
@@ -3180,16 +3163,7 @@ export class ArchivoComponent implements OnInit {
       next: (res) => {
         if (res.datos?.esPdf || (!res.datos?.html && res.datos?.pdfUrl)) {
           const pdfUrl = res.datos?.pdfUrl || `/api/v1/documento/${doc.id_documento}/pdf`;
-          this.http.get(pdfUrl, { responseType: 'arraybuffer' }).subscribe({
-            next: (buf: ArrayBuffer) => {
-              this.cargarPdfEnCanvas(new Uint8Array(buf));
-            },
-            error: () => {
-              this.cargandoVisor.set(false);
-              this.errorVisor.set('No se pudo cargar la copia digital del documento.');
-              this.cdr.markForCheck();
-            }
-          });
+          this.cargarPdfEnCanvas(pdfUrl);
           return;
         }
 
@@ -3213,7 +3187,7 @@ export class ArchivoComponent implements OnInit {
     });
   }
 
-  async cargarPdfEnCanvas(data: Uint8Array | ArrayBuffer): Promise<void> {
+  async cargarPdfEnCanvas(src: any): Promise<void> {
     try {
       this.cargandoVisor.set(true);
       this.errorVisor.set(null);
@@ -3228,12 +3202,13 @@ export class ArchivoComponent implements OnInit {
         this.renderTaskEnCurso = null;
       }
 
-      const loadingTask = pdfjsLib.getDocument({
-        data: data,
-        cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
-        cMapPacked: true
-      });
+      const docParam: any = typeof src === 'string'
+        ? { url: src, cMapUrl: '/assets/pdfjs/cmaps/', cMapPacked: true }
+        : (src && src.url
+            ? { ...src, cMapUrl: '/assets/pdfjs/cmaps/', cMapPacked: true }
+            : { data: src, cMapUrl: '/assets/pdfjs/cmaps/', cMapPacked: true });
 
+      const loadingTask = pdfjsLib.getDocument(docParam);
       const pdfDoc = await loadingTask.promise;
       this.loadedPdfDocument = pdfDoc;
       this.totalPaginasPdf.set(pdfDoc.numPages || 1);
@@ -3243,7 +3218,7 @@ export class ArchivoComponent implements OnInit {
 
       setTimeout(() => {
         this.renderizarPaginaActualPdf();
-      }, 50);
+      }, 30);
     } catch (err: any) {
       console.error('Error cargando documento PDF con PDF.js:', err);
       this.cargandoVisor.set(false);

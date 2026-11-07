@@ -84,6 +84,7 @@ module.exports = app => {
 
       // 2. Obtener todos los documentos cerrados con CITE
       const docs = await Documento.findAll({
+        attributes: { exclude: ['archivo_adjunto'] },
         where: {
           estado: 'CERRADO',
           nombre: { [Op.like]: '%/%' }
@@ -177,6 +178,7 @@ module.exports = app => {
 
       // Documentos de los funcionarios de esta unidad, sub-unidades o recibidos en copia oficial (CC)
       const docs = await Documento.findAll({
+        attributes: { exclude: ['archivo_adjunto'] },
         where: {
           estado: 'CERRADO',
           nombre: { [Op.like]: '%/%' },
@@ -270,6 +272,7 @@ module.exports = app => {
   app.get('/api/v1/archivo/institucional', async (req, res) => {
     try {
       const docs = await Documento.findAll({
+        attributes: { exclude: ['archivo_adjunto'] },
         where: {
           es_institucional: true,
           estado: { [Op.ne]: 'ELIMINADO' }

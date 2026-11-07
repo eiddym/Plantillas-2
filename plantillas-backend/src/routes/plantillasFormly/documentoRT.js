@@ -879,18 +879,7 @@ module.exports = app => {
         ));
       }
 
-      // 1. Si tiene archivo_adjunto con base64 Data URL, enviarlo directamente
-      if (doc.archivo_adjunto && typeof doc.archivo_adjunto === 'string' && doc.archivo_adjunto.startsWith('data:application/pdf')) {
-        const base64Data = doc.archivo_adjunto.split('base64,')[1];
-        if (base64Data) {
-          const buffer = Buffer.from(base64Data, 'base64');
-          res.set('Content-Type', 'application/pdf');
-          res.set('Content-Disposition', `inline; filename="${util.formatoNombreDoc(doc.nombre)}.pdf"`);
-          return res.send(buffer);
-        }
-      }
-
-      // 2. Si tiene versiones o archivo físico en disco
+      // 1. Si tiene versiones o archivo físico estático en disco (MÁXIMA VELOCIDAD Y STREAMING POR RANGOS)
       let candidatePaths = [];
       if (doc.versiones && Array.isArray(doc.versiones)) {
         for (const v of doc.versiones) {
@@ -922,6 +911,17 @@ module.exports = app => {
             res.set('Content-Disposition', `inline; filename="${formattedName}"`);
             return res.sendFile(path.resolve(p));
           }
+        }
+      }
+
+      // 2. Si tiene archivo_adjunto con base64 Data URL, enviarlo directamente
+      if (doc.archivo_adjunto && typeof doc.archivo_adjunto === 'string' && doc.archivo_adjunto.startsWith('data:application/pdf')) {
+        const base64Data = doc.archivo_adjunto.split('base64,')[1];
+        if (base64Data) {
+          const buffer = Buffer.from(base64Data, 'base64');
+          res.set('Content-Type', 'application/pdf');
+          res.set('Content-Disposition', `inline; filename="${formattedName}"`);
+          return res.send(buffer);
         }
       }
 
