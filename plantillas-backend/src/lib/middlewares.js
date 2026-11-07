@@ -95,10 +95,13 @@ module.exports = app => {
     });
   }
 
-  app.use(bodyParser.json({limit:'100mb'}));
+  app.use(bodyParser.json({ limit: '100mb' }));
+  app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 
   // Para poder subir archivos.
-  app.use(fileupload());
+  app.use(fileupload({
+    limits: { fileSize: 100 * 1024 * 1024 }
+  }));
 
 
     // Permite la visualizacion de los test, en entornos distintos a produccion.
@@ -122,11 +125,8 @@ module.exports = app => {
     // Deshabilita la informacion.
     app.disable('x-powered-by');
 
-    // Realiza el uso de "bodyParser" para la recepcion de Json como body.
-    app.use(bodyParser.json());
-
-      // Realiza el uso de la autenticacion de passport.
-      app.use(app.src.auth.initialize());
+    // Realiza el uso de la autenticacion de passport.
+    app.use(app.src.auth.initialize());
 
     // Ruta estatica de acceso a la imagen del membrete.
     console.log('[MEMBRETE PATH]', process.cwd(), 'public/images/membrete.png');
