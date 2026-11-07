@@ -99,8 +99,8 @@ export class DocumentosService {
     return this.http.put<ApiResponse<any>>(`${this.baseUrl}/documento/${id}/recibir`, {});
   }
 
-  obtenerVistaPreviaHtml(idOrCite: number | string): Observable<ApiResponse<{ html: string; nombre: string; estado?: string; tipoHoja?: string }>> {
-    return this.http.get<ApiResponse<{ html: string; nombre: string; estado?: string; tipoHoja?: string }>>(`${this.baseUrl}/documento/${encodeURIComponent(idOrCite)}/preview`);
+  obtenerVistaPreviaHtml(idOrCite: number | string): Observable<ApiResponse<{ html: string | null; nombre: string; estado?: string; tipoHoja?: string; esPdf?: boolean; pdfUrl?: string; id_documento?: number }>> {
+    return this.http.get<ApiResponse<{ html: string | null; nombre: string; estado?: string; tipoHoja?: string; esPdf?: boolean; pdfUrl?: string; id_documento?: number }>>(`${this.baseUrl}/documento/${encodeURIComponent(idOrCite)}/preview`);
   }
 
   desclasificarDocumento(id: number): Observable<ApiResponse<any>> {

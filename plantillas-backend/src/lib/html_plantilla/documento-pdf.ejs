@@ -339,6 +339,14 @@
         width: 75%;
       }
 
+      <% if (typeof teko_font_base64 !== 'undefined' && teko_font_base64) { %>
+      @font-face {
+        font-family: 'Teko Light';
+        src: url('<%= teko_font_base64 %>') format('truetype');
+        font-weight: 600;
+        font-style: normal;
+      }
+      <% } %>
 
 </style>
   </head>
@@ -381,19 +389,52 @@
     <div class="mi-contenido">
     <div class="cuerpo-documento">
       <div class="reserva-qr"></div>
+      <% if (typeof html !== 'undefined' && html) { %>
+        <!-- ENCABEZADO INSTITUCIONAL OFICIAL (VISTA PREVIA EN PANTALLA) -->
+        <div class="pdf-header-container" style="width: 100%; box-sizing: border-box; margin: 0 0 16px 0; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+          <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 0; padding: 0;">
+            <tr>
+              <td style="width: 90px; vertical-align: middle; text-align: left; padding: 0;">
+                <% if (typeof logo_base64 !== 'undefined' && logo_base64) { %>
+                  <img src="<%= logo_base64 %>" alt="Logo Institucional" style="width: 82px; height: 82px; border-radius: 50%; object-fit: cover; display: block;">
+                <% } %>
+              </td>
+              <td style="vertical-align: middle; text-align: center; padding: 0 6px;">
+                <div style="font-family: 'Teko Light', 'Teko', 'Arial Narrow', sans-serif; font-size: 30px; font-weight: 700; color: #7b3f16; line-height: 1.05; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; margin-bottom: 2px;">
+                  <%= (typeof entidad !== 'undefined' && entidad && entidad.razon_social) ? entidad.razon_social : 'COOPERATIVA MINERA MARABUNTA R.L.' %>
+                </div>
+                <div style="font-family: 'Teko Light', 'Teko', 'Arial Narrow', sans-serif; font-size: 15.5px; font-weight: 600; color: #111111; line-height: 1.15; margin-bottom: 2px; white-space: nowrap;">
+                  <%= (typeof entidad !== 'undefined' && entidad && entidad.personeria_juridica) ? entidad.personeria_juridica : 'P.J. 483/2025, R.E.C. 01.01.2760' %>
+                </div>
+                <div style="font-family: 'Teko Light', 'Teko', 'Arial Narrow', sans-serif; font-size: 12.5px; font-weight: 600; color: #222222; line-height: 1.15; white-space: nowrap;">
+                  <%= (typeof entidad !== 'undefined' && entidad && entidad.afiliacion) ? entidad.afiliacion : 'AFILIADA A LA FEDERACIÓN REGIONAL DE COOPERATIVAS MINERAS DEL SUD R.L. UYUNI' %>
+                </div>
+              </td>
+              <td style="width: 90px; vertical-align: middle; text-align: right; padding: 0;">
+                <% if (typeof logo_ferecomin_base64 !== 'undefined' && logo_ferecomin_base64) { %>
+                  <img src="<%= logo_ferecomin_base64 %>" alt="Logo FERECOMIN" style="width: 82px; height: 82px; border-radius: 50%; object-fit: cover; display: block; margin-left: auto;">
+                <% } else if (typeof logo_base64 !== 'undefined' && logo_base64) { %>
+                  <img src="<%= logo_base64 %>" alt="Logo FERECOMIN" style="width: 82px; height: 82px; border-radius: 50%; object-fit: cover; display: block; margin-left: auto;">
+                <% } %>
+              </td>
+            </tr>
+          </table>
+          <div style="border-bottom: 2.5px solid #c4a484; width: 100%; margin-top: 6px; margin-bottom: 12px;"></div>
+        </div>
+      <% } %>
       <% 
         var _esDocAprobado = (typeof doc !== 'undefined' && doc && (doc.estado === 'APROBADO' || doc.estado === 'CERRADO')) || (typeof estado !== 'undefined' && (estado === 'APROBADO' || estado === 'CERRADO'));
         if (_esDocAprobado) { 
       %>
-        <table class="pdf-page1-metadata" role="presentation" style="width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0 0 8pt 0;">
+        <table class="pdf-page1-metadata" role="presentation" style="width: 100%; border: none !important; border-collapse: collapse; table-layout: fixed; margin: 0 0 8pt 0;">
           <tr>
-            <td class="pdf-meta-izq" style="width: 68%; vertical-align: top; text-align: left; font-size: 10pt; line-height: 1.35; color: #222;">
+            <td class="pdf-meta-izq" style="border: none !important; width: 68%; vertical-align: top; text-align: left; font-size: 10pt; line-height: 1.35; color: #222; padding: 0 !important;">
               <%= typeof pdf_cite !== 'undefined' && pdf_cite ? pdf_cite : (typeof doc !== 'undefined' && doc && doc.nombre ? doc.nombre.replace(/\.pdf$/i, '') : '') %><br>
               Expediente : <%= typeof pdf_expediente !== 'undefined' && pdf_expediente !== null ? pdf_expediente : (typeof exp !== 'undefined' ? exp : '') %><br>
               Código de verificación : <%= typeof pdf_codigo !== 'undefined' && pdf_codigo ? pdf_codigo : (typeof codigoSeguridad !== 'undefined' ? codigoSeguridad : '') %><br>
               Clasificación : <%= _cabClasificacion %>
             </td>
-            <td class="pdf-meta-der" style="width: 32%; vertical-align: top; text-align: right;" align="right">
+            <td class="pdf-meta-der" style="border: none !important; width: 32%; vertical-align: top; text-align: right; padding: 0 !important;" align="right">
               <div class="pdf-fecha-qr" style="display: inline-block; text-align: center;">
                 <div class="pdf-fecha" style="font-size: 9.5pt; font-weight: 600; line-height: 12pt; margin-bottom: 3px; color: #222; text-align: center;"><%= typeof pdf_fecha !== 'undefined' && pdf_fecha ? pdf_fecha : '' %></div>
                 <% if (typeof qr_base64 !== 'undefined' && qr_base64) { %>
@@ -1595,6 +1636,23 @@
           <% for (var s = 0; s < lineasCcPdfDef.length; s++) { %>
             <span><%= lineasCcPdfDef[s] %></span><br>
           <% } %>
+        </div>
+      <% } %>
+
+      <% if (typeof html !== 'undefined' && html) { %>
+        <!-- PIE DE PÁGINA INSTITUCIONAL OFICIAL (VISTA PREVIA EN PANTALLA) -->
+        <div class="pdf-footer-container" style="width: 100%; box-sizing: border-box; margin-top: auto; padding-top: 36px; margin-bottom: 6px; font-family: 'Open Sans', 'DejaVu Sans', Arial, Helvetica, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+          <div style="border-top: 2px solid #c4a484; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 8pt; color: #333; line-height: 11pt;">
+            <div style="width: 50px;"></div>
+            <div style="text-align: center; flex: 1;">
+              <%= (typeof entidad !== 'undefined' && entidad && entidad.direccion) ? entidad.direccion : 'ZONA PROGRESO, CALLE RAVELO S/N, ENTRE BOLIVAR Y ABAROA, UYUNI - BOLIVIA' %><br>
+              <%= (typeof entidad !== 'undefined' && entidad && entidad.nit) ? entidad.nit : 'M.C./NIT: 484874028' %> | <%= (typeof entidad !== 'undefined' && entidad && entidad.telefono) ? entidad.telefono : 'TELEFONO: 71617875' %> | <%= (typeof entidad !== 'undefined' && entidad && entidad.correo) ? entidad.correo : 'CORREO: contacto@marabuntarl.com' %><br>
+              <%= (typeof entidad !== 'undefined' && entidad && entidad.web) ? entidad.web : 'marabuntarl.com' %>
+            </div>
+            <div style="width: 50px; text-align: right; font-size: 9.5pt; font-weight: 700; color: #444; white-space: nowrap;">
+              1/1
+            </div>
+          </div>
         </div>
       <% } %>
     </div>

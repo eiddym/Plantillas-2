@@ -872,6 +872,33 @@ export class DashboardComponent implements OnInit {
     'archivo/institucional': { icon: 'manage_search', color: 'orange', desc: 'Buscador maestro de expedientes', countSignal: () => this.totalArchivoInstitucional() }
   };
 
+  private getItemMeta(url?: string, label?: string) {
+    const rawUrl = url || '';
+    const cleanUrl = rawUrl.replace(/^\/+/, '').toLowerCase();
+    const lbl = (label || '').toUpperCase();
+
+    if (this.itemMetaMap[cleanUrl]) return this.itemMetaMap[cleanUrl];
+    if (this.itemMetaMap[rawUrl]) return this.itemMetaMap[rawUrl];
+    if (this.itemMetaMap['/' + cleanUrl]) return this.itemMetaMap['/' + cleanUrl];
+
+    if (lbl.includes('INSTITUCIONAL')) {
+      return this.itemMetaMap['archivo/institucional'];
+    }
+    if (lbl.includes('GENERAL') && lbl.includes('ARCHIVO')) {
+      return this.itemMetaMap['archivo/general'];
+    }
+    if (lbl.includes('UNIDAD') && lbl.includes('ARCHIVO')) {
+      return this.itemMetaMap['archivo/unidad'];
+    }
+
+    return {
+      icon: 'arrow_right',
+      color: 'blue',
+      desc: `Acceso a ${label || 'módulo'}`,
+      countSignal: () => 0
+    };
+  }
+
   // Cápsula activa seleccionada (por defecto 'DOCUMENTOS' como en el modelo)
   readonly seccionSeleccionada = signal<string>('DOCUMENTOS');
 
@@ -901,12 +928,7 @@ export class DashboardComponent implements OnInit {
       if (padre.submenu && padre.submenu.length > 0) {
         const items: DashboardItem[] = [];
         for (const sub of padre.submenu) {
-          const meta = this.itemMetaMap[sub.url] || {
-            icon: sub.icon || 'arrow_right',
-            color: 'blue',
-            desc: `Acceso a ${sub.label}`,
-            countSignal: () => 0
-          };
+          const meta = this.getItemMeta(sub.url, sub.label);
           items.push({
             label: sub.label,
             url: sub.url,
@@ -925,12 +947,7 @@ export class DashboardComponent implements OnInit {
           });
         }
       } else {
-        const meta = this.itemMetaMap[padre.url] || {
-          icon: padre.icon || 'archive',
-          color: 'slate',
-          desc: `Módulo oficial ${padre.label}`,
-          countSignal: () => 0
-        };
+        const meta = this.getItemMeta(padre.url, padre.label);
         result.push({
           label: padre.label,
           icon: parentMeta.icon,

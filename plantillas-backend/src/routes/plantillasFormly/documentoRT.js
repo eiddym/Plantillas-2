@@ -911,6 +911,13 @@ module.exports = app => {
       if (!forceRegen) {
         for (const p of candidatePaths) {
           if (p && fs.existsSync(p)) {
+            const stat = fs.statSync(p);
+            const docModTime = doc._fecha_modificacion ? new Date(doc._fecha_modificacion).getTime() : 0;
+            // Si el archivo físico es anterior a la modificación del documento, ignorar caché y regenerar
+            if (docModTime > 0 && stat.mtimeMs < docModTime - 5000) {
+              logger.info(`[PDF CACHE] Archivo ${p} es anterior a la modificación del documento. Se regenerará.`);
+              continue;
+            }
             res.set('Content-Type', 'application/pdf');
             res.set('Content-Disposition', `inline; filename="${formattedName}"`);
             return res.sendFile(path.resolve(p));
@@ -1071,6 +1078,20 @@ module.exports = app => {
 
       const tienePlantillaFormly = Array.isArray(plantillaJson) && plantillaJson.length > 0;
       if (!tienePlantillaFormly && (doc.es_institucional || doc.grupo === 'institucional')) {
+        const tienePdfFisico = (doc.archivo_adjunto && typeof doc.archivo_adjunto === 'string' && doc.archivo_adjunto.length > 100) ||
+                               (doc.versiones && Array.isArray(doc.versiones) && doc.versiones.length > 0);
+        if (tienePdfFisico) {
+          return res.status(200).send(util.formatearMensaje("EXITO", "Documento PDF oficial en custodia.", {
+            id_documento: doc.id_documento,
+            nombre: doc.nombre,
+            estado: doc.estado,
+            tipoHoja: 'Letter',
+            esPdf: true,
+            pdfUrl: `/api/v1/documento/${doc.id_documento}/pdf`,
+            html: null
+          }));
+        }
+
         let meta = {};
         try {
           if (doc.plantilla_valor) {

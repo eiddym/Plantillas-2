@@ -1176,14 +1176,50 @@ export class VerificarComponent implements OnInit {
   private pdfBlob: Blob | null = null;
 
   ngOnInit(): void {
-    const qp = this.route.snapshot.queryParams;
-    if (qp['cite'] || qp['codigo']) {
+    this.route.queryParams.subscribe(() => {
+      this.aplicarParametrosYConsultar();
+    });
+    this.aplicarParametrosYConsultar();
+  }
+
+  private extraerParametros(): { cite: string; codigo: string } {
+    const qp = this.route.snapshot.queryParams || {};
+    let cite = qp['cite'] || '';
+    let codigo = qp['codigo'] || '';
+
+    // 1. Fallback directo desde window.location.search (?cite=...&codigo=...)
+    if ((!cite || !codigo) && typeof window !== 'undefined' && window.location?.search) {
+      const urlSearchParams = new URLSearchParams(window.location.search);
+      cite = cite || urlSearchParams.get('cite') || '';
+      codigo = codigo || urlSearchParams.get('codigo') || '';
+    }
+
+    // 2. Fallback si vino en formato hash (/#/verificar?cite=...&codigo=...)
+    if ((!cite || !codigo) && typeof window !== 'undefined' && window.location?.hash) {
+      const hash = window.location.hash;
+      if (hash.includes('?')) {
+        const hashQuery = hash.substring(hash.indexOf('?') + 1);
+        const hashParams = new URLSearchParams(hashQuery);
+        cite = cite || hashParams.get('cite') || '';
+        codigo = codigo || hashParams.get('codigo') || '';
+      }
+    }
+
+    return {
+      cite: decodeURIComponent(cite || '').trim(),
+      codigo: decodeURIComponent(codigo || '').trim()
+    };
+  }
+
+  private aplicarParametrosYConsultar(): void {
+    const { cite, codigo } = this.extraerParametros();
+    if (cite || codigo) {
       this.verifyForm.patchValue({
-        cite: qp['cite'] || '',
-        codigo: qp['codigo'] || ''
+        cite: cite || this.verifyForm.value.cite,
+        codigo: codigo || this.verifyForm.value.codigo
       });
-      if (qp['cite'] && qp['codigo']) {
-        this.consultar();
+      if (cite && codigo && !this.loading() && !this.resultado()) {
+        setTimeout(() => this.consultar(), 120);
       }
     }
   }

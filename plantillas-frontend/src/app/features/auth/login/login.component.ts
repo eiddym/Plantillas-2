@@ -135,6 +135,7 @@ import { AuthService } from '../../../core/auth/auth.service';
   styles: [`
     .login-container {
       min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -143,13 +144,14 @@ import { AuthService } from '../../../core/auth/auth.service';
                   url('/assets/images/bg.jpg') no-repeat center center fixed;
       background-size: cover;
       font-family: 'Poppins', Roboto, sans-serif;
+      box-sizing: border-box;
     }
 
     .login-card-horizontal {
       display: flex;
       width: 100%;
-      max-width: 920px;
-      min-height: 500px;
+      max-width: 860px;
+      min-height: 460px;
       background-color: #ffffff;
       border-radius: 20px;
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
@@ -158,7 +160,7 @@ import { AuthService } from '../../../core/auth/auth.service';
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(15px) scale(0.98); }
+      from { opacity: 0; transform: translateY(12px) scale(0.99); }
       to { opacity: 1; transform: translateY(0) scale(1); }
     }
 
@@ -169,16 +171,18 @@ import { AuthService } from '../../../core/auth/auth.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 40px;
+      padding: 36px;
       position: relative;
       border-right: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .logo-cooperativa {
       width: 100%;
-      max-width: 320px;
+      max-width: 260px;
       height: auto;
-      filter: drop-shadow(0px 10px 24px rgba(0, 0, 0, 0.35));
+      max-height: 220px;
+      object-fit: contain;
+      filter: drop-shadow(0px 8px 20px rgba(0, 0, 0, 0.35));
       z-index: 2;
       transition: transform 0.3s ease;
       &:hover {
@@ -188,8 +192,8 @@ import { AuthService } from '../../../core/auth/auth.service';
 
     /* --- PANEL DERECHO (FORMULARIO DOCS) --- */
     .panel-derecho {
-      flex: 1.1;
-      padding: 45px 55px;
+      flex: 1.15;
+      padding: 38px 46px;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -198,29 +202,29 @@ import { AuthService } from '../../../core/auth/auth.service';
 
     .cabecera-sistema {
       text-align: center;
-      font-size: 12.5px;
+      font-size: 11.5px;
       font-weight: 600;
-      color: #0f172a;
+      color: #64748b;
       text-transform: uppercase;
-      margin-bottom: 8px;
-      letter-spacing: 0.6px;
+      margin-bottom: 4px;
+      letter-spacing: 0.5px;
       line-height: 1.4;
     }
 
     .titulo-docs {
       text-align: center;
-      font-size: 42px;
+      font-size: 34px;
       font-weight: 900;
       color: #0f172a;
-      margin-bottom: 30px;
-      letter-spacing: 1.5px;
+      margin-bottom: 22px;
+      letter-spacing: 1.2px;
       font-family: 'Poppins', sans-serif;
     }
 
     .login-form {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
     }
 
     .input-group {
@@ -232,24 +236,30 @@ import { AuthService } from '../../../core/auth/auth.service';
 
     .input-blanco {
       width: 100%;
-      height: 50px;
-      background-color: #ffffff;
-      border: 1.5px solid #0f172a;
-      border-radius: 4px;
-      padding: 0 45px;
-      font-size: 15px;
+      height: 46px;
+      background-color: #f8fafc;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 0 44px;
+      font-size: 14.5px;
       font-family: 'Poppins', sans-serif;
       color: #0f172a;
       box-sizing: border-box;
-      transition: all 0.25s ease;
+      transition: all 0.2s ease;
 
       &::placeholder {
-        color: #64748b;
+        color: #94a3b8;
         font-weight: 400;
+      }
+
+      &:hover {
+        border-color: #94a3b8;
+        background-color: #ffffff;
       }
 
       &:focus {
         outline: none;
+        background-color: #ffffff;
         border-color: #0284c7;
         box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
       }
@@ -257,11 +267,11 @@ import { AuthService } from '../../../core/auth/auth.service';
 
     .icon-field {
       position: absolute;
-      left: 12px;
-      color: #0f172a;
-      font-size: 22px;
-      width: 22px;
-      height: 22px;
+      left: 14px;
+      color: #64748b;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
       pointer-events: none;
       display: flex;
       align-items: center;
@@ -273,53 +283,60 @@ import { AuthService } from '../../../core/auth/auth.service';
       right: 12px;
       background: transparent;
       border: none;
-      color: #0284c7;
+      color: #64748b;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 0;
+      transition: color 0.2s ease;
+      &:hover {
+        color: #0284c7;
+      }
       mat-icon {
-        font-size: 22px;
-        width: 22px;
-        height: 22px;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
       }
     }
 
     .field-error {
       color: #dc2626;
-      font-size: 12px;
-      margin-top: -10px;
+      font-size: 11.5px;
+      margin-top: -8px;
       margin-left: 4px;
       font-weight: 500;
     }
 
-    /* --- BOTÓN LOGIN PÍLDORA AZUL OSCURO --- */
+    /* --- BOTÓN LOGIN PÍLDORA ELEGANTE --- */
     .login-btn {
       width: 100%;
-      padding: 14px;
-      margin-top: 10px;
-      background-color: #1e293b;
+      height: 46px;
+      margin-top: 6px;
+      background: linear-gradient(135deg, #0f2027 0%, #203a43 100%);
       color: #ffffff;
       border: none;
-      border-radius: 25px;
+      border-radius: 23px;
       font-family: 'Poppins', sans-serif;
       font-weight: 700;
-      font-size: 15px;
+      font-size: 13.5px;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 0.8px;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       transition: all 0.25s ease;
-      box-shadow: 0 4px 12px rgba(30, 41, 59, 0.25);
+      box-shadow: 0 4px 14px rgba(15, 32, 39, 0.25);
 
       &:hover:not(:disabled) {
-        background-color: #0f172a;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.35);
+        background: linear-gradient(135deg, #15303c 0%, #2c5364 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(15, 32, 39, 0.35);
       }
 
       &:disabled {
-        opacity: 0.6;
+        opacity: 0.55;
         cursor: not-allowed;
       }
     }
@@ -328,20 +345,20 @@ import { AuthService } from '../../../core/auth/auth.service';
     .enlaces-publicos {
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      margin-top: 22px;
+      gap: 10px;
+      margin-top: 20px;
     }
 
     .acceso-publico-card {
       display: flex;
       align-items: center;
-      gap: 14px;
-      padding: 12px 16px;
-      border-radius: 14px;
+      gap: 12px;
+      padding: 11px 14px;
+      border-radius: 12px;
       text-decoration: none;
       color: #0f2027;
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 2px 8px rgba(15, 32, 39, 0.04);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 1px 4px rgba(15, 32, 39, 0.04);
 
       &.card-verificar {
         background: linear-gradient(135deg, #f0fdf9 0%, #e6f4f1 100%);
@@ -349,8 +366,8 @@ import { AuthService } from '../../../core/auth/auth.service';
         &:hover {
           background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
           border-color: #10b981;
-          box-shadow: 0 8px 20px rgba(16, 185, 129, 0.18);
-          transform: translateY(-2px);
+          box-shadow: 0 4px 14px rgba(16, 185, 129, 0.16);
+          transform: translateY(-1px);
         }
       }
 
@@ -360,15 +377,15 @@ import { AuthService } from '../../../core/auth/auth.service';
         &:hover {
           background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%);
           border-color: #00796b;
-          box-shadow: 0 8px 20px rgba(0, 121, 107, 0.18);
-          transform: translateY(-2px);
+          box-shadow: 0 4px 14px rgba(0, 121, 107, 0.16);
+          transform: translateY(-1px);
         }
       }
     }
 
     .card-icon-wrap {
-      width: 42px;
-      height: 42px;
+      width: 38px;
+      height: 38px;
       border-radius: 10px;
       display: flex;
       align-items: center;
@@ -377,19 +394,19 @@ import { AuthService } from '../../../core/auth/auth.service';
 
       mat-icon {
         color: #ffffff;
-        font-size: 22px;
-        width: 22px;
-        height: 22px;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
       }
 
       &.icon-petroleo {
         background: linear-gradient(135deg, #0f383e 0%, #0d5c63 100%);
-        box-shadow: 0 3px 8px rgba(15, 56, 62, 0.35);
+        box-shadow: 0 2px 6px rgba(15, 56, 62, 0.3);
       }
 
       &.icon-petroleo-secundario {
         background: linear-gradient(135deg, #005c53 0%, #042940 100%);
-        box-shadow: 0 3px 8px rgba(4, 41, 64, 0.35);
+        box-shadow: 0 2px 6px rgba(4, 41, 64, 0.3);
       }
     }
 
@@ -397,69 +414,190 @@ import { AuthService } from '../../../core/auth/auth.service';
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 1px;
     }
 
     .card-title {
-      font-size: 13.5px;
+      font-size: 13px;
       font-weight: 700;
       color: #0f2027;
     }
 
     .card-subtitle {
-      font-size: 11.5px;
+      font-size: 11px;
       color: #475569;
     }
 
     .card-arrow {
       color: #0d5c63;
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
       transition: transform 0.2s ease;
     }
 
     .acceso-publico-card:hover .card-arrow {
-      transform: translateX(4px);
+      transform: translateX(3px);
     }
 
     .error-banner {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 10px 14px;
+      padding: 9px 12px;
       background: #fef2f2;
       color: #b91c1c;
       border: 1px solid #fecaca;
       border-radius: 8px;
-      margin-bottom: 1rem;
-      font-size: 0.88rem;
+      margin-bottom: 0.75rem;
+      font-size: 0.84rem;
       font-weight: 500;
     }
 
     .mb-4 {
-      margin-bottom: 1rem;
+      margin-bottom: 0.75rem;
     }
 
-    /* RESPONSIVE */
+    /* =========================================================================
+       RESPONSIVE MÓVIL Y TABLET: DISEÑO COMPACTO, ELEGANTE Y SIN ALARGAMIENTOS
+       ========================================================================= */
     @media (max-width: 768px) {
+      .login-container {
+        padding: 16px 12px;
+        align-items: center;
+      }
+
       .login-card-horizontal {
         flex-direction: column;
-        max-width: 440px;
+        max-width: 390px;
+        min-height: auto;
+        border-radius: 16px;
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+        margin: auto;
       }
+
       .panel-izquierdo {
-        padding: 35px 20px;
+        padding: 16px 16px 14px;
         border-right: none;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: linear-gradient(135deg, #0f2027 0%, #173842 100%);
       }
-      .panel-derecho {
-        padding: 35px 25px;
-      }
+
       .logo-cooperativa {
-        max-width: 220px;
+        max-width: 95px;
+        max-height: 70px;
+        filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.25));
       }
+
+      .panel-derecho {
+        padding: 18px 20px 22px;
+        flex: unset;
+      }
+
+      .cabecera-sistema {
+        font-size: 10px;
+        margin-bottom: 2px;
+        letter-spacing: 0.3px;
+        line-height: 1.3;
+      }
+
       .titulo-docs {
-        font-size: 34px;
+        font-size: 22px;
+        margin-bottom: 14px;
+        letter-spacing: 0.5px;
+      }
+
+      .login-form {
+        gap: 11px;
+      }
+
+      .input-blanco {
+        height: 42px;
+        font-size: 13.5px;
+        padding: 0 38px;
+        border-radius: 8px;
+      }
+
+      .icon-field {
+        left: 11px;
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      .toggle-password {
+        right: 10px;
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+        }
+      }
+
+      .login-btn {
+        height: 42px;
+        font-size: 12.5px;
+        border-radius: 21px;
+        margin-top: 3px;
+      }
+
+      .enlaces-publicos {
+        margin-top: 14px;
+        gap: 8px;
+      }
+
+      .acceso-publico-card {
+        padding: 8px 12px;
+        border-radius: 10px;
+        gap: 10px;
+      }
+
+      .card-icon-wrap {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        mat-icon {
+          font-size: 17px;
+          width: 17px;
+          height: 17px;
+        }
+      }
+
+      .card-title {
+        font-size: 12px;
+      }
+
+      .card-subtitle {
+        font-size: 10.5px;
+      }
+
+      .card-arrow {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .login-container {
+        padding: 8px;
+      }
+
+      .panel-derecho {
+        padding: 14px 14px 18px;
+      }
+
+      .titulo-docs {
+        font-size: 20px;
+        margin-bottom: 10px;
+      }
+
+      .logo-cooperativa {
+        max-width: 80px;
+        max-height: 60px;
       }
     }
   `]

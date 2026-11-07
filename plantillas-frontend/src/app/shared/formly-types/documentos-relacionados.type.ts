@@ -328,8 +328,11 @@ export class FormlyFieldDocumentosRelacionadosComponent extends FieldType<FieldT
     const esAprobado = doc.estado === 'APROBADO' || doc.estado === 'CERRADO';
     this.dialog.open(VisorPdfDialogComponent, {
       width: '92vw',
-      maxWidth: '1200px',
-      height: '92vh',
+      maxWidth: '700px',
+      height: '86vh',
+      maxHeight: '86vh',
+      panelClass: ['modal-sin-padding', 'modal-vista-previa-escala'],
+      autoFocus: false,
       data: {
         titulo: doc.nombre || 'Documento Relacionado',
         docCite: doc.nombre,

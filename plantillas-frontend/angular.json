@@ -35,6 +35,11 @@
                 "glob": "**/*",
                 "input": "node_modules/tinymce",
                 "output": "tinymce"
+              },
+              {
+                "glob": "pdf.worker.min.js",
+                "input": "node_modules/pdfjs-dist/build",
+                "output": "assets/pdfjs"
               }
             ],
             "styles": [

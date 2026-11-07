@@ -1087,37 +1087,20 @@ export class DocumentosListComponent implements OnInit {
     if (!doc.nombre && !doc.id_documento) return;
     const esAprobado = doc.estado === 'APROBADO' || doc.estado === 'CERRADO';
 
-    if (esAprobado) {
-      this.dialog.open(VisorPdfDialogComponent, {
-        width: '85vw',
-        maxWidth: '1200px',
-        height: '92vh',
-        maxHeight: '94vh',
-        panelClass: 'modal-sin-padding',
-        autoFocus: false,
-        data: {
-          titulo: `${doc.nombre} - ${doc.ref || 'Documento Oficial'}`,
-          docCite: doc.nombre,
-          idDocumento: doc.id_documento,
-          esBorrador: false
-        }
-      });
-    } else {
-      this.dialog.open(VisorPdfDialogComponent, {
-        height: '94vh',
-        maxHeight: '94vh',
-        width: 'auto',
-        maxWidth: '96vw',
-        panelClass: ['modal-sin-padding', 'modal-vista-previa-escala'],
-        autoFocus: false,
-        data: {
-          titulo: doc.nombre ? `${doc.nombre} - ${doc.ref || 'Vista Previa'}` : 'Vista Previa',
-          idDocumento: doc.id_documento,
-          docCite: doc.nombre,
-          esBorrador: true
-        }
-      });
-    }
+    this.dialog.open(VisorPdfDialogComponent, {
+      width: '92vw',
+      maxWidth: '700px',
+      height: '86vh',
+      maxHeight: '86vh',
+      panelClass: ['modal-sin-padding', 'modal-vista-previa-escala'],
+      autoFocus: false,
+      data: {
+        titulo: `${doc.nombre || 'Documento'} - ${doc.ref || (esAprobado ? 'Documento Oficial' : 'Vista Previa')}`,
+        docCite: doc.nombre,
+        idDocumento: doc.id_documento,
+        esBorrador: !esAprobado
+      }
+    });
   }
 
   verHistorial(doc: any): void {

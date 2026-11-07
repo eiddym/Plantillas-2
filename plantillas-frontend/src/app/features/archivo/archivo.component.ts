@@ -20,7 +20,11 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { AuthService } from '../../core/auth/auth.service';
 import { DocumentosService } from '../../core/services/documentos.service';
-import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component';
+import * as pdfjsLib from 'pdfjs-dist';
+
+if (typeof window !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/pdfjs/pdf.worker.min.js';
+}
 
 export interface VersionArchivo {
   version: number;
@@ -159,28 +163,24 @@ export interface UnidadArchivo {
               <div class="visor-header">
                 <div class="visor-doc-info">
                   <span class="visor-badge-cite">{{ docSeleccionado()?.nombre }}</span>
-                  <span class="visor-doc-titulo">{{ docSeleccionado()?.nombre_plantilla || 'Documento Oficial Custodiado' }} · {{ tipoHojaVisor() === 'Oficio' ? 'OFICIO' : 'CARTA' }}</span>
+                  <span class="visor-doc-titulo">{{ docSeleccionado()?.nombre_plantilla || 'Documento Oficial Custodiado' }} · {{ (esModoPdfCanvas() || urlPdfSegura()) ? 'PDF OFICIAL' : (tipoHojaVisor() === 'Oficio' ? 'OFICIO' : 'CARTA') }}</span>
                 </div>
-                <div class="visor-zoom-tools">
-                  <div class="zoom-pill-group">
-                    <button type="button" class="zoom-btn" (click)="ajustarZoomVisor(-0.1)" matTooltip="Reducir (Zoom -)">
-                      <mat-icon>remove</mat-icon>
-                    </button>
-                    <button type="button" class="zoom-btn zoom-mode-btn" [class.active]="modoEscalaVisor() === 'fit'" (click)="setModoFitVisor()" matTooltip="Ajustar hoja completa a la pantalla">
-                      <span>{{ modoEscalaVisor() === 'fit' ? 'Ajustar' : (porcentajeEscalaVisor() + '%') }}</span>
-                    </button>
-                    <button type="button" class="zoom-btn" (click)="ajustarZoomVisor(0.1)" matTooltip="Aumentar (Zoom +)">
-                      <mat-icon>add</mat-icon>
-                    </button>
+                @if (htmlVisorSeguro() || esModoPdfCanvas()) {
+                  <div class="visor-zoom-tools">
+                    <div class="zoom-pill-group">
+                      <button type="button" class="zoom-btn" (click)="ajustarZoomVisor(-0.1)" matTooltip="Reducir (Zoom -)">
+                        <mat-icon>remove</mat-icon>
+                      </button>
+                      <button type="button" class="zoom-btn zoom-mode-btn" [class.active]="modoEscalaVisor() === 'fit'" (click)="setModoFitVisor()" matTooltip="Ajustar hoja completa a la pantalla">
+                        <span>{{ modoEscalaVisor() === 'fit' ? 'Ajustar' : (esModoPdfCanvas() ? (porcentajeZoomPdf() + '%') : (porcentajeEscalaVisor() + '%')) }}</span>
+                      </button>
+                      <button type="button" class="zoom-btn" (click)="ajustarZoomVisor(0.1)" matTooltip="Aumentar (Zoom +)">
+                        <mat-icon>add</mat-icon>
+                      </button>
+                    </div>
                   </div>
-                </div>
+                }
                 <div class="visor-actions">
-                  <button mat-icon-button class="btn-visor-act" (click)="verPdf(docSeleccionado())" matTooltip="Abrir en Pantalla Completa">
-                    <mat-icon>open_in_full</mat-icon>
-                  </button>
-                  <button mat-icon-button class="btn-visor-act" (click)="descargarArchivoFisico(docSeleccionado())" matTooltip="Descargar Copia PDF">
-                    <mat-icon>download</mat-icon>
-                  </button>
                   <button mat-icon-button class="btn-visor-act close" (click)="cerrarVisor()" matTooltip="Cerrar Previsualización">
                     <mat-icon>close</mat-icon>
                   </button>
@@ -201,6 +201,38 @@ export interface UnidadArchivo {
                       <span>Reintentar</span>
                     </button>
                   </div>
+                } @else if (esModoPdfCanvas()) {
+                  <div class="visor-canvas-viewport" #pdfCanvasViewport>
+                    @if (totalPaginasPdf() > 1) {
+                      <div class="pdf-pagination-bar">
+                        <div class="pdf-page-arrows">
+                          <button type="button" class="btn-canvas-nav" (click)="irAPaginaPdf(paginaActualPdf() - 1)" [disabled]="paginaActualPdf() <= 1" matTooltip="Página anterior">
+                            <mat-icon>chevron_left</mat-icon>
+                          </button>
+                          <span class="page-count-text">Pág {{ paginaActualPdf() }} de {{ totalPaginasPdf() }}</span>
+                          <button type="button" class="btn-canvas-nav" (click)="irAPaginaPdf(paginaActualPdf() + 1)" [disabled]="paginaActualPdf() >= totalPaginasPdf()" matTooltip="Página siguiente">
+                            <mat-icon>chevron_right</mat-icon>
+                          </button>
+                        </div>
+                        <div class="pdf-page-tabs">
+                          @for (p of listaPaginasPdf(); track p) {
+                            <button 
+                              type="button" 
+                              class="pdf-page-tab-btn" 
+                              [class.active]="paginaActualPdf() === p" 
+                              (click)="irAPaginaPdf(p)">
+                              Pág {{ p }}
+                            </button>
+                          }
+                        </div>
+                      </div>
+                    }
+                    <div class="pdf-canvas-wrapper" #pdfCanvasWrapper>
+                      <canvas #pdfCanvas id="pdf-canvas-principal" class="pdf-rendered-canvas"></canvas>
+                    </div>
+                  </div>
+                } @else if (urlPdfSegura()) {
+                  <iframe [src]="urlPdfSegura()" class="pdf-local-iframe" title="Visor Documental Embebido"></iframe>
                 } @else if (htmlVisorSeguro()) {
                   <div class="visor-sheet-viewport" #visorViewport>
                     <div class="sheet-scaler-wrapper" [style.width.px]="scaledWidthVisor()" [style.height.px]="scaledHeightVisor()">
@@ -219,8 +251,6 @@ export interface UnidadArchivo {
                       </div>
                     </div>
                   </div>
-                } @else if (urlPdfSegura()) {
-                  <iframe [src]="urlPdfSegura()" class="pdf-local-iframe" title="Visor Documental Embebido"></iframe>
                 }
               </div>
             </div>
@@ -318,9 +348,6 @@ export interface UnidadArchivo {
                       </div>
 
                       <div class="action-btn-row" (click)="$event.stopPropagation()">
-                        <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF) en Pantalla" class="btn-action pdf">
-                          <mat-icon>picture_as_pdf</mat-icon>
-                        </button>
                         <button mat-icon-button (click)="verDetalle(d)" matTooltip="Ver Trazabilidad y Versiones" class="btn-action">
                           <mat-icon>history</mat-icon>
                         </button>
@@ -384,15 +411,12 @@ export interface UnidadArchivo {
                             </div>
                             <div class="docs-mini-list">
                               @for (doc of u.agrupado_por_tipo[tipoKey]; track doc.id_documento) {
-                                <div class="doc-mini-row">
+                                <div class="doc-mini-row" (click)="seleccionarDocumento(doc)">
                                   <div class="doc-mini-info">
                                     <strong class="mini-cite">{{ doc.nombre }}</strong>
                                     <span class="mini-ref">{{ obtenerReferencia(doc) }}</span>
                                   </div>
-                                  <div class="mini-actions">
-                                    <button mat-icon-button (click)="verPdf(doc)" matTooltip="Ver PDF en Pantalla" class="btn-action-mini pdf">
-                                      <mat-icon>picture_as_pdf</mat-icon>
-                                    </button>
+                                  <div class="mini-actions" (click)="$event.stopPropagation()">
                                     <button mat-icon-button (click)="verDetalle(doc)" matTooltip="Ver Trazabilidad" class="btn-action-mini">
                                       <mat-icon>history</mat-icon>
                                     </button>
@@ -504,9 +528,6 @@ export interface UnidadArchivo {
                       </div>
 
                       <div class="action-btn-row" (click)="$event.stopPropagation()">
-                        <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF) en Pantalla" class="btn-action pdf">
-                          <mat-icon>picture_as_pdf</mat-icon>
-                        </button>
                         <button mat-icon-button (click)="verDetalle(d)" matTooltip="Ver Trazabilidad" class="btn-action">
                           <mat-icon>history</mat-icon>
                         </button>
@@ -576,9 +597,6 @@ export interface UnidadArchivo {
                       </div>
 
                       <div class="action-btn-row" (click)="$event.stopPropagation()">
-                        <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF) en Pantalla" class="btn-action pdf">
-                          <mat-icon>picture_as_pdf</mat-icon>
-                        </button>
                         <button mat-icon-button (click)="verDetalle(d)" matTooltip="Ver Trazabilidad" class="btn-action">
                           <mat-icon>history</mat-icon>
                         </button>
@@ -617,14 +635,13 @@ export interface UnidadArchivo {
                         <div class="sub-tipo-item">
                           <h5>{{ tKey }} ({{ sub.agrupado_por_tipo[tKey].length }})</h5>
                           @for (sDoc of sub.agrupado_por_tipo[tKey]; track sDoc.id_documento) {
-                            <div class="sub-doc-row">
+                            <div class="sub-doc-row" (click)="seleccionarDocumento(sDoc)">
                               <span>{{ sDoc.nombre }} - {{ obtenerReferencia(sDoc) }}</span>
-                              <button mat-icon-button (click)="verPdf(sDoc)" matTooltip="Ver PDF en Pantalla" class="btn-action-mini pdf">
-                                <mat-icon>picture_as_pdf</mat-icon>
-                              </button>
-                              <button mat-icon-button (click)="descargarArchivoFisico(sDoc)" matTooltip="Descargar Copia PDF" class="btn-action-mini">
-                                <mat-icon>download</mat-icon>
-                              </button>
+                              <div class="mini-actions" (click)="$event.stopPropagation()">
+                                <button mat-icon-button (click)="descargarArchivoFisico(sDoc)" matTooltip="Descargar Copia PDF" class="btn-action-mini">
+                                  <mat-icon>download</mat-icon>
+                                </button>
+                              </div>
                             </div>
                           }
                         </div>
@@ -709,9 +726,6 @@ export interface UnidadArchivo {
                       </div>
 
                       <div class="action-btn-row" (click)="$event.stopPropagation()">
-                        <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF) en Pantalla" class="btn-action pdf">
-                          <mat-icon>picture_as_pdf</mat-icon>
-                        </button>
                         <button mat-icon-button (click)="verVersiones(d)" matTooltip="Historial de Versiones y Trazabilidad" class="btn-action">
                           <mat-icon>history</mat-icon>
                         </button>
@@ -895,9 +909,9 @@ export interface UnidadArchivo {
                     <strong>Versión Original Concluida</strong>
                     <span>Documento cerrado y archivado en formato digital oficial.</span>
                   </div>
-                  <button mat-flat-button color="primary" class="btn-dl-v" (click)="verPdf(docVersionesVer())">
+                  <button mat-flat-button color="primary" class="btn-dl-v" (click)="verDocEnVisor(docVersionesVer())">
                     <mat-icon>visibility</mat-icon>
-                    <span>Ver en Pantalla</span>
+                    <span>Ver en el Visor</span>
                   </button>
                   <button mat-stroked-button class="btn-dl-v" (click)="descargarArchivoFisico(docVersionesVer())">
                     <mat-icon>download</mat-icon>
@@ -918,9 +932,9 @@ export interface UnidadArchivo {
                         <span class="v-user">Registrado por: {{ ver.usuario }}</span>
                       </div>
                       <div class="version-action-btns">
-                        <button mat-flat-button color="primary" class="btn-dl-v" (click)="verPdf(docVersionesVer())">
+                        <button mat-flat-button color="primary" class="btn-dl-v" (click)="verDocEnVisor(docVersionesVer())">
                           <mat-icon>visibility</mat-icon>
-                          <span>Ver</span>
+                          <span>Ver en el Visor</span>
                         </button>
                         <button mat-stroked-button class="btn-dl-v" (click)="descargarArchivoFisico(docVersionesVer())">
                           <mat-icon>download</mat-icon>
@@ -960,7 +974,7 @@ export interface UnidadArchivo {
       background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
       padding: 24px 32px;
       border-radius: 16px;
-      color: #fff;
+      color: #ffffff !important;
       box-shadow: 0 10px 30px rgba(15, 32, 39, 0.4);
     }
 
@@ -979,7 +993,7 @@ export interface UnidadArchivo {
       align-items: center;
       justify-content: center;
       box-shadow: 0 8px 18px rgba(0, 180, 219, 0.35);
-      mat-icon { font-size: 28px; width: 28px; height: 28px; color: #fff; }
+      mat-icon { font-size: 28px; width: 28px; height: 28px; color: #ffffff !important; }
     }
 
     .topbar-title {
@@ -987,12 +1001,13 @@ export interface UnidadArchivo {
       font-size: 22px;
       font-weight: 800;
       letter-spacing: -0.4px;
+      color: #ffffff !important;
     }
 
     .topbar-sub {
       margin: 4px 0 0;
       font-size: 13.5px;
-      color: rgba(255, 255, 255, 0.7);
+      color: #e2e8f0 !important;
     }
 
     .btn-cargar-institucional {
@@ -1460,15 +1475,15 @@ export interface UnidadArchivo {
     /* Banners */
     .banner-unidad-actual {
       background: linear-gradient(135deg, #141e30 0%, #243b55 100%);
-      color: #fff;
+      color: #ffffff !important;
       padding: 24px 30px;
       border-radius: 14px;
       display: flex;
       justify-content: space-between;
       align-items: center;
 
-      h2 { margin: 6px 0 2px; font-size: 22px; font-weight: 800; }
-      p { margin: 0; font-size: 13.5px; color: rgba(255, 255, 255, 0.7); }
+      h2 { margin: 6px 0 2px; font-size: 22px; font-weight: 800; color: #ffffff !important; }
+      p { margin: 0; font-size: 13.5px; color: #e2e8f0 !important; }
     }
 
     .badge-area {
@@ -1577,15 +1592,15 @@ export interface UnidadArchivo {
     /* Banner Institucional */
     .banner-institucional {
       background: linear-gradient(135deg, #0f2027 0%, #203a43 100%);
-      color: #fff;
+      color: #ffffff !important;
       padding: 24px 30px;
       border-radius: 14px;
       display: flex;
       justify-content: space-between;
       align-items: center;
 
-      h2 { margin: 6px 0 2px; font-size: 22px; font-weight: 800; }
-      p { margin: 0; font-size: 13.5px; color: rgba(255, 255, 255, 0.7); }
+      h2 { margin: 6px 0 2px; font-size: 22px; font-weight: 800; color: #ffffff !important; }
+      p { margin: 0; font-size: 13.5px; color: #cbd5e1 !important; }
     }
 
     .badge-gold-header {
@@ -1759,8 +1774,8 @@ export interface UnidadArchivo {
       align-items: center;
       gap: 12px;
       mat-icon { color: #00b4db; font-size: 28px; width: 28px; height: 28px; }
-      h3 { margin: 0; font-size: 17px; font-weight: 700; }
-      p { margin: 2px 0 0; font-size: 12px; color: rgba(255, 255, 255, 0.65); }
+      h3 { margin: 0; font-size: 17px; font-weight: 700; color: #ffffff !important; }
+      p { margin: 2px 0 0; font-size: 12px; color: #cbd5e1 !important; }
     }
 
     .btn-close { color: rgba(255, 255, 255, 0.7); &:hover { color: #fff; } }
@@ -1907,7 +1922,12 @@ export interface UnidadArchivo {
         grid-template-columns: 1fr !important;
       }
       .visor-embebido-panel {
-        display: none !important;
+        position: relative !important;
+        top: 0 !important;
+        height: 680px !important;
+        min-height: 480px !important;
+        margin-bottom: 20px;
+        order: -1;
       }
     }
 
@@ -2095,7 +2115,7 @@ export interface UnidadArchivo {
       width: 816px;
       box-sizing: border-box;
       background: #ffffff;
-      padding: 38px 46px;
+      padding: 38px 95px; /* 2.5 cm de margen lateral */
       display: flex;
       flex-direction: column;
       color: #1e293b;
@@ -2115,6 +2135,9 @@ export interface UnidadArchivo {
         line-height: 1.5;
         color: #1e293b;
         font-size: 10.5pt;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
 
         * {
           box-sizing: border-box !important;
@@ -2124,10 +2147,13 @@ export interface UnidadArchivo {
           display: none !important;
         }
 
-        .mi-contenido, .contenedor {
+        .mi-contenido, .cuerpo-documento, .contenedor {
           width: 100% !important;
           max-width: 100% !important;
           box-sizing: border-box !important;
+          display: flex;
+          flex-direction: column;
+          flex: 1;
         }
 
         #pageHeader {
@@ -2161,6 +2187,36 @@ export interface UnidadArchivo {
           overflow-wrap: break-word !important;
           word-break: break-word !important;
           vertical-align: top;
+        }
+
+        .pdf-header-container,
+        .pdf-footer-container {
+          width: 100% !important;
+          box-sizing: border-box !important;
+        }
+
+        .pdf-header-container table,
+        .pdf-page1-metadata,
+        table.pdf-page1-metadata,
+        table[role="presentation"],
+        .table-sin-borde {
+          border: none !important;
+          border-collapse: collapse !important;
+          margin: 0 !important;
+          background: transparent !important;
+        }
+
+        .pdf-header-container td,
+        .pdf-header-container th,
+        .pdf-page1-metadata td,
+        .pdf-page1-metadata th,
+        table[role="presentation"] td,
+        table[role="presentation"] th,
+        .table-sin-borde td,
+        .table-sin-borde th {
+          border: none !important;
+          padding: 0 !important;
+          background: transparent !important;
         }
 
         .datosGenerales {
@@ -2206,6 +2262,136 @@ export interface UnidadArchivo {
       height: 100%;
       border: none;
       display: block;
+    }
+
+    /* Visor Canvas Nativo (PDF.js sin iframe ni descarga) */
+    .visor-canvas-viewport {
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      background: #475569;
+      padding: 12px;
+      align-items: center;
+
+      &::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      &::-webkit-scrollbar-thumb {
+        background: #64748b;
+        border-radius: 3px;
+      }
+    }
+
+    .pdf-pagination-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(8px);
+      padding: 6px 14px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      z-index: 5;
+      flex-wrap: wrap;
+    }
+
+    .pdf-page-arrows {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-canvas-nav {
+      background: rgba(255, 255, 255, 0.12);
+      border: none;
+      color: #f8fafc;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      &:hover:not(:disabled) {
+        background: #0284c7;
+        color: #ffffff;
+      }
+
+      &:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+    }
+
+    .page-count-text {
+      font-size: 12px;
+      font-weight: 700;
+      color: #38bdf8;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+    }
+
+    .pdf-page-tabs {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .pdf-page-tab-btn {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #cbd5e1;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.15);
+        color: #ffffff;
+      }
+
+      &.active {
+        background: #0284c7;
+        border-color: #0284c7;
+        color: #ffffff;
+        box-shadow: 0 2px 6px rgba(2, 132, 199, 0.4);
+      }
+    }
+
+    .pdf-canvas-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      width: 100%;
+      flex: 1;
+      box-sizing: border-box;
+    }
+
+    .pdf-rendered-canvas {
+      display: block;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+      background: #ffffff;
+      max-width: 100%;
+      height: auto;
     }
 
     .visor-loading-state, .visor-error-state {
@@ -2374,6 +2560,8 @@ export class ArchivoComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
 
   @ViewChild('visorViewport') visorViewport?: ElementRef<HTMLElement>;
+  @ViewChild('pdfCanvas') pdfCanvas?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('pdfCanvasWrapper') pdfCanvasWrapper?: ElementRef<HTMLElement>;
 
   // Visor Local Embebido (Split Screen con Hoja Física a Escala Real)
   readonly docSeleccionado = signal<DocumentoArchivo | null>(null);
@@ -2385,6 +2573,19 @@ export class ArchivoComponent implements OnInit {
   readonly escalaVisor = signal<number>(0.52);
   readonly modoEscalaVisor = signal<'fit' | 'custom'>('fit');
   readonly porcentajeEscalaVisor = computed(() => Math.round(this.escalaVisor() * 100));
+
+  // Estado del Visor Canvas Nativo (PDF.js sin iframe ni descarga)
+  readonly esModoPdfCanvas = signal<boolean>(false);
+  readonly totalPaginasPdf = signal<number>(1);
+  readonly paginaActualPdf = signal<number>(1);
+  readonly zoomPdfFactor = signal<number>(1.0);
+  readonly porcentajeZoomPdf = computed(() => Math.round(this.zoomPdfFactor() * 100));
+  readonly listaPaginasPdf = computed(() => {
+    const total = this.totalPaginasPdf();
+    return Array.from({ length: total }, (_, i) => i + 1);
+  });
+  private loadedPdfDocument: any = null;
+  private renderTaskEnCurso: any = null;
 
   readonly scaledWidthVisor = computed(() => Math.round(816 * this.escalaVisor()));
   readonly scaledHeightVisor = computed(() => {
@@ -2853,6 +3054,9 @@ export class ArchivoComponent implements OnInit {
     if (this.docSeleccionado() && this.modoEscalaVisor() === 'fit') {
       this.recalcularEscalaFitVisor();
     }
+    if (this.esModoPdfCanvas() && this.loadedPdfDocument) {
+      this.renderizarPaginaActualPdf();
+    }
   }
 
   recalcularEscalaFitVisor(): void {
@@ -2879,6 +3083,14 @@ export class ArchivoComponent implements OnInit {
 
   ajustarZoomVisor(delta: number): void {
     this.modoEscalaVisor.set('custom');
+    if (this.esModoPdfCanvas()) {
+      const actual = this.zoomPdfFactor();
+      const nuevo = Math.max(0.4, Math.min(+(actual + delta).toFixed(2), 2.2));
+      this.zoomPdfFactor.set(nuevo);
+      this.renderizarPaginaActualPdf();
+      this.cdr.markForCheck();
+      return;
+    }
     const actual = this.escalaVisor();
     const nuevo = Math.max(0.25, Math.min(+(actual + delta).toFixed(2), 1.8));
     this.escalaVisor.set(nuevo);
@@ -2887,29 +3099,102 @@ export class ArchivoComponent implements OnInit {
 
   setModoFitVisor(): void {
     this.modoEscalaVisor.set('fit');
+    if (this.esModoPdfCanvas()) {
+      this.zoomPdfFactor.set(1.0);
+      this.renderizarPaginaActualPdf();
+      this.cdr.markForCheck();
+      return;
+    }
     this.recalcularEscalaFitVisor();
+  }
+
+  tienePlantillaFormly(doc: any): boolean {
+    if (!doc || !doc.plantilla) return false;
+    try {
+      const p = typeof doc.plantilla === 'string' ? JSON.parse(doc.plantilla) : doc.plantilla;
+      return Array.isArray(p) && p.length > 0;
+    } catch {
+      return false;
+    }
   }
 
   seleccionarDocumento(doc: DocumentoArchivo): void {
     if (!doc || !doc.id_documento) return;
-    if (typeof window !== 'undefined' && window.innerWidth < 1100) {
-      this.verPdf(doc);
-      return;
-    }
     this.docSeleccionado.set(doc);
     this.cargandoVisor.set(true);
     this.errorVisor.set(null);
     this.htmlVisorSeguro.set(null);
     this.urlPdfSegura.set(null);
+    this.esModoPdfCanvas.set(false);
+
+    if (typeof window !== 'undefined' && window.innerWidth < 1100) {
+      setTimeout(() => {
+        const el = document.querySelector('.visor-embebido-panel');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
 
     if (this.currentObjectUrl) {
       URL.revokeObjectURL(this.currentObjectUrl);
       this.currentObjectUrl = null;
     }
 
+    // 1. Si el documento tiene el PDF físico en base64 en archivo_adjunto
+    if (doc.archivo_adjunto && typeof doc.archivo_adjunto === 'string' && doc.archivo_adjunto.startsWith('data:application/pdf')) {
+      try {
+        const base64Part = doc.archivo_adjunto.split('base64,')[1];
+        if (base64Part) {
+          const byteCharacters = atob(base64Part);
+          const byteNumbers = new Uint8Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          this.cargarPdfEnCanvas(byteNumbers);
+          return;
+        }
+      } catch (err) {
+        console.error('Error procesando archivo adjunto base64:', err);
+      }
+    }
+
+    // 2. Si no tiene plantilla Formly interactiva (documento PDF escaneado / institucional subido)
+    const tieneFormly = this.tienePlantillaFormly(doc);
+    if (!tieneFormly) {
+      this.http.get(`/api/v1/documento/${doc.id_documento}/pdf`, { responseType: 'arraybuffer' }).subscribe({
+        next: (buf: ArrayBuffer) => {
+          this.cargarPdfEnCanvas(new Uint8Array(buf));
+        },
+        error: () => {
+          this.cargarPreviewHtml(doc);
+        }
+      });
+      return;
+    }
+
+    // 3. Documento interactivo redactado en Formly
+    this.cargarPreviewHtml(doc);
+  }
+
+  cargarPreviewHtml(doc: DocumentoArchivo): void {
     this.documentosService.obtenerVistaPreviaHtml(doc.id_documento || doc.nombre).subscribe({
       next: (res) => {
+        if (res.datos?.esPdf || (!res.datos?.html && res.datos?.pdfUrl)) {
+          const pdfUrl = res.datos?.pdfUrl || `/api/v1/documento/${doc.id_documento}/pdf`;
+          this.http.get(pdfUrl, { responseType: 'arraybuffer' }).subscribe({
+            next: (buf: ArrayBuffer) => {
+              this.cargarPdfEnCanvas(new Uint8Array(buf));
+            },
+            error: () => {
+              this.cargandoVisor.set(false);
+              this.errorVisor.set('No se pudo cargar la copia digital del documento.');
+              this.cdr.markForCheck();
+            }
+          });
+          return;
+        }
+
         this.cargandoVisor.set(false);
+        this.esModoPdfCanvas.set(false);
         if (res.datos?.tipoHoja === 'Oficio' || res.datos?.tipoHoja === 'Legal') {
           this.tipoHojaVisor.set('Oficio');
         } else {
@@ -2921,30 +3206,116 @@ export class ArchivoComponent implements OnInit {
         setTimeout(() => this.recalcularEscalaFitVisor(), 60);
       },
       error: () => {
-        // Fallback solo si es archivo adjunto base64
-        if (doc.archivo_adjunto && typeof doc.archivo_adjunto === 'string' && doc.archivo_adjunto.startsWith('data:application/pdf')) {
-          try {
-            const base64Part = doc.archivo_adjunto.split('base64,')[1];
-            if (base64Part) {
-              const byteCharacters = atob(base64Part);
-              const byteNumbers = new Uint8Array(byteCharacters.length);
-              for (let i = 0; i < byteCharacters.length; i++) {
-                byteNumbers[i] = byteCharacters.charCodeAt(i);
-              }
-              const blob = new Blob([byteNumbers], { type: 'application/pdf' });
-              this.currentObjectUrl = URL.createObjectURL(blob);
-              this.urlPdfSegura.set(this.sanitizer.bypassSecurityTrustResourceUrl(`${this.currentObjectUrl}#toolbar=1&navpanes=0`));
-              this.cargandoVisor.set(false);
-              this.cdr.markForCheck();
-              return;
-            }
-          } catch (err) {}
-        }
         this.cargandoVisor.set(false);
         this.errorVisor.set('No se pudo cargar la visualización del documento.');
         this.cdr.markForCheck();
       }
     });
+  }
+
+  async cargarPdfEnCanvas(data: Uint8Array | ArrayBuffer): Promise<void> {
+    try {
+      this.cargandoVisor.set(true);
+      this.errorVisor.set(null);
+      this.esModoPdfCanvas.set(true);
+      this.urlPdfSegura.set(null);
+      this.htmlVisorSeguro.set(null);
+      this.zoomPdfFactor.set(1.0);
+      this.modoEscalaVisor.set('fit');
+
+      if (this.renderTaskEnCurso) {
+        try { this.renderTaskEnCurso.cancel(); } catch {}
+        this.renderTaskEnCurso = null;
+      }
+
+      const loadingTask = pdfjsLib.getDocument({
+        data: data,
+        cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+        cMapPacked: true
+      });
+
+      const pdfDoc = await loadingTask.promise;
+      this.loadedPdfDocument = pdfDoc;
+      this.totalPaginasPdf.set(pdfDoc.numPages || 1);
+      this.paginaActualPdf.set(1);
+      this.cargandoVisor.set(false);
+      this.cdr.detectChanges();
+
+      setTimeout(() => {
+        this.renderizarPaginaActualPdf();
+      }, 50);
+    } catch (err: any) {
+      console.error('Error cargando documento PDF con PDF.js:', err);
+      this.cargandoVisor.set(false);
+      this.esModoPdfCanvas.set(false);
+      this.errorVisor.set('No se pudo procesar el archivo PDF para previsualización.');
+      this.cdr.markForCheck();
+    }
+  }
+
+  irAPaginaPdf(num: number): void {
+    if (!this.loadedPdfDocument) return;
+    const total = this.totalPaginasPdf();
+    if (num < 1 || num > total || num === this.paginaActualPdf()) return;
+    this.paginaActualPdf.set(num);
+    this.cdr.markForCheck();
+    setTimeout(() => {
+      this.renderizarPaginaActualPdf();
+    }, 20);
+  }
+
+  async renderizarPaginaActualPdf(): Promise<void> {
+    if (!this.loadedPdfDocument) return;
+    const canvasEl = this.pdfCanvas?.nativeElement || (document.getElementById('pdf-canvas-principal') as HTMLCanvasElement);
+    if (!canvasEl) {
+      setTimeout(() => this.renderizarPaginaActualPdf(), 50);
+      return;
+    }
+
+    if (this.renderTaskEnCurso) {
+      try { this.renderTaskEnCurso.cancel(); } catch {}
+      this.renderTaskEnCurso = null;
+    }
+
+    try {
+      const pageNum = this.paginaActualPdf();
+      const page = await this.loadedPdfDocument.getPage(pageNum);
+
+      const wrapper = this.pdfCanvasWrapper?.nativeElement || canvasEl.parentElement;
+      const availableWidth = wrapper ? Math.max(wrapper.clientWidth - 20, 260) : 600;
+
+      const unscaledViewport = page.getViewport({ scale: 1 });
+      const baseScale = availableWidth / unscaledViewport.width;
+      const effectiveScale = baseScale * this.zoomPdfFactor();
+      const viewport = page.getViewport({ scale: effectiveScale });
+
+      const dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2.5) : 1;
+
+      canvasEl.width = Math.floor(viewport.width * dpr);
+      canvasEl.height = Math.floor(viewport.height * dpr);
+      canvasEl.style.width = `${Math.floor(viewport.width)}px`;
+      canvasEl.style.height = `${Math.floor(viewport.height)}px`;
+
+      const context = canvasEl.getContext('2d', { alpha: false });
+      if (!context) return;
+
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const renderContext = {
+        canvasContext: context,
+        viewport: viewport
+      };
+
+      this.renderTaskEnCurso = page.render(renderContext);
+      await this.renderTaskEnCurso.promise;
+      this.renderTaskEnCurso = null;
+    } catch (err: any) {
+      if (err?.name !== 'RenderingCancelledException') {
+        console.warn('Error al renderizar página PDF en canvas:', err);
+      }
+    }
   }
 
   reintentarCargaVisor(): void {
@@ -2959,35 +3330,28 @@ export class ArchivoComponent implements OnInit {
       URL.revokeObjectURL(this.currentObjectUrl);
       this.currentObjectUrl = null;
     }
+    if (this.renderTaskEnCurso) {
+      try { this.renderTaskEnCurso.cancel(); } catch {}
+      this.renderTaskEnCurso = null;
+    }
+    this.loadedPdfDocument = null;
     this.docSeleccionado.set(null);
+    this.esModoPdfCanvas.set(false);
     this.urlPdfSegura.set(null);
     this.htmlVisorSeguro.set(null);
     this.cargandoVisor.set(false);
     this.errorVisor.set(null);
   }
 
+  verDocEnVisor(doc: any): void {
+    if (!doc) return;
+    this.cerrarVersiones();
+    this.seleccionarDocumento(doc);
+  }
+
   verPdf(doc: any): void {
     if (!doc) return;
-    this.docSeleccionado.set(doc);
-
-    const tituloDoc = doc.nombre 
-      ? `${doc.nombre} - ${doc.referencia || doc.nombre_plantilla || 'Documento Oficial'}`
-      : 'Documento Oficial';
-
-    this.dialog.open(VisorPdfDialogComponent, {
-      width: '85vw',
-      maxWidth: '1200px',
-      height: '92vh',
-      maxHeight: '94vh',
-      panelClass: 'modal-sin-padding',
-      autoFocus: false,
-      data: {
-        titulo: tituloDoc,
-        docCite: doc.nombre,
-        idDocumento: doc.id_documento,
-        esBorrador: false
-      }
-    });
+    this.seleccionarDocumento(doc);
   }
 
   descargarPdf(doc: any): void {

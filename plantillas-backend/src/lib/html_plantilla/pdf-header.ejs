@@ -1,30 +1,30 @@
-<div style="width: 100%; box-sizing: border-box; padding: 0 15mm; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+<div style="width: 100%; box-sizing: border-box; padding: 0 25mm; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
   <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 0; padding: 0;">
     <tr>
-      <td style="width: 70px; vertical-align: middle; text-align: left; padding: 0;">
+      <td style="width: 90px; vertical-align: middle; text-align: left; padding: 0;">
         <% if (typeof logo_base64 !== 'undefined' && logo_base64) { %>
-          <img src="<%= logo_base64 %>" alt="Logo Institucional" style="width: 62px; height: 62px; border-radius: 50%; object-fit: cover; display: block;">
+          <img src="<%= logo_base64 %>" alt="Logo Institucional" style="width: 82px; height: 82px; border-radius: 50%; object-fit: cover; display: block;">
         <% } %>
       </td>
-      <td style="vertical-align: middle; text-align: center; padding: 0 4px;">
-        <div style="font-family: 'Teko Light', 'Teko', 'Arial Narrow', sans-serif; font-size: 26px; font-weight: 600; color: #7b3f16; line-height: 1.0; letter-spacing: 0.3px; text-transform: uppercase; white-space: nowrap; margin-bottom: 1px;">
+      <td style="vertical-align: middle; text-align: center; padding: 0 6px;">
+        <div style="font-family: 'Teko Light', 'Teko', 'Arial Narrow', sans-serif; font-size: 30px; font-weight: 700; color: #7b3f16; line-height: 1.05; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; margin-bottom: 2px;">
           <%= (typeof entidad !== 'undefined' && entidad && entidad.razon_social) ? entidad.razon_social : 'COOPERATIVA MINERA MARABUNTA R.L.' %>
         </div>
-        <div style="font-family: 'Teko Light', 'Teko', 'Arial Narrow', sans-serif; font-size: 14px; font-weight: 600; color: #111111; line-height: 1.1; margin-bottom: 1px; white-space: nowrap;">
+        <div style="font-family: 'Teko Light', 'Teko', 'Arial Narrow', sans-serif; font-size: 15.5px; font-weight: 600; color: #111111; line-height: 1.15; margin-bottom: 2px; white-space: nowrap;">
           <%= (typeof entidad !== 'undefined' && entidad && entidad.personeria_juridica) ? entidad.personeria_juridica : 'P.J. 483/2025, R.E.C. 01.01.2760' %>
         </div>
-        <div style="font-family: 'Teko Light', 'Teko', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 600; color: #222222; line-height: 1.1; white-space: nowrap;">
+        <div style="font-family: 'Teko Light', 'Teko', 'Arial Narrow', sans-serif; font-size: 12.5px; font-weight: 600; color: #222222; line-height: 1.15; white-space: nowrap;">
           <%= (typeof entidad !== 'undefined' && entidad && entidad.afiliacion) ? entidad.afiliacion : 'AFILIADA A LA FEDERACIÓN REGIONAL DE COOPERATIVAS MINERAS DEL SUD R.L. UYUNI' %>
         </div>
       </td>
-      <td style="width: 70px; vertical-align: middle; text-align: right; padding: 0;">
+      <td style="width: 90px; vertical-align: middle; text-align: right; padding: 0;">
         <% if (typeof logo_ferecomin_base64 !== 'undefined' && logo_ferecomin_base64) { %>
-          <img src="<%= logo_ferecomin_base64 %>" alt="Logo FERECOMIN" style="width: 62px; height: 62px; border-radius: 50%; object-fit: cover; display: block; margin-left: auto;">
+          <img src="<%= logo_ferecomin_base64 %>" alt="Logo FERECOMIN" style="width: 82px; height: 82px; border-radius: 50%; object-fit: cover; display: block; margin-left: auto;">
         <% } else if (typeof logo_base64 !== 'undefined' && logo_base64) { %>
-          <img src="<%= logo_base64 %>" alt="Logo FERECOMIN" style="width: 62px; height: 62px; border-radius: 50%; object-fit: cover; display: block; margin-left: auto;">
+          <img src="<%= logo_base64 %>" alt="Logo FERECOMIN" style="width: 82px; height: 82px; border-radius: 50%; object-fit: cover; display: block; margin-left: auto;">
         <% } %>
       </td>
     </tr>
   </table>
-  <div style="border-bottom: 2px solid #c4a484; width: 100%; margin-top: 2px; margin-bottom: 8px;"></div>
+  <div style="border-bottom: 2.5px solid #c4a484; width: 100%; margin-top: 6px; margin-bottom: 8px;"></div>
 </div>

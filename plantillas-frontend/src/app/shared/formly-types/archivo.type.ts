@@ -222,8 +222,11 @@ export class FormlyFieldArchivoComponent extends FieldType<FieldTypeConfig> impl
 
     this.dialog.open(VisorPdfDialogComponent, {
       width: '92vw',
-      maxWidth: '1200px',
-      height: '92vh',
+      maxWidth: '700px',
+      height: '86vh',
+      maxHeight: '86vh',
+      panelClass: ['modal-sin-padding', 'modal-vista-previa-escala'],
+      autoFocus: false,
       data: {
         titulo: item.filename,
         pdfUrl: pdfUrl
