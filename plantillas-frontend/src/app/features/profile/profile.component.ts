@@ -432,6 +432,7 @@ export class ProfileComponent implements OnInit {
 
   readonly user = this.authService.currentUser;
   readonly editandoAlertas = signal(false);
+  readonly idConfNotificacion = signal<number | null>(null);
 
   readonly alertas: AlertasConfig = {
     canal_habilitado: true,
@@ -496,6 +497,23 @@ export class ProfileComponent implements OnInit {
         },
         error: () => {}
       });
+
+      // Cargar configuración de notificaciones del usuario
+      this.http.get<any>(`/api/v1/notificacion/conf_notificacion?fid_usuario=${u.id}`).subscribe({
+        next: (res) => {
+          const item = res?.datos?.resultado?.[0];
+          if (item) {
+            this.idConfNotificacion.set(item.id_conf_notificacion);
+            this.alertas.canal_habilitado = item.canal_habilitado ?? true;
+            this.alertas.enviado = item.enviado ?? true;
+            this.alertas.observado = item.observado ?? true;
+            this.alertas.derivado = item.derivado ?? true;
+            this.alertas.aprobar_ciudadania = item.aprobar_ciudadania ?? false;
+            this.alertas.aprobados_ciudadania = item.aprobados_ciudadania ?? false;
+          }
+        },
+        error: () => {}
+      });
     }
   }
 
@@ -508,11 +526,35 @@ export class ProfileComponent implements OnInit {
   }
 
   guardarAlertas(): void {
-    this.snackBar.open('Configuración de alertas actualizada exitosamente', 'Cerrar', {
-      duration: 3500,
-      panelClass: ['snackbar-success']
-    });
-    this.editandoAlertas.set(false);
+    const id = this.idConfNotificacion();
+    const payload = {
+      id_conf_notificacion: id,
+      canal: 'CORREO',
+      canal_habilitado: this.alertas.canal_habilitado,
+      enviado: this.alertas.enviado,
+      observado: this.alertas.observado,
+      derivado: this.alertas.derivado,
+      aprobar_ciudadania: this.alertas.aprobar_ciudadania,
+      aprobados_ciudadania: this.alertas.aprobados_ciudadania
+    };
+
+    if (id) {
+      this.http.put<any>(`/api/v1/notificacion/conf_notificacion/${id}`, payload).subscribe({
+        next: () => {
+          this.snackBar.open('Configuración de alertas actualizada exitosamente', 'Cerrar', {
+            duration: 3500,
+            panelClass: ['snackbar-success']
+          });
+          this.editandoAlertas.set(false);
+        },
+        error: (err) => {
+          this.snackBar.open(err.error?.mensaje || 'Error al actualizar configuración de alertas', 'Cerrar', { duration: 3500 });
+        }
+      });
+    } else {
+      this.snackBar.open('Configuración guardada localmente', 'Cerrar', { duration: 3000 });
+      this.editandoAlertas.set(false);
+    }
   }
 
   onFotoSeleccionada(event: any): void {

@@ -202,6 +202,27 @@ async function sincronizar() {
 
     console.log(`[Usuarios] Total permitidos en el sistema: ${usuariosData.length} (sys_default y 10794552-1J)`);
 
+    // Asegurar configuración de notificaciones para los usuarios
+    for (const usr of usuariosData) {
+      await models.conf_notificacion.findOrCreate({
+        where: { fid_usuario: usr.id_usuario },
+        defaults: {
+          fid_usuario: usr.id_usuario,
+          canal: 'CORREO',
+          canal_habilitado: true,
+          enviado: true,
+          observado: true,
+          aprobado: true,
+          derivado: true,
+          aprobar_ciudadania: true,
+          aprobados_ciudadania: true,
+          estado: 'ACTIVO',
+          _usuario_creacion: 1,
+          _usuario_modificacion: 1
+        }
+      });
+    }
+
     // 5. SINCRONIZAR PERMISOS ROL-MENÚ Y USUARIO-ROL
     console.log('\n--- 5. Sincronizando Asignaciones de Roles y Permisos ---');
     const rolMenusData = JSON.parse(fs.readFileSync(path.join(seedDir, 'rol_menus.json'), 'utf8'));

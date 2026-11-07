@@ -28,7 +28,10 @@ module.exports = app => {
       });
 
   const verificarUsuario = (req, res, next) => {
-    const idUsuarioToken = req.body.audit_usuario.id_usuario;
+    const idUsuarioToken = req.body?.audit_usuario?.id_usuario;
+    if (!req.query.fid_usuario && idUsuarioToken) {
+      req.query.fid_usuario = idUsuarioToken;
+    }
     const idUsuarioParametros = parseInt(req.query.fid_usuario);
     
     if(idUsuarioToken !== idUsuarioParametros){
