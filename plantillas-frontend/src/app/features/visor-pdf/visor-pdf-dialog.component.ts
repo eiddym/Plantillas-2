@@ -523,7 +523,7 @@ export class VisorPdfDialogComponent implements OnInit, AfterViewInit, OnDestroy
     return Math.round(rawH * this.escalaActual());
   });
   readonly porcentajeEscala = computed(() => Math.round(this.escalaActual() * 100));
-  
+
   safePdfUrl: SafeResourceUrl | null = null;
   safeHtml: any = null;
   private localBlobUrl: string | null = null;
@@ -531,7 +531,7 @@ export class VisorPdfDialogComponent implements OnInit, AfterViewInit, OnDestroy
   constructor(
     public dialogRef: MatDialogRef<VisorPdfDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: VisorPdfData
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     if (this.data.idDocumento) {
@@ -561,7 +561,7 @@ export class VisorPdfDialogComponent implements OnInit, AfterViewInit, OnDestroy
     if (this.localBlobUrl) {
       try {
         URL.revokeObjectURL(this.localBlobUrl);
-      } catch {}
+      } catch { }
     }
   }
 
@@ -645,7 +645,7 @@ export class VisorPdfDialogComponent implements OnInit, AfterViewInit, OnDestroy
       next: (blob) => {
         this.loading.set(false);
         if (this.localBlobUrl) {
-          try { URL.revokeObjectURL(this.localBlobUrl); } catch {}
+          try { URL.revokeObjectURL(this.localBlobUrl); } catch { }
         }
         this.localBlobUrl = URL.createObjectURL(blob);
         this.downloadUrl.set(this.localBlobUrl);
@@ -658,7 +658,7 @@ export class VisorPdfDialogComponent implements OnInit, AfterViewInit, OnDestroy
             next: (blob) => {
               this.loading.set(false);
               if (this.localBlobUrl) {
-                try { URL.revokeObjectURL(this.localBlobUrl); } catch {}
+                try { URL.revokeObjectURL(this.localBlobUrl); } catch { }
               }
               this.localBlobUrl = URL.createObjectURL(blob);
               this.downloadUrl.set(this.localBlobUrl);
