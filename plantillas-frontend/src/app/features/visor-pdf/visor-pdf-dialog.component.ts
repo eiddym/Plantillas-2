@@ -610,6 +610,29 @@ export class VisorPdfDialogComponent implements OnInit, AfterViewInit, OnDestroy
 
     this.documentosService.obtenerVistaPreviaHtml(idOrCite).subscribe({
       next: (res) => {
+        if (res.datos?.esPdf || (!res.datos?.html && res.datos?.pdfUrl)) {
+          const pdfUrl = res.datos?.pdfUrl || `/api/v1/documento/${res.datos?.id_documento || idOrCite}/pdf`;
+          this.http.get(pdfUrl, { responseType: 'blob' }).subscribe({
+            next: (blob) => {
+              this.loading.set(false);
+              if (this.localBlobUrl) {
+                try { URL.revokeObjectURL(this.localBlobUrl); } catch { }
+              }
+              this.localBlobUrl = URL.createObjectURL(blob);
+              this.downloadUrl.set(this.localBlobUrl);
+              this.safePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.localBlobUrl);
+              this.safeHtml = null;
+              this.cdr.markForCheck();
+            },
+            error: () => {
+              this.loading.set(false);
+              this.errorMessage.set('No se pudo cargar el archivo PDF oficial.');
+              this.cdr.markForCheck();
+            }
+          });
+          return;
+        }
+
         this.loading.set(false);
         if (res.datos?.tipoHoja === 'Oficio' || res.datos?.tipoHoja === 'Legal') {
           this.tipoHoja.set('Oficio');

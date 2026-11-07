@@ -158,21 +158,23 @@ export interface UnidadArchivo {
               <div class="visor-header">
                 <div class="visor-doc-info">
                   <span class="visor-badge-cite">{{ docSeleccionado()?.nombre }}</span>
-                  <span class="visor-doc-titulo">{{ docSeleccionado()?.nombre_plantilla || 'Documento Oficial Custodiado' }} · {{ tipoHojaVisor() === 'Oficio' ? 'OFICIO' : 'CARTA' }}</span>
+                  <span class="visor-doc-titulo">{{ docSeleccionado()?.nombre_plantilla || 'Documento Oficial Custodiado' }} · {{ urlPdfSegura() ? 'PDF OFICIAL' : (tipoHojaVisor() === 'Oficio' ? 'OFICIO' : 'CARTA') }}</span>
                 </div>
-                <div class="visor-zoom-tools">
-                  <div class="zoom-pill-group">
-                    <button type="button" class="zoom-btn" (click)="ajustarZoomVisor(-0.1)" matTooltip="Reducir (Zoom -)">
-                      <mat-icon>remove</mat-icon>
-                    </button>
-                    <button type="button" class="zoom-btn zoom-mode-btn" [class.active]="modoEscalaVisor() === 'fit'" (click)="setModoFitVisor()" matTooltip="Ajustar hoja completa a la pantalla">
-                      <span>{{ modoEscalaVisor() === 'fit' ? 'Ajustar' : (porcentajeEscalaVisor() + '%') }}</span>
-                    </button>
-                    <button type="button" class="zoom-btn" (click)="ajustarZoomVisor(0.1)" matTooltip="Aumentar (Zoom +)">
-                      <mat-icon>add</mat-icon>
-                    </button>
+                @if (htmlVisorSeguro()) {
+                  <div class="visor-zoom-tools">
+                    <div class="zoom-pill-group">
+                      <button type="button" class="zoom-btn" (click)="ajustarZoomVisor(-0.1)" matTooltip="Reducir (Zoom -)">
+                        <mat-icon>remove</mat-icon>
+                      </button>
+                      <button type="button" class="zoom-btn zoom-mode-btn" [class.active]="modoEscalaVisor() === 'fit'" (click)="setModoFitVisor()" matTooltip="Ajustar hoja completa a la pantalla">
+                        <span>{{ modoEscalaVisor() === 'fit' ? 'Ajustar' : (porcentajeEscalaVisor() + '%') }}</span>
+                      </button>
+                      <button type="button" class="zoom-btn" (click)="ajustarZoomVisor(0.1)" matTooltip="Aumentar (Zoom +)">
+                        <mat-icon>add</mat-icon>
+                      </button>
+                    </div>
                   </div>
-                </div>
+                }
                 <div class="visor-actions">
                   <button mat-icon-button class="btn-visor-act" (click)="descargarArchivoFisico(docSeleccionado())" matTooltip="Descargar Copia PDF">
                     <mat-icon>download</mat-icon>
@@ -197,6 +199,8 @@ export interface UnidadArchivo {
                       <span>Reintentar</span>
                     </button>
                   </div>
+                } @else if (urlPdfSegura()) {
+                  <iframe [src]="urlPdfSegura()" class="pdf-local-iframe" title="Visor Documental Embebido"></iframe>
                 } @else if (htmlVisorSeguro()) {
                   <div class="visor-sheet-viewport" #visorViewport>
                     <div class="sheet-scaler-wrapper" [style.width.px]="scaledWidthVisor()" [style.height.px]="scaledHeightVisor()">
@@ -215,8 +219,6 @@ export interface UnidadArchivo {
                       </div>
                     </div>
                   </div>
-                } @else if (urlPdfSegura()) {
-                  <iframe [src]="urlPdfSegura()" class="pdf-local-iframe" title="Visor Documental Embebido"></iframe>
                 }
               </div>
             </div>
@@ -2912,6 +2914,16 @@ export class ArchivoComponent implements OnInit {
     this.recalcularEscalaFitVisor();
   }
 
+  tienePlantillaFormly(doc: any): boolean {
+    if (!doc || !doc.plantilla) return false;
+    try {
+      const p = typeof doc.plantilla === 'string' ? JSON.parse(doc.plantilla) : doc.plantilla;
+      return Array.isArray(p) && p.length > 0;
+    } catch {
+      return false;
+    }
+  }
+
   seleccionarDocumento(doc: DocumentoArchivo): void {
     if (!doc || !doc.id_documento) return;
     this.docSeleccionado.set(doc);
@@ -2932,8 +2944,70 @@ export class ArchivoComponent implements OnInit {
       this.currentObjectUrl = null;
     }
 
+    // 1. Si el documento tiene el PDF físico en base64 en archivo_adjunto, cargarlo en Blob directamente
+    if (doc.archivo_adjunto && typeof doc.archivo_adjunto === 'string' && doc.archivo_adjunto.startsWith('data:application/pdf')) {
+      try {
+        const base64Part = doc.archivo_adjunto.split('base64,')[1];
+        if (base64Part) {
+          const byteCharacters = atob(base64Part);
+          const byteNumbers = new Uint8Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const blob = new Blob([byteNumbers], { type: 'application/pdf' });
+          this.currentObjectUrl = URL.createObjectURL(blob);
+          this.urlPdfSegura.set(this.sanitizer.bypassSecurityTrustResourceUrl(`${this.currentObjectUrl}#toolbar=1&navpanes=0&view=FitH`));
+          this.cargandoVisor.set(false);
+          this.cdr.markForCheck();
+          return;
+        }
+      } catch (err) {
+        console.error('Error procesando archivo adjunto base64:', err);
+      }
+    }
+
+    // 2. Si no tiene plantilla Formly interactiva (documento PDF escaneado / institucional subido)
+    const tieneFormly = this.tienePlantillaFormly(doc);
+    if (!tieneFormly) {
+      this.http.get(`/api/v1/documento/${doc.id_documento}/pdf`, { responseType: 'blob' }).subscribe({
+        next: (blob) => {
+          this.currentObjectUrl = URL.createObjectURL(blob);
+          this.urlPdfSegura.set(this.sanitizer.bypassSecurityTrustResourceUrl(`${this.currentObjectUrl}#toolbar=1&navpanes=0&view=FitH`));
+          this.cargandoVisor.set(false);
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.cargarPreviewHtml(doc);
+        }
+      });
+      return;
+    }
+
+    // 3. Documento interactivo redactado en Formly
+    this.cargarPreviewHtml(doc);
+  }
+
+  cargarPreviewHtml(doc: DocumentoArchivo): void {
     this.documentosService.obtenerVistaPreviaHtml(doc.id_documento || doc.nombre).subscribe({
       next: (res) => {
+        if (res.datos?.esPdf || (!res.datos?.html && res.datos?.pdfUrl)) {
+          const pdfUrl = res.datos?.pdfUrl || `/api/v1/documento/${doc.id_documento}/pdf`;
+          this.http.get(pdfUrl, { responseType: 'blob' }).subscribe({
+            next: (blob) => {
+              this.currentObjectUrl = URL.createObjectURL(blob);
+              this.urlPdfSegura.set(this.sanitizer.bypassSecurityTrustResourceUrl(`${this.currentObjectUrl}#toolbar=1&navpanes=0&view=FitH`));
+              this.cargandoVisor.set(false);
+              this.cdr.markForCheck();
+            },
+            error: () => {
+              this.cargandoVisor.set(false);
+              this.errorVisor.set('No se pudo cargar la copia digital del documento.');
+              this.cdr.markForCheck();
+            }
+          });
+          return;
+        }
+
         this.cargandoVisor.set(false);
         if (res.datos?.tipoHoja === 'Oficio' || res.datos?.tipoHoja === 'Legal') {
           this.tipoHojaVisor.set('Oficio');
@@ -2946,25 +3020,6 @@ export class ArchivoComponent implements OnInit {
         setTimeout(() => this.recalcularEscalaFitVisor(), 60);
       },
       error: () => {
-        // Fallback solo si es archivo adjunto base64
-        if (doc.archivo_adjunto && typeof doc.archivo_adjunto === 'string' && doc.archivo_adjunto.startsWith('data:application/pdf')) {
-          try {
-            const base64Part = doc.archivo_adjunto.split('base64,')[1];
-            if (base64Part) {
-              const byteCharacters = atob(base64Part);
-              const byteNumbers = new Uint8Array(byteCharacters.length);
-              for (let i = 0; i < byteCharacters.length; i++) {
-                byteNumbers[i] = byteCharacters.charCodeAt(i);
-              }
-              const blob = new Blob([byteNumbers], { type: 'application/pdf' });
-              this.currentObjectUrl = URL.createObjectURL(blob);
-              this.urlPdfSegura.set(this.sanitizer.bypassSecurityTrustResourceUrl(`${this.currentObjectUrl}#toolbar=1&navpanes=0`));
-              this.cargandoVisor.set(false);
-              this.cdr.markForCheck();
-              return;
-            }
-          } catch (err) {}
-        }
         this.cargandoVisor.set(false);
         this.errorVisor.set('No se pudo cargar la visualización del documento.');
         this.cdr.markForCheck();

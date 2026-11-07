@@ -1078,6 +1078,20 @@ module.exports = app => {
 
       const tienePlantillaFormly = Array.isArray(plantillaJson) && plantillaJson.length > 0;
       if (!tienePlantillaFormly && (doc.es_institucional || doc.grupo === 'institucional')) {
+        const tienePdfFisico = (doc.archivo_adjunto && typeof doc.archivo_adjunto === 'string' && doc.archivo_adjunto.length > 100) ||
+                               (doc.versiones && Array.isArray(doc.versiones) && doc.versiones.length > 0);
+        if (tienePdfFisico) {
+          return res.status(200).send(util.formatearMensaje("EXITO", "Documento PDF oficial en custodia.", {
+            id_documento: doc.id_documento,
+            nombre: doc.nombre,
+            estado: doc.estado,
+            tipoHoja: 'Letter',
+            esPdf: true,
+            pdfUrl: `/api/v1/documento/${doc.id_documento}/pdf`,
+            html: null
+          }));
+        }
+
         let meta = {};
         try {
           if (doc.plantilla_valor) {
