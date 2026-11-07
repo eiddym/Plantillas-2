@@ -600,6 +600,36 @@ export interface VisorPdfData {
             vertical-align: top;
           }
 
+          .pdf-header-container,
+          .pdf-footer-container {
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+
+          .pdf-header-container table,
+          .pdf-page1-metadata,
+          table.pdf-page1-metadata,
+          table[role="presentation"],
+          .table-sin-borde {
+            border: none !important;
+            border-collapse: collapse !important;
+            margin: 0 !important;
+            background: transparent !important;
+          }
+
+          .pdf-header-container td,
+          .pdf-header-container th,
+          .pdf-page1-metadata td,
+          .pdf-page1-metadata th,
+          table[role="presentation"] td,
+          table[role="presentation"] th,
+          .table-sin-borde td,
+          .table-sin-borde th {
+            border: none !important;
+            padding: 0 !important;
+            background: transparent !important;
+          }
+
           .datosGenerales {
             font-weight: 700;
             width: 130px;
