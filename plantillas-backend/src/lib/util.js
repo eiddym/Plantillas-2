@@ -110,10 +110,10 @@ async function renderPdfPuppeteer({ html, headerHtml, footerHtml, format, output
       paperWidth = 11.69; paperHeight = 16.54;
     }
 
-    const marginTop = marginToInches('3.0cm', 1.18);
-    const marginBottom = marginToInches('2.0cm', 0.79);
-    const marginLeft = marginToInches('1.5cm', 0.59);
-    const marginRight = marginToInches('1.5cm', 0.59);
+    const marginTop = marginToInches('3.2cm', 1.26);
+    const marginBottom = marginToInches('2.4cm', 0.94);
+    const marginLeft = marginToInches('2.5cm', 0.984);
+    const marginRight = marginToInches('2.5cm', 0.984);
 
     const cdpOptions = {
       printBackground: true,
@@ -1085,10 +1085,11 @@ const generarDocumento = (pDatos, firma = false) => new Promise((resolve, reject
       : (process.env.URL_VERIFICACION || 'https://docs.marabuntarl.com/#/verificar');
 
   const baseUrl = urlConfigurada
-    .replace(/\/verificar\/?$/i, '')
+    .replace(/\/+#?\/?verificar\/?$/i, '')
+    .replace(/\/+#?\/?$/g, '')
     .replace(/\/+$/g, '');
 
-  const rutaVerificacion = `${baseUrl}/#/verificar`;
+  const rutaVerificacion = `${baseUrl}/verificar`;
 
   const citeModel =
     pDatos.model_actual && pDatos.model_actual['cite-0']
@@ -1527,9 +1528,12 @@ const generarHtml = (pDatos) => new Promise((resolve, reject) => {
 
   const urlConfigurada = (config && config.urlVerificar)
     ? String(config.urlVerificar).trim()
-    : (process.env.URL_VERIFICACION || 'https://docs.marabuntarl.com/#/verificar');
-  const baseUrl = urlConfigurada.replace(/\/verificar\/?$/i, '').replace(/\/+$/g, '');
-  const urlVerif = `${baseUrl}/#/verificar?cite=${encodeURIComponent(pDatos.pdf_cite)}&codigo=${encodeURIComponent(pDatos.pdf_codigo)}`;
+    : (process.env.URL_VERIFICACION || 'http://192.168.1.10/verificar');
+  const baseUrl = urlConfigurada
+    .replace(/\/+#?\/?verificar\/?$/i, '')
+    .replace(/\/+#?\/?$/g, '')
+    .replace(/\/+$/g, '');
+  const urlVerif = `${baseUrl}/verificar?cite=${encodeURIComponent(pDatos.pdf_cite)}&codigo=${encodeURIComponent(pDatos.pdf_codigo)}`;
 
   pDatos.qr_url = urlVerif;
 

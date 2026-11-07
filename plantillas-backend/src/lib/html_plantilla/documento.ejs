@@ -390,32 +390,32 @@
         <div class="pdf-header-container" style="width: 100%; box-sizing: border-box; margin: 0 0 16px 0; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
           <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 0; padding: 0;">
             <tr>
-              <td style="width: 68px; vertical-align: middle; text-align: left; padding: 0;">
+              <td style="width: 90px; vertical-align: middle; text-align: left; padding: 0;">
                 <% if (typeof logo_base64 !== 'undefined' && logo_base64) { %>
-                  <img src="<%= logo_base64 %>" alt="Logo Institucional" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; display: block;">
+                  <img src="<%= logo_base64 %>" alt="Logo Institucional" style="width: 82px; height: 82px; border-radius: 50%; object-fit: cover; display: block;">
                 <% } %>
               </td>
               <td style="vertical-align: middle; text-align: center; padding: 0 6px;">
-                <div style="font-family: 'Teko Light', 'Teko', 'Arial Narrow', sans-serif; font-size: 26px; font-weight: 600; color: #7b3f16; line-height: 1.0; letter-spacing: 0.3px; text-transform: uppercase; white-space: nowrap; margin-bottom: 1px;">
+                <div style="font-family: 'Teko Light', 'Teko', 'Arial Narrow', sans-serif; font-size: 30px; font-weight: 700; color: #7b3f16; line-height: 1.05; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; margin-bottom: 2px;">
                   <%= (typeof entidad !== 'undefined' && entidad && entidad.razon_social) ? entidad.razon_social : 'COOPERATIVA MINERA MARABUNTA R.L.' %>
                 </div>
-                <div style="font-family: 'Teko Light', 'Teko', 'Arial Narrow', sans-serif; font-size: 14px; font-weight: 600; color: #111111; line-height: 1.1; margin-bottom: 1px; white-space: nowrap;">
+                <div style="font-family: 'Teko Light', 'Teko', 'Arial Narrow', sans-serif; font-size: 15.5px; font-weight: 600; color: #111111; line-height: 1.15; margin-bottom: 2px; white-space: nowrap;">
                   <%= (typeof entidad !== 'undefined' && entidad && entidad.personeria_juridica) ? entidad.personeria_juridica : 'P.J. 483/2025, R.E.C. 01.01.2760' %>
                 </div>
-                <div style="font-family: 'Teko Light', 'Teko', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 600; color: #222222; line-height: 1.1; white-space: nowrap;">
+                <div style="font-family: 'Teko Light', 'Teko', 'Arial Narrow', sans-serif; font-size: 12.5px; font-weight: 600; color: #222222; line-height: 1.15; white-space: nowrap;">
                   <%= (typeof entidad !== 'undefined' && entidad && entidad.afiliacion) ? entidad.afiliacion : 'AFILIADA A LA FEDERACIÓN REGIONAL DE COOPERATIVAS MINERAS DEL SUD R.L. UYUNI' %>
                 </div>
               </td>
-              <td style="width: 68px; vertical-align: middle; text-align: right; padding: 0;">
+              <td style="width: 90px; vertical-align: middle; text-align: right; padding: 0;">
                 <% if (typeof logo_ferecomin_base64 !== 'undefined' && logo_ferecomin_base64) { %>
-                  <img src="<%= logo_ferecomin_base64 %>" alt="Logo FERECOMIN" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; display: block; margin-left: auto;">
+                  <img src="<%= logo_ferecomin_base64 %>" alt="Logo FERECOMIN" style="width: 82px; height: 82px; border-radius: 50%; object-fit: cover; display: block; margin-left: auto;">
                 <% } else if (typeof logo_base64 !== 'undefined' && logo_base64) { %>
-                  <img src="<%= logo_base64 %>" alt="Logo FERECOMIN" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; display: block; margin-left: auto;">
+                  <img src="<%= logo_base64 %>" alt="Logo FERECOMIN" style="width: 82px; height: 82px; border-radius: 50%; object-fit: cover; display: block; margin-left: auto;">
                 <% } %>
               </td>
             </tr>
           </table>
-          <div style="border-bottom: 2px solid #c4a484; width: 100%; margin-top: 4px; margin-bottom: 12px;"></div>
+          <div style="border-bottom: 2.5px solid #c4a484; width: 100%; margin-top: 6px; margin-bottom: 12px;"></div>
         </div>
       <% } %>
       <%# Funcion que retorna html de acuerdo al tipo de campo  %>
@@ -1782,15 +1782,15 @@ case 'lista': %>
 
       <% if (typeof html !== 'undefined' && html) { %>
         <!-- PIE DE PÁGINA INSTITUCIONAL OFICIAL (VISTA PREVIA EN PANTALLA) -->
-        <div class="pdf-footer-container" style="width: 100%; box-sizing: border-box; margin-top: 42px; padding-top: 6px; font-family: 'Open Sans', 'DejaVu Sans', Arial, Helvetica, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-          <div style="border-top: 1.5px solid #c4a484; padding-top: 5px; display: flex; justify-content: space-between; align-items: center; font-size: 6.2pt; color: #444; line-height: 8.5pt;">
-            <div style="width: 45px;"></div>
+        <div class="pdf-footer-container" style="width: 100%; box-sizing: border-box; margin-top: auto; padding-top: 36px; margin-bottom: 6px; font-family: 'Open Sans', 'DejaVu Sans', Arial, Helvetica, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+          <div style="border-top: 2px solid #c4a484; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 8pt; color: #333; line-height: 11pt;">
+            <div style="width: 50px;"></div>
             <div style="text-align: center; flex: 1;">
               <%= (typeof entidad !== 'undefined' && entidad && entidad.direccion) ? entidad.direccion : 'ZONA PROGRESO, CALLE RAVELO S/N, ENTRE BOLIVAR Y ABAROA, UYUNI - BOLIVIA' %><br>
               <%= (typeof entidad !== 'undefined' && entidad && entidad.nit) ? entidad.nit : 'M.C./NIT: 484874028' %> | <%= (typeof entidad !== 'undefined' && entidad && entidad.telefono) ? entidad.telefono : 'TELEFONO: 71617875' %> | <%= (typeof entidad !== 'undefined' && entidad && entidad.correo) ? entidad.correo : 'CORREO: contacto@marabuntarl.com' %><br>
               <%= (typeof entidad !== 'undefined' && entidad && entidad.web) ? entidad.web : 'marabuntarl.com' %>
             </div>
-            <div style="width: 45px; text-align: right; font-size: 7.2pt; color: #555; white-space: nowrap;">
+            <div style="width: 50px; text-align: right; font-size: 9.5pt; font-weight: 700; color: #444; white-space: nowrap;">
               1/1
             </div>
           </div>

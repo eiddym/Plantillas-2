@@ -2095,7 +2095,7 @@ export interface UnidadArchivo {
       width: 816px;
       box-sizing: border-box;
       background: #ffffff;
-      padding: 38px 46px;
+      padding: 38px 95px; /* 2.5 cm de margen lateral */
       display: flex;
       flex-direction: column;
       color: #1e293b;
@@ -2115,6 +2115,9 @@ export interface UnidadArchivo {
         line-height: 1.5;
         color: #1e293b;
         font-size: 10.5pt;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
 
         * {
           box-sizing: border-box !important;
@@ -2124,10 +2127,13 @@ export interface UnidadArchivo {
           display: none !important;
         }
 
-        .mi-contenido, .contenedor {
+        .mi-contenido, .cuerpo-documento, .contenedor {
           width: 100% !important;
           max-width: 100% !important;
           box-sizing: border-box !important;
+          display: flex;
+          flex-direction: column;
+          flex: 1;
         }
 
         #pageHeader {
