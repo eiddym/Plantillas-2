@@ -172,6 +172,7 @@ services:
       WHATSAPP_API_KEY: ${WHATSAPP_API_KEY:-ev_sec_42964e9a8f27b140cd3e82b719}
       WHATSAPP_INSTANCIA: ${WHATSAPP_INSTANCIA:-marabunta}
       WHATSAPP_CODIGO_PAIS: ${WHATSAPP_CODIGO_PAIS:-591}
+      WHATSAPP_GRUPO_ID: ${WHATSAPP_GRUPO_ID:-}
     depends_on:
       db:
         condition: service_healthy

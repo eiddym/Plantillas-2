@@ -9,13 +9,22 @@ const WHATSAPP_INSTANCIA = process.env.WHATSAPP_INSTANCIA || 'marabunta';
 const CODIGO_PAIS = process.env.WHATSAPP_CODIGO_PAIS || '591';
 
 /**
- * Normaliza cualquier número boliviano o internacional a formato E.164 sin signo '+'
+ * Normaliza cualquier número boliviano, internacional o JID de Grupo (@g.us)
  * Ej: "77777777" -> "59177777777"
  *     "+591 777-77777" -> "59177777777"
+ *     "120363284910293847@g.us" -> "120363284910293847@g.us"
  */
 function normalizarNumero(numero) {
   if (!numero) return null;
-  let limpio = String(numero).replace(/\D/g, '');
+  const raw = String(numero).trim();
+  if (raw.endsWith('@g.us') || raw.endsWith('@s.whatsapp.net')) {
+    return raw;
+  }
+  let limpio = raw.replace(/\D/g, '');
+  if (!limpio) return null;
+  if (limpio.length >= 15) {
+    return `${limpio}@g.us`;
+  }
   if (limpio.length === 8) {
     limpio = `${CODIGO_PAIS}${limpio}`;
   }
@@ -23,12 +32,12 @@ function normalizarNumero(numero) {
 }
 
 /**
- * Envía un mensaje de texto formateado por WhatsApp
+ * Envía un mensaje de texto formateado por WhatsApp (a usuario individual o grupo @g.us)
  */
 async function enviarTexto(numeroDestino, mensaje) {
   const numero = normalizarNumero(numeroDestino);
   if (!numero) {
-    throw new Error('Número de celular inválido o no especificado.');
+    throw new Error('Número de celular o ID de grupo inválido o no especificado.');
   }
 
   const url = `${WHATSAPP_API_URL.replace(/\/+$/, '')}/message/sendText/${WHATSAPP_INSTANCIA}`;
@@ -56,20 +65,25 @@ async function enviarTexto(numeroDestino, mensaje) {
 }
 
 /**
- * Envía un documento PDF oficial adjunto por WhatsApp
+ * Envía un documento PDF oficial adjunto por WhatsApp (URL o Base64)
  */
-async function enviarPdf(numeroDestino, urlPdf, nombreArchivo, leyenda) {
+async function enviarPdf(numeroDestino, urlOBase64Pdf, nombreArchivo, leyenda) {
   const numero = normalizarNumero(numeroDestino);
-  if (!numero) throw new Error('Número de celular inválido.');
+  if (!numero) throw new Error('Número de celular o ID de grupo inválido.');
 
   const url = `${WHATSAPP_API_URL.replace(/\/+$/, '')}/message/sendMedia/${WHATSAPP_INSTANCIA}`;
+
+  let mediaValue = urlOBase64Pdf;
+  if (typeof mediaValue === 'string' && mediaValue.includes('base64,')) {
+    mediaValue = mediaValue.split('base64,')[1];
+  }
 
   const payload = {
     number: numero,
     mediatype: 'document',
     mimetype: 'application/pdf',
     caption: leyenda || 'Documento Oficial',
-    media: urlPdf,
+    media: mediaValue,
     fileName: nombreArchivo || 'documento.pdf'
   };
 
@@ -84,9 +98,64 @@ async function enviarPdf(numeroDestino, urlPdf, nombreArchivo, leyenda) {
   return response.data;
 }
 
+/**
+ * Obtiene la lista de grupos de WhatsApp donde participa la instancia corporativa
+ */
+async function obtenerGrupos() {
+  const url = `${WHATSAPP_API_URL.replace(/\/+$/, '')}/group/fetchAllGroups/${WHATSAPP_INSTANCIA}?getParticipants=false`;
+  const response = await axios.get(url, {
+    headers: {
+      apikey: WHATSAPP_API_KEY
+    },
+    timeout: 15000
+  });
+  return Array.isArray(response.data) ? response.data : [];
+}
+
+/**
+ * Envía una difusión global (Convocatoria, Circular, Comunicado o Documento Institucional)
+ * únicamente al Grupo Oficial de WhatsApp de la Institución (sin spam individual).
+ */
+async function enviarAGrupoInstitucional(mensaje, opciones = {}) {
+  let grupoId = opciones.grupoId || process.env.WHATSAPP_GRUPO_ID || '';
+  if (!grupoId) {
+    try {
+      const grupos = await obtenerGrupos();
+      if (grupos.length > 0 && grupos[0].id) {
+        grupoId = grupos[0].id;
+      }
+    } catch (e) {
+      logger.warn('[WhatsApp Grupo] No se pudo autodetectar grupo institucional:', e.message);
+    }
+  }
+
+  if (!grupoId) {
+    logger.warn('[WhatsApp Grupo] WHATSAPP_GRUPO_ID no configurado y sin grupos detectados aún.');
+    return { enviado: false, motivo: 'WHATSAPP_GRUPO_ID no configurado' };
+  }
+
+  const resTexto = await enviarTexto(grupoId, mensaje);
+
+  if (opciones.pdfMedia) {
+    try {
+      await enviarPdf(
+        grupoId,
+        opciones.pdfMedia,
+        opciones.nombreArchivo || 'Documento_Oficial.pdf',
+        opciones.leyendaPdf || '📄 Documento Oficial Adjunto'
+      );
+    } catch (ePdf) {
+      logger.warn('[WhatsApp Grupo] Texto enviado, pero falló adjunto PDF:', ePdf.message);
+    }
+  }
+
+  return { enviado: true, grupoId, data: resTexto };
+}
+
 module.exports = {
   normalizarNumero,
   enviarTexto,
-  enviarPdf
+  enviarPdf,
+  obtenerGrupos,
+  enviarAGrupoInstitucional
 };
-

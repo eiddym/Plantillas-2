@@ -12,6 +12,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -88,6 +89,7 @@ export interface UnidadArchivo {
     MatTableModule,
     MatIconModule,
     MatButtonModule,
+    MatCheckboxModule,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
@@ -728,6 +730,11 @@ export interface UnidadArchivo {
                       </div>
 
                       <div class="action-btn-row" (click)="$event.stopPropagation()">
+                        @if (esAdminOMae()) {
+                          <button mat-icon-button (click)="difundirGlobalmente(d)" matTooltip="Difundir a Todos (Correos Masivos + Grupo de WhatsApp)" class="btn-action">
+                            <mat-icon>campaign</mat-icon>
+                          </button>
+                        }
                         <button mat-icon-button (click)="verVersiones(d)" matTooltip="Historial de Versiones y Trazabilidad" class="btn-action">
                           <mat-icon>history</mat-icon>
                         </button>
@@ -823,6 +830,13 @@ export interface UnidadArchivo {
                 <button type="button" mat-stroked-button (click)="fileCarga.click()">
                   {{ nombreArchivoCarga() || 'Seleccionar Archivo PDF' }}
                 </button>
+              </div>
+
+              <!-- Opción de Difusión Masiva Directa (Sin requerir aprobación intermedia) -->
+              <div class="col-span-full" style="padding: 8px 12px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px;">
+                <mat-checkbox formControlName="difundir_todos" color="primary">
+                  <strong>Difundir inmediatamente a todo el personal</strong> (Bandeja del Sistema + Correos de Todos + Grupo de WhatsApp Institucional)
+                </mat-checkbox>
               </div>
 
               <div class="modal-actions col-span-full">
@@ -2645,7 +2659,8 @@ export class ArchivoComponent implements OnInit {
     anio: new FormControl(new Date().getFullYear(), [Validators.required]),
     categoria: new FormControl('Documento Institucional'),
     descripcion: new FormControl('', [Validators.required]),
-    observacion: new FormControl('')
+    observacion: new FormControl(''),
+    difundir_todos: new FormControl(true)
   });
 
   readonly citeCalculadoPreview = signal<string>('MARABUNTA/DOC/1/2026');
@@ -2946,7 +2961,8 @@ export class ArchivoComponent implements OnInit {
       anio: new Date().getFullYear(),
       categoria: 'Documento Institucional',
       descripcion: '',
-      observacion: ''
+      observacion: '',
+      difundir_todos: true
     });
     this.nombreArchivoCarga.set(null);
     this.archivoPdfBase64 = null;
@@ -2989,18 +3005,33 @@ export class ArchivoComponent implements OnInit {
       archivo_base64: this.archivoPdfBase64,
       archivo_adjunto: this.archivoPdfBase64,
       url_archivo: `/public/documentos/${this.citeCalculadoPreview().toUpperCase().replace(/\//g, '_')}.pdf`,
+      difundir_todos: !!v.difundir_todos,
       audit_usuario: user
     }).subscribe({
       next: (res) => {
         this.guardando.set(false);
         this.cerrarModalCarga();
         const citeAsignado = (res.datos?.nombre || this.citeCalculadoPreview()).toUpperCase();
-        this.snackBar.open(`¡Documento Institucional registrado con CITE: ${citeAsignado}!`, 'Aceptar', { duration: 5000 });
+        this.snackBar.open(`¡Documento emitido y difundido con CITE: ${citeAsignado}!`, 'Aceptar', { duration: 5000 });
         this.cargarArchivoInstitucional();
       },
       error: (err) => {
         this.guardando.set(false);
         this.snackBar.open(err.error?.mensaje || 'Error al cargar documento institucional', 'Cerrar', { duration: 4000 });
+      }
+    });
+  }
+
+  difundirGlobalmente(doc: DocumentoArchivo): void {
+    if (!confirm(`¿Desea difundir el documento ${doc.nombre} a los correos de todos los usuarios y al Grupo Institucional de WhatsApp?`)) {
+      return;
+    }
+    this.http.post<any>(`/api/v1/archivo/difundir/${doc.id_documento}`, {}).subscribe({
+      next: (res) => {
+        this.snackBar.open(res.mensaje || `Difusión global ejecutada para ${doc.nombre}`, 'Aceptar', { duration: 4000 });
+      },
+      error: (err) => {
+        this.snackBar.open(err.error?.mensaje || 'Error al ejecutar difusión global', 'Cerrar', { duration: 3500 });
       }
     });
   }

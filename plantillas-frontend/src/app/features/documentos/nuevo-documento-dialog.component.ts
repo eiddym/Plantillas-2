@@ -68,7 +68,7 @@ export interface NuevoDocumentoDialogData {
         >
           <div class="card-top">
             <span class="abrev-pill">{{ p.abreviacion || 'DOC' }}</span>
-            <span class="format-pill">{{ getFormato(p) }}</span>
+            <span class="format-pill">{{ p.es_difusion_global ? '📢 Difusión Global • ' : '' }}{{ getFormato(p) }}</span>
           </div>
           <h4 class="template-name">{{ p.nombre }}</h4>
           <div class="card-bottom">
@@ -335,8 +335,27 @@ export class NuevoDocumentoDialogComponent implements OnInit {
         this.loading.set(false);
         const datosAny = res.datos as any;
         const lista = datosAny?.resultado || datosAny?.rows || (Array.isArray(res.datos) ? res.datos : []);
-        // Solo mostrar plantillas activas
-        this.plantillas.set(lista.filter((p: any) => p.estado !== 'INACTIVO'));
+        const u: any = this.authService.currentUser() || {};
+        const esAdminOMae = !!u.es_mae || this.authService.isMae() || this.authService.hasRole('ADMIN') || this.authService.hasRole('CONFIGURADOR');
+        const userId = Number(u.id || u.id_usuario || 0);
+        const unidadId = Number(u.fid_unidad || u.id_unidad || 0);
+
+        const filtradas = lista.filter((p: any) => {
+          if (p.estado === 'INACTIVO') return false;
+          if (esAdminOMae) return true;
+          let unidPerm: number[] = [];
+          let usrPerm: number[] = [];
+          try { unidPerm = JSON.parse(p.unidades_permitidas || '[]'); } catch {}
+          try { usrPerm = JSON.parse(p.usuarios_permitidos || '[]'); } catch {}
+          const tieneFiltroUnidad = Array.isArray(unidPerm) && unidPerm.length > 0;
+          const tieneFiltroUsuario = Array.isArray(usrPerm) && usrPerm.length > 0;
+          if (!tieneFiltroUnidad && !tieneFiltroUsuario) return true;
+          if (tieneFiltroUsuario && usrPerm.map(Number).includes(userId)) return true;
+          if (tieneFiltroUnidad && unidadId > 0 && unidPerm.map(Number).includes(unidadId)) return true;
+          return false;
+        });
+
+        this.plantillas.set(filtradas);
         this.cdr.markForCheck();
       },
       error: () => {
@@ -384,13 +403,31 @@ export class NuevoDocumentoDialogComponent implements OnInit {
 
     const currentUser = this.authService.currentUser();
     const usuarioId = currentUser?.id || 1;
+    const esGlobal = !!p.es_difusion_global ||
+      (p.nombre || '').toLowerCase().includes('circular') ||
+      (p.nombre || '').toLowerCase().includes('convocatoria') ||
+      (p.nombre || '').toLowerCase().includes('comunicado');
+
+    const valorInicial: any = { inputSelect: 'Reservado' };
+    if (esGlobal) {
+      const destTodos = {
+        id_usuario: 'TODOS',
+        todos: true,
+        nombres: 'A TODO EL PERSONAL',
+        apellidos: '',
+        cargo: 'Difusión General Institucional'
+      };
+      valorInicial.datosGenerales = { para: destTodos, via: [], de: [] };
+      valorInicial['datosGenerales-0'] = { para: destTodos, via: [], de: [] };
+      valorInicial.inputt_1 = 'A TODO EL PERSONAL';
+    }
 
     const payload: any = {
       nombre: 'BORRADOR',
       nombre_plantilla: p.nombre,
       abreviacion: p.abreviacion,
       plantilla: p.plantilla,
-      plantilla_valor: JSON.stringify({ inputSelect: 'Reservado' }),
+      plantilla_valor: JSON.stringify(valorInicial),
       sw: { enviado: false, enviar: false },
       fid_plantilla: p.id_plantilla_formly,
       _usuario_creacion: usuarioId

@@ -2214,7 +2214,8 @@ module.exports = app => {
             para = Array.isArray(p) ? p[0] : p;
           } catch (e) {}
           const viaActual = documentoBase.via_actual;
-          const aprobarPara = (Number(viaActual) === Number(para));
+          const esGlobalDoc = notificar.esDocumentoDifusionGlobal(documentoBase) || bl.esCircularInstructivoConvocatoria(documentoBase);
+          const aprobarPara = (Number(viaActual) === Number(para)) || esGlobalDoc;
           const datosAprobacion = {
             derivar: req.body.derivar || false,
             observaciones: req.body.observaciones || '',

@@ -14,6 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { FormlyFieldConfig, FormlyModule } from '@ngx-formly/core';
+import { HttpClient } from '@angular/common/http';
 import { PlantillaFormly, PlantillasService } from '../../core/services/plantillas.service';
 import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
 
@@ -87,6 +88,35 @@ interface PaletteItem {
             <input matInput formControlName="abreviacion" readonly placeholder="Ej. ITC">
             <mat-hint>Calculada sin conectores</mat-hint>
           </mat-form-field>
+
+          <mat-form-field appearance="outline" class="meta-field">
+            <mat-label>Unidades Asignadas (Vacío = Todas)</mat-label>
+            <mat-select formControlName="unidades_permitidas" multiple>
+              @for (un of unidadesDisponibles(); track un.id_unidad) {
+                <mat-option [value]="un.id_unidad">{{ un.nombre }} ({{ un.abreviacion }})</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="meta-field">
+            <mat-label>Usuarios Específicos (Vacío = Todos)</mat-label>
+            <mat-select formControlName="usuarios_permitidos" multiple>
+              @for (usr of usuariosDisponibles(); track usr.id_usuario) {
+                <mat-option [value]="usr.id_usuario">{{ usr.nombres }} {{ usr.apellidos }} ({{ usr.cargo }})</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <div class="meta-checks-group" style="display:flex; flex-direction:column; gap:4px; justify-content:center;">
+            <mat-checkbox formControlName="es_difusion_global" color="primary">
+              <strong>Plantilla de Difusión Global (PARA = A Todo el Personal)</strong>
+            </mat-checkbox>
+            @if (metaForm.get('es_difusion_global')?.value) {
+              <mat-checkbox formControlName="requiere_aprobacion_mae" color="primary">
+                <span>Si la envía una unidad subordinada, exigir aprobación invisible de su MAE</span>
+              </mat-checkbox>
+            }
+          </div>
         </form>
       </mat-card>
 
@@ -729,6 +759,7 @@ interface PaletteItem {
 })
 export class PlantillaEditorComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
+  private readonly http = inject(HttpClient);
   private readonly plantillasService = inject(PlantillasService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -739,6 +770,8 @@ export class PlantillaEditorComponent implements OnInit {
   readonly selectedFieldIndex = signal<number | null>(null);
   readonly modoVistaLayout = signal<'completa' | 'estructura' | 'preview'>('completa');
   readonly paletaColapsada = signal<boolean>(false);
+  readonly unidadesDisponibles = signal<any[]>([]);
+  readonly usuariosDisponibles = signal<any[]>([]);
   plantillaId: number | null = null;
 
   togglePaleta(): void {
@@ -755,7 +788,11 @@ export class PlantillaEditorComponent implements OnInit {
 
   readonly metaForm: FormGroup = this.fb.group({
     nombre: ['', [Validators.required]],
-    abreviacion: ['', [Validators.required]]
+    abreviacion: ['', [Validators.required]],
+    es_difusion_global: [false],
+    requiere_aprobacion_mae: [true],
+    unidades_permitidas: [[]],
+    usuarios_permitidos: [[]]
   });
 
   previewForm = new FormGroup({});
@@ -986,6 +1023,15 @@ export class PlantillaEditorComponent implements OnInit {
   canvasFields: FormlyFieldConfig[] = [];
 
   ngOnInit(): void {
+    this.http.get<any>('/api/v1/seguridad/unidad?limit=200').subscribe({
+      next: (r) => this.unidadesDisponibles.set(r?.datos?.resultado || []),
+      error: () => {}
+    });
+    this.http.get<any>('/api/v1/seguridad/usuario?limit=200').subscribe({
+      next: (r) => this.usuariosDisponibles.set(r?.datos?.resultado || []),
+      error: () => {}
+    });
+
     // Generación automática de sigla/abreviación omitiendo conectores en español
     this.metaForm.get('nombre')?.valueChanges.subscribe(nom => {
       const sigla = this.generarSiglaSinConectores(nom || '');
@@ -1051,9 +1097,18 @@ export class PlantillaEditorComponent implements OnInit {
           this.canvasFields = [];
         }
 
+        let unidPerm: number[] = [];
+        let usrPerm: number[] = [];
+        try { unidPerm = JSON.parse(p.unidades_permitidas || '[]'); } catch {}
+        try { usrPerm = JSON.parse(p.usuarios_permitidos || '[]'); } catch {}
+
         this.metaForm.patchValue({
           nombre: p.nombre,
-          abreviacion: p.abreviacion || this.generarSiglaSinConectores(p.nombre)
+          abreviacion: p.abreviacion || this.generarSiglaSinConectores(p.nombre),
+          es_difusion_global: !!p.es_difusion_global,
+          requiere_aprobacion_mae: p.requiere_aprobacion_mae !== false,
+          unidades_permitidas: Array.isArray(unidPerm) ? unidPerm : [],
+          usuarios_permitidos: Array.isArray(usrPerm) ? usrPerm : []
         });
 
         this.actualizarPreview();
@@ -1206,7 +1261,11 @@ export class PlantillaEditorComponent implements OnInit {
     const payload: PlantillaFormly = {
       nombre: this.metaForm.value.nombre,
       abreviacion: this.metaForm.value.abreviacion || this.generarSiglaSinConectores(this.metaForm.value.nombre),
-      plantilla: JSON.stringify(esquemaNormalizado)
+      plantilla: JSON.stringify(esquemaNormalizado),
+      es_difusion_global: !!this.metaForm.value.es_difusion_global,
+      requiere_aprobacion_mae: !!this.metaForm.value.requiere_aprobacion_mae,
+      unidades_permitidas: JSON.stringify(this.metaForm.value.unidades_permitidas || []),
+      usuarios_permitidos: JSON.stringify(this.metaForm.value.usuarios_permitidos || [])
     };
 
     const req$ = this.isEditing() && this.plantillaId

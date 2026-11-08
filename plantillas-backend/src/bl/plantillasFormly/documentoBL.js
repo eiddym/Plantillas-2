@@ -132,7 +132,9 @@ module.exports = {
           })
           .catch( pError => reject(pError))
       }else {
-        resolve(true)
+        return module.exports.actualizarDocumento(pDocumento, datosActualizar, pModelos.historial_flujo, tr)
+          .then(() => resolve(true))
+          .catch(pError => reject(pError));
       }
 
     })
@@ -180,112 +182,212 @@ module.exports = {
     const nombreP = String(doc.nombre_plantilla || '').toLowerCase();
     const abrev = String(doc.abreviacion || '').toUpperCase();
     const titDoc = String(doc.titulo || doc.nombre || '').toLowerCase();
+    if (notificar.esDocumentoDifusionGlobal(doc)) return true;
     return (
       nombreP.includes('circular') ||
       nombreP.includes('instructivo') ||
       nombreP.includes('convocatoria') ||
+      nombreP.includes('comunicado') ||
       titDoc.includes('circular') ||
       titDoc.includes('instructivo') ||
       titDoc.includes('convocatoria') ||
-      ['C-A', 'CIR', 'I', 'INS', 'CONV'].includes(abrev) ||
+      titDoc.includes('comunicado') ||
+      ['C-A', 'CIR', 'I', 'INS', 'CONV', 'COM'].includes(abrev) ||
       !!doc.multiple
     );
   },
 
+  /**
+   * Resuelve si el usuario creador es una Autoridad de Rango Máximo Autónoma (es_mae = true)
+   * o, si es subordinado, quién es la Autoridad Máxima (MAE) de su rama jerárquica.
+   */
+  resolverMaeJerarquica: async (dbModelos, idUsuarioCreador) => {
+    if (!dbModelos || !dbModelos.usuario) {
+      return { esCreadorMae: false, maeAprobador: null };
+    }
+    const creador = await dbModelos.usuario.findOne({
+      where: { id_usuario: Number(idUsuarioCreador) },
+      include: [{ model: dbModelos.unidad, as: 'unidad' }]
+    });
+    if (!creador) {
+      return { esCreadorMae: false, maeAprobador: null };
+    }
+    if (creador.es_mae === true || creador.usuario === 'admin' || creador.usuario === 'sys_default') {
+      return { esCreadorMae: true, maeAprobador: creador };
+    }
+
+    // Subir por fid_unidad_padre hasta encontrar la unidad raíz del creador
+    const todasUnidades = await dbModelos.unidad.findAll({ where: { estado: 'ACTIVO' } });
+    const mapaUnidades = new Map(todasUnidades.map(u => [Number(u.id_unidad), u]));
+    let unidadActual = mapaUnidades.get(Number(creador.fid_unidad));
+    let guard = 0;
+    while (unidadActual && unidadActual.fid_unidad_padre && guard < 10) {
+      const padre = mapaUnidades.get(Number(unidadActual.fid_unidad_padre));
+      if (!padre) break;
+      unidadActual = padre;
+      guard++;
+    }
+    const idUnidadRaiz = unidadActual ? Number(unidadActual.id_unidad) : Number(creador.fid_unidad);
+
+    // Buscar MAE activa en esa unidad raíz, o cualquier MAE activa como respaldo
+    const maesActivas = await dbModelos.usuario.findAll({
+      where: { es_mae: true, estado: 'ACTIVO' },
+      order: [['id_usuario', 'ASC']]
+    });
+
+    const maeRama = maesActivas.find(m => Number(m.fid_unidad) === idUnidadRaiz) || maesActivas[0] || null;
+    return { esCreadorMae: false, maeAprobador: maeRama };
+  },
+
   documento_enviar: (modeloHistorialFlujo, doc, transaccion, pDirector) =>
-  new Promise( (resolve, reject) => {
-    let de = parseIdsSeguro(doc.de, doc.plantilla_valor, 'de', [Number(doc._usuario_creacion)]);
-    if (de.length === 0 && doc._usuario_creacion) {
-      de = [Number(doc._usuario_creacion)];
-    }
-    const _de = de.slice();
-    let aprobaron_de = doc.aprobaron_de || [];
-    de = _.pull(de, Number(doc._usuario_creacion));
-    if (aprobaron_de && aprobaron_de.length > 0 ) {
-      aprobaron_de.push(Number(doc._usuario_creacion));
-    } else {
-      aprobaron_de = _de.includes(Number(doc._usuario_creacion)) ? [Number(doc._usuario_creacion)] : [];
-    }
-    const via = parseIdsSeguro(doc.via, doc.plantilla_valor, 'via', []);
-    const para = parseIdsSeguro(doc.para, doc.plantilla_valor, 'para', []);
-    if (para.length === 0) {
-      return reject(new Error('Debe seleccionar un destinatario (PARA) antes de enviar el documento.'));
-    }
-    let viaActual = 0;
-    let form = [];
+  new Promise(async (resolve, reject) => {
     try {
-      form = typeof doc.plantilla === 'string' ? JSON.parse(doc.plantilla) : (doc.plantilla || []);
-    } catch (e) {}
-
-    let aprobarPorDireccion = false;
-    for (let f = 0; f < form.length; f++) {
-      if (form[f].type == "datosGenerales" && form[f].templateOptions) {
-        aprobarPorDireccion = form[f].templateOptions.aprobarPorDireccion;
-        break;
+      let de = parseIdsSeguro(doc.de, doc.plantilla_valor, 'de', [Number(doc._usuario_creacion)]);
+      if (de.length === 0 && doc._usuario_creacion) {
+        de = [Number(doc._usuario_creacion)];
       }
-    }
-
-    if (aprobarPorDireccion && via.length==0) {
-      viaActual = pDirector;
-    } else {
-      if (de.length > 0) {
-        viaActual = de[0];
-      } else if (via.length > 0) {
-        viaActual = via[0];
+      const _de = de.slice();
+      let aprobaron_de = doc.aprobaron_de || [];
+      de = _.pull(de, Number(doc._usuario_creacion));
+      if (aprobaron_de && aprobaron_de.length > 0 ) {
+        aprobaron_de.push(Number(doc._usuario_creacion));
       } else {
-        viaActual = para[0];
+        aprobaron_de = _de.includes(Number(doc._usuario_creacion)) ? [Number(doc._usuario_creacion)] : [];
       }
-    }
-
-    const esDirecto = module.exports.esCircularInstructivoConvocatoria(doc);
-    let asignarCiteProm = Promise.resolve(null);
-
-    // Si es Circular, Instructivo o Convocatoria y no tiene CITE oficial, debe nacer con CITE al enviar
-    if (esDirecto && (!doc.nombre || !doc.nombre.includes('/'))) {
+      const via = parseIdsSeguro(doc.via, doc.plantilla_valor, 'via', []);
+      let para = parseIdsSeguro(doc.para, doc.plantilla_valor, 'para', []);
       const dbModelos = doc.sequelize ? doc.sequelize.models : null;
-      if (dbModelos) {
+
+      // Si es difusión global (PARA = TODOS), asegurar que 'para' tenga todos los usuarios activos
+      const esGlobal = notificar.esDocumentoDifusionGlobal(doc) || module.exports.esCircularInstructivoConvocatoria(doc);
+      if (esGlobal && dbModelos && dbModelos.usuario && para.length <= 1) {
+        const esExplicitoTodos = notificar.esDocumentoDifusionGlobal(doc);
+        if (esExplicitoTodos) {
+          const activos = await dbModelos.usuario.findAll({ where: { estado: 'ACTIVO' }, attributes: ['id_usuario'] });
+          para = activos.map(u => Number(u.id_usuario)).filter(n => n > 0);
+        }
+      }
+
+      if (para.length === 0) {
+        return reject(new Error('Debe seleccionar un destinatario (PARA) antes de enviar el documento.'));
+      }
+      let viaActual = 0;
+      let form = [];
+      try {
+        form = typeof doc.plantilla === 'string' ? JSON.parse(doc.plantilla) : (doc.plantilla || []);
+      } catch (e) {}
+
+      let aprobarPorDireccion = false;
+      for (let f = 0; f < form.length; f++) {
+        if (form[f].type == "datosGenerales" && form[f].templateOptions) {
+          aprobarPorDireccion = form[f].templateOptions.aprobarPorDireccion;
+          break;
+        }
+      }
+
+      if (aprobarPorDireccion && via.length==0) {
+        viaActual = pDirector;
+      } else {
+        if (de.length > 0) {
+          viaActual = de[0];
+        } else if (via.length > 0) {
+          viaActual = via[0];
+        } else {
+          viaActual = para[0];
+        }
+      }
+
+      // Verificar jerarquía cuando es documento global / Circular / Convocatoria
+      let esEmisionDirectaMae = false;
+      let maeEnSegundoPlano = null;
+
+      if (esGlobal && dbModelos) {
+        const jerarquia = await module.exports.resolverMaeJerarquica(dbModelos, doc._usuario_creacion);
+        if (jerarquia.esCreadorMae) {
+          esEmisionDirectaMae = true;
+        } else if (jerarquia.maeAprobador) {
+          // Subordinado enviando documento global: requiere aprobación en segundo plano por la MAE de su rama
+          maeEnSegundoPlano = jerarquia.maeAprobador;
+          viaActual = Number(maeEnSegundoPlano.id_usuario);
+        }
+      }
+
+      let asignarCiteProm = Promise.resolve(null);
+      if (esEmisionDirectaMae && (!doc.nombre || !doc.nombre.includes('/')) && dbModelos) {
         asignarCiteProm = module.exports.obtenerCrearCite(dbModelos, doc, doc._usuario_creacion);
       }
-    }
 
-    asignarCiteProm.then((citeResp) => {
-      let estadoFinal = esDirecto ? 'DERIVADO' : 'ENVIADO';
+      const citeResp = await asignarCiteProm;
+      let estadoFinal = esEmisionDirectaMae ? 'CERRADO' : 'ENVIADO';
       let nombreFinal = doc.nombre;
-      let pValFinal = doc.plantilla_valor;
+      let pValObj = {};
+      try {
+        pValObj = typeof doc.plantilla_valor === 'string' ? JSON.parse(doc.plantilla_valor || '{}') : (doc.plantilla_valor || {});
+      } catch (_) {}
       let fechaFinal = doc.fecha;
 
       if (citeResp && citeResp.cite) {
         nombreFinal = citeResp.cite;
-        pValFinal = JSON.stringify(citeResp.datosPlantilla || {});
+        pValObj = citeResp.datosPlantilla || pValObj;
         fechaFinal = moment().tz('America/La_Paz').format();
       }
 
-      return doc.update({
+      if (maeEnSegundoPlano) {
+        pValObj._requiere_aprobacion_mae = true;
+        pValObj._mae_aprobador_id = Number(maeEnSegundoPlano.id_usuario);
+        pValObj._mae_aprobador_nombre = `${maeEnSegundoPlano.nombres || ''} ${maeEnSegundoPlano.apellidos || ''}`.trim();
+        pValObj._mae_aprobador_cargo = maeEnSegundoPlano.cargo || 'MAE';
+      }
+
+      const pValFinal = JSON.stringify(pValObj);
+
+      const docActualizado = await doc.update({
         nombre: nombreFinal,
         plantilla_valor: pValFinal,
         fecha: fechaFinal,
         de: JSON.stringify(_de),
         via: JSON.stringify(via),
         para: JSON.stringify(para),
-        via_actual: esDirecto ? null : viaActual,
+        via_actual: esEmisionDirectaMae ? null : viaActual,
         estado: estadoFinal,
+        alcance_archivo: esEmisionDirectaMae ? 'GENERAL' : doc.alcance_archivo,
         _usuario_modificacion: doc._usuario_creacion,
         aprobaron_de,
-      }, transaccion)
-      .then(docActualizado =>
-        modeloHistorialFlujo.create({
-          id_documento: docActualizado.id_documento,
-          accion: esDirecto ? 'EMITIDO_CON_CITE' : 'ENVIADO',
-          observacion: esDirecto 
-            ? `Documento oficial emitido con CITE ${nombreFinal} para acuse de recibo y archivo.`
-            : '',
-          estado: 'ACTIVO',
-          _usuario_creacion: docActualizado._usuario_creacion,
-        }, transaccion)
-      )
-      .then(resu => resolve(resu));
-    })
-    .catch(e => reject(e));
+      }, transaccion);
+
+      if (esEmisionDirectaMae && dbModelos) {
+        try {
+          const codResp = await module.exports.generarCodigo(dbModelos, docActualizado, doc._usuario_creacion, transaccion);
+          if (codResp && codResp.codigo) {
+            docActualizado.codigo = codResp.codigo;
+          }
+        } catch (eCod) {
+          logger.warn('[documento_enviar] Advertencia al generar código QR en emisión directa MAE:', eCod.message);
+        }
+      }
+
+      const resu = await modeloHistorialFlujo.create({
+        id_documento: docActualizado.id_documento,
+        accion: esEmisionDirectaMae ? 'EMITIDO_CON_CITE' : 'ENVIADO',
+        observacion: esEmisionDirectaMae
+          ? `Documento global emitido directamente por Autoridad de Rango Máximo con CITE ${nombreFinal}.`
+          : (maeEnSegundoPlano
+              ? `Enviado en segundo plano para autorización de difusión global por ${maeEnSegundoPlano.nombres} ${maeEnSegundoPlano.apellidos} (${maeEnSegundoPlano.cargo}).`
+              : ''),
+        estado: 'ACTIVO',
+        _usuario_creacion: docActualizado._usuario_creacion,
+      }, transaccion);
+
+      if (esEmisionDirectaMae && dbModelos) {
+        setImmediate(() => {
+          notificar.enviarDifusionGlobal(dbModelos, docActualizado, {});
+        });
+      }
+
+      return resolve(resu);
+    } catch (e) {
+      return reject(e);
+    }
   }),
 
   /**
@@ -1442,8 +1544,28 @@ module.exports = {
       })
       .then(citeResp => {
         datosActualizar.nombre = citeResp.cite;
-        datosActualizar.plantilla_valor = JSON.stringify(citeResp.datosPlantilla);
-        return module.exports.crearModificarPartidas(datos.usuarioModificacion, modelos.partida, citeResp.datosPlantilla, datos.tieneCite);
+        const dp = citeResp.datosPlantilla || {};
+        if (notificar.esDocumentoDifusionGlobal(documento) || module.exports.esCircularInstructivoConvocatoria(documento)) {
+          datosActualizar.alcance_archivo = 'GENERAL';
+          datosActualizar.via_actual = null;
+          const uAudit = datos.auditUsuario || {};
+          const nomMae = `${uAudit.nombres || uAudit.first_name || ''} ${uAudit.apellidos || uAudit.last_name || ''}`.trim() || uAudit.usuario || 'MAE';
+          const cargoMae = uAudit.cargo || 'Autoridad de Rango Máximo (MAE)';
+          dp._aprobado_por_mae = true;
+          dp._aprobado_por_mae_id = datos.usuarioModificacion;
+          dp._aprobado_por_mae_nombre = nomMae;
+          dp._aprobado_por_mae_cargo = cargoMae;
+          dp._aprobado_por_mae_fecha = fecha;
+          const selloMae = `APROBADO POR: ${nomMae.toUpperCase()} - ${cargoMae.toUpperCase()}`;
+          const ccActual = String(dp.ccArchivo || dp['ccArchivo-0'] || '').trim();
+          if (!ccActual.includes('APROBADO POR:')) {
+            const nuevoCc = ccActual ? `${ccActual}\n${selloMae}` : `Cc.: archivo\n${selloMae}`;
+            dp.ccArchivo = nuevoCc;
+            dp['ccArchivo-0'] = nuevoCc;
+          }
+        }
+        datosActualizar.plantilla_valor = JSON.stringify(dp);
+        return module.exports.crearModificarPartidas(datos.usuarioModificacion, modelos.partida, dp, datos.tieneCite);
       })
       .then(partidasResp => {
         if (partidasResp) {

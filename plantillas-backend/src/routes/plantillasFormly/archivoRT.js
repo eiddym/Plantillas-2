@@ -3,6 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 const loteBL = require('../../bl/plantillasFormly/loteBL');
+const notificar = require('../../lib/notificacion');
+const whatsapp = require('../../lib/whatsapp');
 
 module.exports = app => {
   const Documento = app.src.db.models.documento;
@@ -324,9 +326,14 @@ module.exports = app => {
 
       await doc.update({
         es_institucional: true,
+        alcance_archivo: 'INSTITUCIONAL',
         categoria_institucional: req.body.categoria || doc.nombre_plantilla || 'Resolución / Normativa',
         versiones: versionInicial,
         _usuario_modificacion: auditUser.id_usuario || 1
+      });
+
+      setImmediate(() => {
+        notificar.enviarDifusionGlobal(app.src.db.models, doc, {});
       });
 
       res.status(200).send(util.formatearMensaje("EXITO", "Documento promovido a Archivo Institucional con éxito.", doc));
@@ -466,6 +473,10 @@ module.exports = app => {
         }
       ];
 
+      const todosActivos = await Usuario.findAll({ where: { estado: 'ACTIVO' }, attributes: ['id_usuario'] });
+      const idsTodos = todosActivos.map(u => Number(u.id_usuario)).filter(n => n > 0);
+      const alcanceFinal = req.body.alcance_archivo || 'INSTITUCIONAL';
+
       const nuevoDoc = await Documento.create({
         nombre: citeFinal,
         referencia: referenciaFinal,
@@ -473,6 +484,9 @@ module.exports = app => {
         abreviacion: sigla,
         categoria_institucional: categoria || 'DOCUMENTO INSTITUCIONAL',
         archivo_adjunto: archivoData || null,
+        de: JSON.stringify([auditUser.id_usuario || 1]),
+        para: JSON.stringify(idsTodos),
+        alcance_archivo: alcanceFinal,
         plantilla: JSON.stringify({ tipo: 'institucional', nombre_documento: tituloDoc, sigla, descripcion: descDoc }),
         plantilla_valor: JSON.stringify({
           cite: citeFinal,
@@ -480,17 +494,63 @@ module.exports = app => {
           sigla,
           descripcion: descDoc,
           ref: referenciaFinal,
-          observacion: observacion || ''
+          observacion: observacion || '',
+          datosGenerales: {
+            para: [{ id_usuario: 'TODOS', todos: true, nombres: 'A TODO EL PERSONAL', todos_ids: idsTodos }]
+          }
         }),
         estado: 'CERRADO',
-        es_institucional: true,
+        es_institucional: alcanceFinal === 'INSTITUCIONAL',
         versiones: versiones,
         _usuario_creacion: auditUser.id_usuario || 1,
         _usuario_modificacion: auditUser.id_usuario || 1,
         fecha: new Date()
       });
 
-      res.status(201).send(util.formatearMensaje("EXITO", "Documento institucional cargado exitosamente.", nuevoDoc));
+      if (req.body.difundir_todos !== false) {
+        setImmediate(() => {
+          notificar.enviarDifusionGlobal(app.src.db.models, nuevoDoc, {});
+        });
+      }
+
+      res.status(201).send(util.formatearMensaje("EXITO", "Documento oficial emitido y difundido exitosamente.", nuevoDoc));
+    } catch (error) {
+      res.status(412).send(util.formatearMensaje("ERROR", error.message || error));
+    }
+  });
+
+  /**
+   * GET /api/v1/archivo/whatsapp/grupos
+   * Lista los grupos de WhatsApp donde participa la instancia corporativa Evolution API
+   */
+  app.get('/api/v1/archivo/whatsapp/grupos', async (req, res) => {
+    try {
+      const grupos = await whatsapp.obtenerGrupos();
+      res.status(200).send(util.formatearMensaje("EXITO", "Grupos de WhatsApp obtenidos.", {
+        grupo_configurado: process.env.WHATSAPP_GRUPO_ID || '',
+        grupos
+      }));
+    } catch (error) {
+      res.status(200).send(util.formatearMensaje("INFORMACION", "No se pudieron listar grupos (verifique conexión QR).", {
+        grupo_configurado: process.env.WHATSAPP_GRUPO_ID || '',
+        grupos: []
+      }));
+    }
+  });
+
+  /**
+   * POST /api/v1/archivo/difundir/:id_documento
+   * Dispara o re-envía un documento cerrado a todos los correos + Grupo Institucional de WhatsApp
+   */
+  app.post('/api/v1/archivo/difundir/:id_documento', async (req, res) => {
+    try {
+      const idDoc = parseInt(req.params.id_documento, 10);
+      const doc = await Documento.findByPk(idDoc);
+      if (!doc) {
+        return res.status(404).send(util.formatearMensaje("ERROR", "Documento no encontrado."));
+      }
+      await notificar.enviarDifusionGlobal(app.src.db.models, doc, {});
+      res.status(200).send(util.formatearMensaje("EXITO", `Difusión global ejecutada para ${doc.nombre} (Correos masivos + Grupo de WhatsApp).`));
     } catch (error) {
       res.status(412).send(util.formatearMensaje("ERROR", error.message || error));
     }

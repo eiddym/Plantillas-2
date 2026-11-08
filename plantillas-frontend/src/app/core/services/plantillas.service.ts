@@ -9,6 +9,10 @@ export interface PlantillaFormly {
   plantilla: string; // JSON string of FormlyFieldConfig[]
   plantilla_valor?: string | null;
   estado?: string;
+  es_difusion_global?: boolean;
+  requiere_aprobacion_mae?: boolean;
+  unidades_permitidas?: string;
+  usuarios_permitidos?: string;
   _usuario_creacion?: number;
   _usuario_modificacion?: number;
   _fecha_creacion?: string;

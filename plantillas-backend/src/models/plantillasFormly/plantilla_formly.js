@@ -37,6 +37,28 @@ module.exports = (sequelize, DataType) => {
             defaultValue: 'ACTIVO',
             xlabel: 'Estado',
         },
+        es_difusion_global: {
+            type: DataType.BOOLEAN,
+            defaultValue: false,
+            xlabel: 'Es Difusión Global (Para Todos)',
+        },
+        requiere_aprobacion_mae: {
+            type: DataType.BOOLEAN,
+            defaultValue: true,
+            xlabel: 'Requiere Aprobación MAE si es Subordinado',
+        },
+        unidades_permitidas: {
+            type: DataType.TEXT,
+            allowNull: true,
+            defaultValue: '[]',
+            xlabel: 'Unidades Permitidas (JSON)',
+        },
+        usuarios_permitidos: {
+            type: DataType.TEXT,
+            allowNull: true,
+            defaultValue: '[]',
+            xlabel: 'Usuarios Permitidos (JSON)',
+        },
         _usuario_creacion: {
             type: DataType.INTEGER,
             allowNull: false,

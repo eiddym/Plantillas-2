@@ -153,20 +153,22 @@ module.exports = app => {
   }
 	*/
   app.get('/api/v1/seguridad/usuario_mae_info', (req, res) => {
-    Usuario.findOne({
-      attributes: ['id_usuario', 'usuario', 'nombres', 'apellidos', 'cargo', 'es_mae'],
+    Usuario.findAll({
+      attributes: ['id_usuario', 'usuario', 'nombres', 'apellidos', 'cargo', 'fid_unidad', 'es_mae'],
       where: { es_mae: true, estado: 'ACTIVO' }
     })
-    .then(maeUser => {
-      if (maeUser) {
-        res.status(200).send(util.formatearMensaje("EXITO", "MAE actual obtenido.", {
-          mae_ocupado: true,
-          mae: maeUser
+    .then(maeUsers => {
+      if (maeUsers && maeUsers.length > 0) {
+        res.status(200).send(util.formatearMensaje("EXITO", "Autoridades de rango máximo obtenidas.", {
+          mae_ocupado: false,
+          mae: maeUsers[0],
+          maes: maeUsers
         }));
       } else {
         res.status(200).send(util.formatearMensaje("EXITO", "No hay MAE asignado.", {
           mae_ocupado: false,
-          mae: null
+          mae: null,
+          maes: []
         }));
       }
     })
@@ -760,9 +762,6 @@ module.exports = app => {
             }
 
             const crearProc = () => Usuario.create(usuarioCrear, { transaction: t });
-            if (usuarioCrear.es_mae === true) {
-              return Usuario.update({ es_mae: false }, { where: {}, transaction: t }).then(crearProc);
-            }
             return crearProc();
 
           }
@@ -998,9 +997,6 @@ module.exports = app => {
     .then(filas => {
       const actual=JSON.parse(JSON.stringify(usuario));
       const updateProc = () => usuarioRespuesta.update(usuario, {transaction: t});
-      if (usuario.es_mae === true) {
-        return Usuario.update({ es_mae: false }, { where: { id_usuario: { [Op.ne]: req.params.id } }, transaction: t }).then(updateProc);
-      }
       return updateProc();
     })
     // Inserta las relaciones usuario - rol del usuario.

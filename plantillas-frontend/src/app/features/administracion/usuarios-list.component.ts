@@ -324,7 +324,7 @@ import { SeguridadService, UsuarioAdmin, Unidad, Rol } from '../../core/services
                           <div class="mae-addon fade-in">
                             <mat-checkbox formControlName="es_mae" color="primary">
                               <span class="star-icon">⭐</span>
-                              <strong class="mae-text">Es MAE / Director General</strong>
+                              <strong class="mae-text">Autoridad de Rango Máximo / Cabeza Autónoma (MAE)</strong>
                             </mat-checkbox>
                           </div>
                         }

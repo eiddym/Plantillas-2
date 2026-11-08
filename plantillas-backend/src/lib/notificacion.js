@@ -29,6 +29,126 @@ const jsonConfig = {
 const transporte = nodemailer.createTransport(jsonConfig);
 let usuarioOrigen=null;
 
+function esDocumentoDifusionGlobal(pDocumento) {
+  if (!pDocumento) return false;
+  if (pDocumento.es_institucional === true || pDocumento.alcance_archivo === 'INSTITUCIONAL') {
+    return true;
+  }
+  try {
+    const pv = typeof pDocumento.plantilla_valor === 'string'
+      ? JSON.parse(pDocumento.plantilla_valor)
+      : (pDocumento.plantilla_valor || {});
+    const dg = pv.datosGenerales || pv['datosGenerales-0'] || {};
+    const paraArr = Array.isArray(dg.para) ? dg.para : (dg.para ? [dg.para] : []);
+    if (paraArr.some(p => p && (p.todos === true || p.id_usuario === 'TODOS' || p.id_usuario === 0 || String(p.nombres || '').toUpperCase().includes('TODO EL PERSONAL')))) {
+      return true;
+    }
+    if (String(pv.inputt_1 || '').toUpperCase().includes('TODO EL PERSONAL')) {
+      return true;
+    }
+  } catch (_) {}
+
+  try {
+    const rawPara = typeof pDocumento.para === 'string' ? JSON.parse(pDocumento.para) : pDocumento.para;
+    if (Array.isArray(rawPara) && rawPara.some(x => x === 'TODOS' || x === 0 || (x && (x.todos || x.id_usuario === 'TODOS')))) {
+      return true;
+    }
+  } catch (_) {}
+
+  return false;
+}
+
+async function enviarDifusionGlobal(pModelos, pDocumento, pTr) {
+  if (process.env.NODE_ENV === 'test') return true;
+  try {
+    const usuariosActivos = await pModelos.usuario.findAll({
+      where: { estado: 'ACTIVO' },
+      attributes: ['id_usuario', 'nombres', 'apellidos', 'email', 'cargo']
+    });
+
+    const tipoDoc = pDocumento.nombre_plantilla || pDocumento.categoria_institucional || 'Comunicado Oficial';
+    const citeDoc = pDocumento.nombre || 'S/N';
+    let refDoc = pDocumento.referencia || '';
+    let aprobadoPorTexto = '';
+
+    try {
+      const pv = typeof pDocumento.plantilla_valor === 'string'
+        ? JSON.parse(pDocumento.plantilla_valor)
+        : (pDocumento.plantilla_valor || {});
+      const dg = pv.datosGenerales || pv['datosGenerales-0'] || {};
+      if (!refDoc && (dg.ref || pv.ref)) {
+        refDoc = dg.ref || pv.ref;
+      }
+      if (pv._aprobado_por_mae_nombre) {
+        aprobadoPorTexto = `${pv._aprobado_por_mae_nombre}${pv._aprobado_por_mae_cargo ? ' (' + pv._aprobado_por_mae_cargo + ')' : ''}`;
+      }
+    } catch (_) {}
+
+    const urlSistema = config.front || 'https://docs.marabuntarl.com/';
+    const asuntoGlobal = `📢 [${tipoDoc.toUpperCase()}] ${citeDoc} - ${refDoc || 'Cooperativa Minera Marabunta R.L.'}`;
+    const htmlGlobal = `
+      <div style="font-family: Arial, sans-serif; color: #1e293b; max-width: 620px; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden;">
+        <div style="background: #0f172a; color: #ffffff; padding: 14px 20px;">
+          <h3 style="margin: 0; font-size: 16px;">COOPERATIVA MINERA MARABUNTA R.L.</h3>
+          <p style="margin: 4px 0 0; font-size: 12px; color: #38bdf8;">DIFUSIÓN DOCUMENTAL OFICIAL A TODO EL PERSONAL</p>
+        </div>
+        <div style="padding: 18px 20px;">
+          <p style="margin: 0 0 10px;">Se ha emitido y publicado un nuevo documento oficial de alcance general:</p>
+          <p style="margin: 4px 0;"><strong>Tipo de Documento:</strong> ${tipoDoc}</p>
+          <p style="margin: 4px 0;"><strong>CITE Oficial:</strong> ${citeDoc}</p>
+          ${refDoc ? `<p style="margin: 4px 0;"><strong>Referencia:</strong> ${refDoc}</p>` : ''}
+          ${aprobadoPorTexto ? `<p style="margin: 4px 0;"><strong>Autorizado por:</strong> ${aprobadoPorTexto}</p>` : ''}
+          <p style="margin: 16px 0 0;">
+            <a href="${urlSistema}" style="background: #0284c7; color: #ffffff; text-decoration: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; display: inline-block;">
+              Ingresar al Sistema para Revisar Documento
+            </a>
+          </p>
+        </div>
+      </div>
+    `;
+
+    // 1. Envío de Correo Masivo a todos los usuarios activos con email válido
+    const listaCorreos = [...new Set(
+      usuariosActivos
+        .map(u => (u.email || '').trim())
+        .filter(e => e && e.includes('@'))
+    )];
+
+    if (listaCorreos.length > 0 && configCorreoLocal && configCorreoLocal.host) {
+      transporte.sendMail({
+        from: configCorreoLocal.origen,
+        bcc: listaCorreos,
+        subject: asuntoGlobal,
+        html: htmlGlobal
+      }, err => {
+        if (err) {
+          logger.warn('[DIFUSION GLOBAL CORREO] Advertencia en envío masivo:', err.message);
+        } else {
+          logger.info(`[DIFUSION GLOBAL CORREO] Enviado a ${listaCorreos.length} usuarios.`);
+        }
+      });
+    }
+
+    // 2. Envío de WhatsApp ÚNICAMENTE al Grupo Institucional (NO individual)
+    const mensajeGrupoWa =
+      `📢 *COMUNICADO OFICIAL - COOPERATIVA MINERA MARABUNTA R.L.*\n\n` +
+      `📄 *Documento:* ${tipoDoc}\n` +
+      `🔖 *CITE:* ${citeDoc}\n` +
+      (refDoc ? `📌 *Referencia:* ${refDoc}\n` : '') +
+      (aprobadoPorTexto ? `✅ *Autorizado por:* ${aprobadoPorTexto}\n` : '') +
+      `\n🔗 *Ver documento oficial en el sistema:*\n${urlSistema}`;
+
+    await whatsapp.enviarAGrupoInstitucional(mensajeGrupoWa).catch(err => {
+      logger.warn('[DIFUSION GLOBAL WHATSAPP GRUPO] No se pudo enviar al grupo:', err.message);
+    });
+
+    return true;
+  } catch (err) {
+    logger.warn('[DIFUSION GLOBAL] Error general:', err.message || err);
+    return true;
+  }
+}
+
 function enviar(pModelos, pDocumento, pEntorno, pTr) {
   return enviarNotificacion(pModelos, pDocumento, pEntorno, pTr)
     .catch(err => {
@@ -38,6 +158,12 @@ function enviar(pModelos, pDocumento, pEntorno, pTr) {
 }
 
 function enviarNotificacion(pModelos, pDocumento, pEntorno, pTr){
+  if (pEntorno === 'difusion_global') {
+    return enviarDifusionGlobal(pModelos, pDocumento, pTr);
+  }
+  if (pEntorno === 'aprobado' && esDocumentoDifusionGlobal(pDocumento)) {
+    enviarDifusionGlobal(pModelos, pDocumento, pTr);
+  }
   let id_1 = pDocumento._usuario_creacion;
   let id_2 = pDocumento.via_actual;
   if(pEntorno=='derivado'){
@@ -450,4 +576,6 @@ module.exports = {
   enviarSMS,
   enviarCorreo,
   enviarCorreoLocal,
+  enviarDifusionGlobal,
+  esDocumentoDifusionGlobal,
 };
