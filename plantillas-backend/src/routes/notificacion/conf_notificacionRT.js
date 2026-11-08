@@ -183,6 +183,12 @@ module.exports = app => {
       aprobados_ciudadania: req.body.aprobados_ciudadania,
       canal_habilitado: req.body.canal_habilitado,
     };
+    if (req.body.celular !== undefined) {
+      data.celular = req.body.celular;
+    }
+    if (req.body.aprobado !== undefined) {
+      data.aprobado = req.body.aprobado;
+    }
     verificar(req.params.id, req.body.audit_usuario.id_usuario)
       .then(() =>
         conf_notificacion.update(data, {

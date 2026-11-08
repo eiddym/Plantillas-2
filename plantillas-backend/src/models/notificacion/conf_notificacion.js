@@ -23,12 +23,12 @@
             xlabel: 'Usuario',
         },
         celular: {
-            type: DataType.STRING(10),
+            type: DataType.STRING(20),
             allowNull:true,
             xlabel: 'Celular',
         },
         canal: {
-            type: DataType.ENUM('SMS', 'CORREO','SMS_CORREO'),
+            type: DataType.ENUM('SMS', 'CORREO','SMS_CORREO', 'WHATSAPP', 'CORREO_WHATSAPP'),
             defaultValue: 'CORREO',
             xlabel: 'Canal',
         },

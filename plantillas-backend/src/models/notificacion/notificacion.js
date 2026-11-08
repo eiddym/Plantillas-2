@@ -18,7 +18,7 @@ module.exports = (sequelize, DataType) => {
           xlabel: 'Usuario',
         },
         canal: {
-          type: DataType.ENUM('SMS','CORREO','SMS_CORREO'),
+          type: DataType.ENUM('SMS','CORREO','SMS_CORREO','WHATSAPP','CORREO_WHATSAPP'),
           allowNull: false,
           xlabel: 'Nombre',
         },

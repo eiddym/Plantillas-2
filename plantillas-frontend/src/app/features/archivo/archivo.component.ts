@@ -163,7 +163,7 @@ export interface UnidadArchivo {
               <div class="visor-header">
                 <div class="visor-doc-info">
                   <span class="visor-badge-cite">{{ docSeleccionado()?.nombre }}</span>
-                  <span class="visor-doc-titulo">{{ docSeleccionado()?.nombre_plantilla || 'Documento Oficial Custodiado' }} · {{ (esModoPdfCanvas() || urlPdfSegura()) ? 'PDF OFICIAL' : (tipoHojaVisor() === 'Oficio' ? 'OFICIO' : 'CARTA') }}</span>
+                  <span class="visor-doc-titulo">{{ docSeleccionado()?.nombre_plantilla || 'Documento Oficial Custodiado' }} · {{ tipoHojaVisor() === 'Oficio' ? 'OFICIO' : 'CARTA' }} ({{ orientacionHojaVisor() === 'Horizontal' ? 'HORIZONTAL' : 'VERTICAL' }})</span>
                 </div>
                 @if (htmlVisorSeguro() || esModoPdfCanvas()) {
                   <div class="visor-zoom-tools">
@@ -240,10 +240,12 @@ export interface UnidadArchivo {
                         class="sheet-scaler" 
                         [style.transform]="'scale(' + escalaVisor() + ')'"
                         [style.transform-origin]="'top left'"
-                        [style.width.px]="816"
-                        [style.min-height.px]="tipoHojaVisor() === 'Oficio' ? 1248 : 1056">
+                        [style.width.px]="canonicalWidthVisor()"
+                        [style.min-height.px]="canonicalHeightVisor()">
                         <div 
                           class="physical-sheet" 
+                          [style.width.px]="canonicalWidthVisor()"
+                          [style.min-height.px]="canonicalHeightVisor()"
                           [class.sheet-carta]="tipoHojaVisor() === 'Letter'" 
                           [class.sheet-oficio]="tipoHojaVisor() === 'Oficio'">
                           <div [innerHTML]="htmlVisorSeguro()" class="document-html-content"></div>
@@ -2079,19 +2081,20 @@ export interface UnidadArchivo {
       height: auto;
       max-height: calc(100vh - 180px);
       box-sizing: border-box;
-      overflow: auto;
+      overflow-y: auto;
+      overflow-x: hidden;
       display: flex;
       justify-content: center;
       align-items: flex-start;
-      padding: 16px;
-      background: #cbd5e1;
+      padding: 10px 12px 14px;
+      background: #0f172a;
 
       &::-webkit-scrollbar {
         width: 6px;
         height: 6px;
       }
       &::-webkit-scrollbar-thumb {
-        background: #94a3b8;
+        background: #334155;
         border-radius: 3px;
       }
     }
@@ -2577,7 +2580,8 @@ export class ArchivoComponent implements OnInit {
   readonly cargandoVisor = signal<boolean>(false);
   readonly errorVisor = signal<string | null>(null);
   readonly tipoHojaVisor = signal<'Letter' | 'Oficio'>('Letter');
-  readonly escalaVisor = signal<number>(0.52);
+  readonly orientacionHojaVisor = signal<'Vertical' | 'Horizontal'>('Vertical');
+  readonly escalaVisor = signal<number>(0.6);
   readonly modoEscalaVisor = signal<'fit' | 'custom'>('fit');
   readonly porcentajeEscalaVisor = computed(() => Math.round(this.escalaVisor() * 100));
 
@@ -2594,11 +2598,18 @@ export class ArchivoComponent implements OnInit {
   private loadedPdfDocument: any = null;
   private renderTaskEnCurso: any = null;
 
-  readonly scaledWidthVisor = computed(() => Math.round(816 * this.escalaVisor()));
-  readonly scaledHeightVisor = computed(() => {
-    const canH = this.tipoHojaVisor() === 'Oficio' ? 1248 : 1056;
-    return Math.round(canH * this.escalaVisor());
+  readonly canonicalWidthVisor = computed(() => {
+    const baseLong = this.tipoHojaVisor() === 'Oficio' ? 1248 : 1056;
+    return this.orientacionHojaVisor() === 'Horizontal' ? baseLong : 816;
   });
+
+  readonly canonicalHeightVisor = computed(() => {
+    const baseLong = this.tipoHojaVisor() === 'Oficio' ? 1248 : 1056;
+    return this.orientacionHojaVisor() === 'Horizontal' ? 816 : baseLong;
+  });
+
+  readonly scaledWidthVisor = computed(() => Math.round(this.canonicalWidthVisor() * this.escalaVisor()));
+  readonly scaledHeightVisor = computed(() => Math.round(this.canonicalHeightVisor() * this.escalaVisor()));
 
   private currentObjectUrl: string | null = null;
   archivoPdfBase64: string | null = null;
@@ -3071,17 +3082,13 @@ export class ArchivoComponent implements OnInit {
     const vp = this.visorViewport?.nativeElement;
     if (!vp) return;
     const availW = vp.clientWidth;
-    const availH = vp.clientHeight;
-    if (!availW || !availH) return;
+    if (!availW) return;
 
-    const margen = 28;
-    const canW = 816;
-    const canH = this.tipoHojaVisor() === 'Oficio' ? 1248 : 1056;
-
-    const scaleW = (availW - margen) / canW;
-    const scaleH = (availH - margen) / canH;
-    let fit = Math.min(scaleW, scaleH);
-    fit = Math.max(0.3, Math.min(fit, 1.15));
+    // Estandarización exacta: el contenido ocupa todo el ancho útil del visor (restando los 24px de padding lateral)
+    const innerWidth = Math.max(availW - 24, 260);
+    const canW = this.canonicalWidthVisor();
+    let fit = innerWidth / canW;
+    fit = Math.max(0.3, Math.min(fit, 1.4));
     fit = Math.round(fit * 1000) / 1000;
 
     this.escalaVisor.set(fit);
@@ -3174,10 +3181,16 @@ export class ArchivoComponent implements OnInit {
         } else {
           this.tipoHojaVisor.set('Letter');
         }
+        const orientacion = (res.datos as any)?.orientacion;
+        if (orientacion === 'Horizontal' || orientacion === 'Landscape' || orientacion === 'horizontal') {
+          this.orientacionHojaVisor.set('Horizontal');
+        } else {
+          this.orientacionHojaVisor.set('Vertical');
+        }
         const html = res.datos?.html || '<p class="text-muted">No se pudo cargar la visualización del documento.</p>';
         this.htmlVisorSeguro.set(this.sanitizer.bypassSecurityTrustHtml(html));
         this.cdr.markForCheck();
-        setTimeout(() => this.recalcularEscalaFitVisor(), 60);
+        setTimeout(() => this.recalcularEscalaFitVisor(), 40);
       },
       error: () => {
         this.cargandoVisor.set(false);
@@ -3257,19 +3270,33 @@ export class ArchivoComponent implements OnInit {
       const page = await this.loadedPdfDocument.getPage(pageNum);
 
       const wrapper = this.pdfCanvasWrapper?.nativeElement || canvasEl.parentElement;
-      const availableWidth = wrapper ? Math.max(wrapper.clientWidth - 20, 260) : 600;
+      const availableWidth = wrapper ? Math.max(wrapper.clientWidth, 260) : 600;
 
       const unscaledViewport = page.getViewport({ scale: 1 });
-      const baseScale = availableWidth / unscaledViewport.width;
-      const effectiveScale = baseScale * this.zoomPdfFactor();
+      const esHorizontal = unscaledViewport.width > unscaledViewport.height;
+      const rawRatio = esHorizontal
+        ? (unscaledViewport.width / unscaledViewport.height)
+        : (unscaledViewport.height / unscaledViewport.width);
+
+      // Estandarización estricta a los dos únicos formatos institucionales: CARTA (1.2941) y OFICIO (1.5294)
+      const esOficio = rawRatio > 1.41;
+      this.orientacionHojaVisor.set(esHorizontal ? 'Horizontal' : 'Vertical');
+      this.tipoHojaVisor.set(esOficio ? 'Oficio' : 'Letter');
+      this.cdr.markForCheck();
+
+      const stdRatio = esOficio ? (1248 / 816) : (1056 / 816);
+      const targetWidth = Math.round(availableWidth * this.zoomPdfFactor());
+      const targetHeight = Math.round(esHorizontal ? (targetWidth / stdRatio) : (targetWidth * stdRatio));
+
+      const effectiveScale = targetWidth / unscaledViewport.width;
       const viewport = page.getViewport({ scale: effectiveScale });
 
       const dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2.5) : 1;
 
       canvasEl.width = Math.floor(viewport.width * dpr);
       canvasEl.height = Math.floor(viewport.height * dpr);
-      canvasEl.style.width = `${Math.floor(viewport.width)}px`;
-      canvasEl.style.height = `${Math.floor(viewport.height)}px`;
+      canvasEl.style.width = `${targetWidth}px`;
+      canvasEl.style.height = `${targetHeight}px`;
 
       const context = canvasEl.getContext('2d', { alpha: false });
       if (!context) return;

@@ -5,6 +5,7 @@ const config = require('../../src/config/config')();
 const nodemailer = require('nodemailer');
 const logger = require('./logger')
 const smtpTransport = require('nodemailer-smtp-transport')
+const whatsapp = require('./whatsapp');
 
 const cn=config.notificacion;
 const configNotificacion = config.envio_notificacion;
@@ -96,7 +97,7 @@ function enviarNotificacion(pModelos, pDocumento, pEntorno, pTr){
 
       pDestinos.forEach(pDestino => {
       // Retorna un mensaje, telefono y correo, dependiendo del Entorno.
-        const { destino, origen, correo, mensaje, mensajeHtml, telefono, asunto } = armarMensaje(usuarioOrigen, pDestino, pEntorno, pDocumento);
+        const { destino, origen, correo, mensaje, mensajeHtml, mensajeWa, telefono, asunto } = armarMensaje(usuarioOrigen, pDestino, pEntorno, pDocumento);
         telefonos.push(telefono);
         correos.push(correo);
         logger.info('Se enviara notificacion al usuario ', destino.usuario.id_usuario)
@@ -140,6 +141,37 @@ function enviarNotificacion(pModelos, pDocumento, pEntorno, pTr){
                 }
               }else  resolve();
             break;
+            case 'WHATSAPP':
+              if (destino.usuario.id_usuario !== origen.usuario.id_usuario) {
+                const tel = destino.celular || destino.usuario.celular;
+                return whatsapp.enviarTexto(tel, mensajeWa || mensaje)
+                  .then(() => {
+                    datos.canal = 'WHATSAPP';
+                    datos.tipo = 'EXITO';
+                    return pModelos.notificacion.create(datos, pTr).then(() => resolve());
+                  })
+                  .catch(err => {
+                    logger.error('[WhatsApp] Error al despachar mensaje:', err.message);
+                    datos.canal = 'WHATSAPP';
+                    datos.tipo = 'ERROR';
+                    datos.detalle = err.message;
+                    return pModelos.notificacion.create(datos, pTr).then(() => resolve());
+                  });
+              } else {
+                resolve();
+              }
+              break;
+            case 'CORREO_WHATSAPP':
+              // Envío dual (Correo + WhatsApp simultáneo)
+              if (destino.usuario.id_usuario !== origen.usuario.id_usuario) {
+                const tel = destino.celular || destino.usuario.celular;
+                whatsapp.enviarTexto(tel, mensajeWa || mensaje).catch(e => logger.warn('[WhatsApp Dual]', e.message));
+                return envioCorreoLocal(asunto, correo, pModelos.notificacion, datos, pTr, mensajeHtml)
+                  .then(() => resolve());
+              } else {
+                resolve();
+              }
+              break;
             case 'SMS_CORREO':
               if(destino.usuario.id_usuario !== origen.usuario.id_usuario){
                 resolve();
@@ -230,7 +262,11 @@ function armarMensaje(usuarioOrigen, pDestino, pEntorno, pDocumento) {
       break;
 
   }
-  return { destino, origen, correo, mensaje, mensajeHtml, telefono, asunto};
+  if (!telefono) {
+    telefono = destino.celular || (destino.usuario && destino.usuario.celular);
+  }
+  const mensajeWa = `📄 *Aviso Sistema de Plantillas*\n\n${mensaje}\n\n🔗 *Acceder:* ${config.front || 'https://docs.marabuntarl.com/'}`;
+  return { destino, origen, correo, mensaje, mensajeHtml, mensajeWa, telefono, asunto};
 }
 /**
  * Función que realiza el envio de SMS, haciendo uso de una API.

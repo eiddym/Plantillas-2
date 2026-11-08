@@ -5,12 +5,15 @@ import { HttpClient } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatRadioModule } from '@angular/material/radio';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AuthService } from '../../core/auth/auth.service';
 
 interface AlertasConfig {
+  canal: string;
+  celular: string;
   canal_habilitado: boolean;
   enviado: boolean;
   observado: boolean;
@@ -28,6 +31,7 @@ interface AlertasConfig {
     MatButtonModule,
     MatIconModule,
     MatCheckboxModule,
+    MatRadioModule,
     MatFormFieldModule,
     MatInputModule,
     MatSnackBarModule
@@ -102,18 +106,31 @@ interface AlertasConfig {
         <!-- VISTA DE EDICIÓN DE ALERTAS -->
         <div class="profile-edit-section" *ngIf="editandoAlertas()">
           <h3 class="edit-title">Configuración de Alertas y Notificaciones</h3>
-          <p class="edit-subtitle">Recibir notificaciones vía:</p>
 
           <div class="channel-row">
             <mat-checkbox [(ngModel)]="alertas.canal_habilitado" color="primary">
-              CORREO ELECTRÓNICO
+              HABILITAR NOTIFICACIONES
             </mat-checkbox>
           </div>
 
-          <div class="email-field-box">
+          <p class="edit-subtitle">Recibir notificaciones vía:</p>
+          <mat-radio-group [(ngModel)]="alertas.canal" [disabled]="!alertas.canal_habilitado" color="primary" class="canal-radio-group">
+            <mat-radio-button value="CORREO">Solo Correo Electrónico</mat-radio-button>
+            <mat-radio-button value="WHATSAPP">Solo WhatsApp</mat-radio-button>
+            <mat-radio-button value="CORREO_WHATSAPP">Ambos (Correo y WhatsApp)</mat-radio-button>
+          </mat-radio-group>
+
+          <div class="email-field-box" *ngIf="alertas.canal === 'CORREO' || alertas.canal === 'CORREO_WHATSAPP'">
             <mat-form-field appearance="outline" class="w-full">
               <mat-label>Correo electrónico</mat-label>
               <input matInput [value]="user()?.email || 'docs@marabuntarl.com'" disabled>
+            </mat-form-field>
+          </div>
+
+          <div class="email-field-box" *ngIf="alertas.canal === 'WHATSAPP' || alertas.canal === 'CORREO_WHATSAPP'">
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Número de WhatsApp (Ej: 77777777 o 59177777777)</mat-label>
+              <input matInput [(ngModel)]="alertas.celular" [disabled]="!alertas.canal_habilitado" placeholder="Ej: 77777777">
             </mat-form-field>
           </div>
 
@@ -358,6 +375,13 @@ interface AlertasConfig {
     }
 
     .channel-row {
+      margin: 4px 0 4px 0;
+    }
+
+    .canal-radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
       margin: 4px 0 8px 0;
     }
 
@@ -435,6 +459,8 @@ export class ProfileComponent implements OnInit {
   readonly idConfNotificacion = signal<number | null>(null);
 
   readonly alertas: AlertasConfig = {
+    canal: 'CORREO',
+    celular: '',
     canal_habilitado: true,
     enviado: true,
     observado: true,
@@ -504,6 +530,8 @@ export class ProfileComponent implements OnInit {
           const item = res?.datos?.resultado?.[0];
           if (item) {
             this.idConfNotificacion.set(item.id_conf_notificacion);
+            this.alertas.canal = item.canal || 'CORREO';
+            this.alertas.celular = item.celular || '';
             this.alertas.canal_habilitado = item.canal_habilitado ?? true;
             this.alertas.enviado = item.enviado ?? true;
             this.alertas.observado = item.observado ?? true;
@@ -529,7 +557,8 @@ export class ProfileComponent implements OnInit {
     const id = this.idConfNotificacion();
     const payload = {
       id_conf_notificacion: id,
-      canal: 'CORREO',
+      canal: this.alertas.canal || 'CORREO',
+      celular: this.alertas.celular || '',
       canal_habilitado: this.alertas.canal_habilitado,
       enviado: this.alertas.enviado,
       observado: this.alertas.observado,
