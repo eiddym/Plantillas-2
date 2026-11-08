@@ -1,5 +1,6 @@
 const { ModelHandler } = require("../../lib/crudHandler");
 const sequelizeFormly = require("../../lib/modelToFormly");
+const whatsapp = require("../../lib/whatsapp");
 
 module.exports = app => {
   const conf_notificacion = app.src.db.models.conf_notificacion;
@@ -241,4 +242,71 @@ module.exports = app => {
   @apiSampleRequest off
 */
   app.options('/api/v1/notificacion/conf_notificacion', sequelizeFormly.formly(conf_notificacion, app.src.db.models));
+
+  /**
+   * Endpoints de Administración y Vinculación de WhatsApp Evolution API (Estado, QR, Grupos, Prueba)
+   */
+  app.get('/api/v1/notificacion/whatsapp/estado', async (req, res) => {
+    try {
+      const estado = await whatsapp.obtenerEstadoConexion();
+      res.status(200).send(util.formatearMensaje("EXITO", "Estado de WhatsApp obtenido.", estado));
+    } catch (error) {
+      res.status(200).send(util.formatearMensaje("INFORMACION", "Instancia desconectada o pendiente de vincular.", {
+        instancia: process.env.WHATSAPP_INSTANCIA || 'marabunta',
+        estado: 'close',
+        grupoId: whatsapp.leerConfigPersistencia().grupoId || '',
+        grupoNombre: whatsapp.leerConfigPersistencia().grupoNombre || ''
+      }));
+    }
+  });
+
+  app.get('/api/v1/notificacion/whatsapp/qr', async (req, res) => {
+    try {
+      const qrData = await whatsapp.obtenerQrConexion();
+      res.status(200).send(util.formatearMensaje("EXITO", "Código QR generado.", qrData));
+    } catch (error) {
+      res.status(412).send(util.formatearMensaje("ERROR", error.message || "No se pudo obtener el QR de Evolution API."));
+    }
+  });
+
+  app.get('/api/v1/notificacion/whatsapp/grupos', async (req, res) => {
+    try {
+      const grupos = await whatsapp.obtenerGrupos();
+      const cfg = whatsapp.leerConfigPersistencia();
+      res.status(200).send(util.formatearMensaje("EXITO", "Grupos de WhatsApp obtenidos.", {
+        grupoId: cfg.grupoId,
+        grupoNombre: cfg.grupoNombre,
+        grupos
+      }));
+    } catch (error) {
+      res.status(200).send(util.formatearMensaje("INFORMACION", "Vincule primero el WhatsApp por QR para listar los grupos.", {
+        grupoId: whatsapp.leerConfigPersistencia().grupoId,
+        grupos: []
+      }));
+    }
+  });
+
+  app.post('/api/v1/notificacion/whatsapp/grupo', (req, res) => {
+    try {
+      const { grupoId, grupoNombre } = req.body;
+      const guardado = whatsapp.guardarGrupoInstitucional(grupoId, grupoNombre);
+      res.status(200).send(util.formatearMensaje("EXITO", "Grupo Institucional de WhatsApp configurado exitosamente.", guardado));
+    } catch (error) {
+      res.status(412).send(util.formatearMensaje("ERROR", error.message || error));
+    }
+  });
+
+  app.post('/api/v1/notificacion/whatsapp/probar', async (req, res) => {
+    try {
+      const destino = req.body.destino || whatsapp.leerConfigPersistencia().grupoId;
+      const texto = req.body.mensaje || '✅ Prueba de conexión exitosa desde el Sistema de Gestión Documental - Cooperativa Minera Marabunta R.L.';
+      if (!destino) {
+        return res.status(400).send(util.formatearMensaje("ERROR", "Indique un número de celular o seleccione un grupo para la prueba."));
+      }
+      const resp = await whatsapp.enviarTexto(destino, texto);
+      res.status(200).send(util.formatearMensaje("EXITO", `Mensaje de prueba enviado a ${destino}`, resp));
+    } catch (error) {
+      res.status(412).send(util.formatearMensaje("ERROR", error.response?.data?.message || error.message || "Error al enviar mensaje de prueba (verifique que el QR haya sido escaneado)."));
+    }
+  });
 };

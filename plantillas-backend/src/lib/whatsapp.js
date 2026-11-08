@@ -1,5 +1,7 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const axios = require('axios');
 const logger = require('./logger');
 
@@ -7,6 +9,41 @@ const WHATSAPP_API_URL = process.env.WHATSAPP_API_URL || 'https://wa.marabuntarl
 const WHATSAPP_API_KEY = process.env.WHATSAPP_API_KEY || 'ev_sec_42964e9a8f27b140cd3e82b719';
 const WHATSAPP_INSTANCIA = process.env.WHATSAPP_INSTANCIA || 'marabunta';
 const CODIGO_PAIS = process.env.WHATSAPP_CODIGO_PAIS || '591';
+const CONFIG_FILE = path.resolve('./runtime-config/whatsapp-config.json');
+
+function leerConfigPersistencia() {
+  try {
+    if (fs.existsSync(CONFIG_FILE)) {
+      return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+    }
+  } catch (e) {
+    logger.warn('[WhatsApp] Error leyendo configuración persistente:', e.message);
+  }
+  return {
+    grupoId: process.env.WHATSAPP_GRUPO_ID || '',
+    grupoNombre: ''
+  };
+}
+
+function guardarGrupoInstitucional(grupoId, grupoNombre = '') {
+  try {
+    const dir = path.dirname(CONFIG_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const data = {
+      grupoId: String(grupoId || '').trim(),
+      grupoNombre: String(grupoNombre || '').trim(),
+      actualizado: new Date().toISOString()
+    };
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(data, null, 2), 'utf8');
+    process.env.WHATSAPP_GRUPO_ID = data.grupoId;
+    return data;
+  } catch (e) {
+    logger.error('[WhatsApp] Error guardando grupo institucional:', e.message);
+    throw e;
+  }
+}
 
 /**
  * Normaliza cualquier número boliviano, internacional o JID de Grupo (@g.us)
@@ -29,6 +66,53 @@ function normalizarNumero(numero) {
     limpio = `${CODIGO_PAIS}${limpio}`;
   }
   return limpio;
+}
+
+/**
+ * Obtiene el estado de conexión actual de la instancia en Evolution API
+ */
+async function obtenerEstadoConexion() {
+  const url = `${WHATSAPP_API_URL.replace(/\/+$/, '')}/instance/connectionState/${WHATSAPP_INSTANCIA}`;
+  const response = await axios.get(url, {
+    headers: { apikey: WHATSAPP_API_KEY },
+    timeout: 12000
+  });
+  const cfg = leerConfigPersistencia();
+  return {
+    instancia: WHATSAPP_INSTANCIA,
+    estado: response.data?.instance?.state || 'close',
+    grupoId: cfg.grupoId || process.env.WHATSAPP_GRUPO_ID || '',
+    grupoNombre: cfg.grupoNombre || ''
+  };
+}
+
+/**
+ * Obtiene o genera el código QR en base64 para vincular el WhatsApp corporativo
+ */
+async function obtenerQrConexion() {
+  const baseUrl = WHATSAPP_API_URL.replace(/\/+$/, '');
+  try {
+    const response = await axios.get(`${baseUrl}/instance/connect/${WHATSAPP_INSTANCIA}`, {
+      headers: { apikey: WHATSAPP_API_KEY },
+      timeout: 15000
+    });
+    return response.data;
+  } catch (err) {
+    // Si la instancia no existe aún, crearla automáticamente y devolver su QR
+    const createResp = await axios.post(`${baseUrl}/instance/create`, {
+      instanceName: WHATSAPP_INSTANCIA,
+      token: 'token_seguro_marabunta_2026',
+      qrcode: true,
+      integration: 'WHATSAPP-BAILEYS'
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: WHATSAPP_API_KEY
+      },
+      timeout: 15000
+    });
+    return createResp.data?.qrcode || createResp.data;
+  }
 }
 
 /**
@@ -117,7 +201,8 @@ async function obtenerGrupos() {
  * únicamente al Grupo Oficial de WhatsApp de la Institución (sin spam individual).
  */
 async function enviarAGrupoInstitucional(mensaje, opciones = {}) {
-  let grupoId = opciones.grupoId || process.env.WHATSAPP_GRUPO_ID || '';
+  const cfg = leerConfigPersistencia();
+  let grupoId = opciones.grupoId || cfg.grupoId || process.env.WHATSAPP_GRUPO_ID || '';
   if (!grupoId) {
     try {
       const grupos = await obtenerGrupos();
@@ -154,6 +239,10 @@ async function enviarAGrupoInstitucional(mensaje, opciones = {}) {
 
 module.exports = {
   normalizarNumero,
+  obtenerEstadoConexion,
+  obtenerQrConexion,
+  guardarGrupoInstitucional,
+  leerConfigPersistencia,
   enviarTexto,
   enviarPdf,
   obtenerGrupos,

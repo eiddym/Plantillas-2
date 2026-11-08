@@ -8,6 +8,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AuthService } from '../../core/auth/auth.service';
 
@@ -34,6 +35,7 @@ interface AlertasConfig {
     MatRadioModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     MatSnackBarModule
   ],
   template: `
@@ -162,6 +164,69 @@ interface AlertasConfig {
               <mat-icon>cancel</mat-icon>
               <span>Cancelar</span>
             </button>
+          </div>
+
+          <!-- PANEL DE VINCULACIÓN Y GRUPO INSTITUCIONAL DE WHATSAPP (EVOLUTION API) -->
+          <div class="wa-admin-panel" *ngIf="esAdminOMae()" style="margin-top: 22px; padding: 16px; border: 1px solid #cbd5e1; border-radius: 10px; background: #f8fafc;">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+              <div>
+                <h4 style="margin:0; font-size:0.98rem; color:#0f172a;">📱 Instancia Corporativa WhatsApp ({{ waInstancia() }})</h4>
+                <small style="color:#475569;">Difusión de Convocatorias, Circulares y Documentos Globales al Grupo Institucional</small>
+              </div>
+              <span [style.background]="waEstado() === 'open' ? '#dcfce7' : '#fef3c7'"
+                    [style.color]="waEstado() === 'open' ? '#166534' : '#92400e'"
+                    style="padding:4px 10px; border-radius:999px; font-size:0.78rem; font-weight:700;">
+                {{ waEstado() === 'open' ? '● Conectado' : '⏳ Pendiente de vincular QR' }}
+              </span>
+            </div>
+
+            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+              <button type="button" mat-stroked-button color="primary" (click)="obtenerQrWhatsApp()" [disabled]="cargandoWa()">
+                <mat-icon>qr_code_2</mat-icon>
+                <span>{{ waQrBase64() ? 'Actualizar Código QR' : 'Ver QR para Vincular Dispositivo' }}</span>
+              </button>
+              <button type="button" mat-stroked-button (click)="cargarGruposWhatsApp()" [disabled]="cargandoWa()">
+                <mat-icon>groups</mat-icon>
+                <span>Cargar Grupos del WhatsApp</span>
+              </button>
+              <button type="button" mat-stroked-button (click)="probarEnvioWhatsApp()" [disabled]="cargandoWa()">
+                <mat-icon>send</mat-icon>
+                <span>Enviar Prueba</span>
+              </button>
+            </div>
+
+            <!-- Imagen QR si está generada -->
+            <div *ngIf="waQrBase64()" style="text-align:center; padding:12px; background:#ffffff; border:1px dashed #94a3b8; border-radius:8px; margin-bottom:12px;">
+              <p style="margin:0 0 8px; font-size:0.82rem; color:#334155; font-weight:600;">
+                Escanee desde su celular: WhatsApp &gt; Dispositivos vinculados &gt; Vincular un dispositivo
+              </p>
+              <img [src]="waQrBase64()" alt="QR WhatsApp" style="width:220px; height:220px; object-fit:contain; border-radius:6px;">
+            </div>
+
+            <!-- Selector de Grupo Institucional (@g.us) -->
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <mat-form-field appearance="outline" class="w-full" *ngIf="waGrupos().length > 0">
+                <mat-label>Seleccionar Grupo Institucional de WhatsApp</mat-label>
+                <mat-select [(ngModel)]="waGrupoSeleccionadoId" (selectionChange)="onSeleccionarGrupoWa($event.value)">
+                  <mat-option *ngFor="let g of waGrupos()" [value]="g.id">
+                    {{ g.subject || g.name || g.id }} ({{ g.id }})
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="w-full">
+                <mat-label>ID del Grupo Institucional (&#64;g.us) para Difusión Global</mat-label>
+                <input matInput [(ngModel)]="waGrupoSeleccionadoId" placeholder="Ej: 120363284910293847&#64;g.us">
+                <mat-hint>Cuando PARA = A TODO EL PERSONAL, el aviso de WhatsApp se enviará únicamente a este grupo</mat-hint>
+              </mat-form-field>
+
+              <div>
+                <button type="button" mat-flat-button color="primary" (click)="guardarGrupoWhatsApp()" [disabled]="cargandoWa()">
+                  <mat-icon>save</mat-icon>
+                  <span>Guardar Grupo Institucional</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -457,6 +522,13 @@ export class ProfileComponent implements OnInit {
   readonly user = this.authService.currentUser;
   readonly editandoAlertas = signal(false);
   readonly idConfNotificacion = signal<number | null>(null);
+  readonly waInstancia = signal<string>('marabunta');
+  readonly waEstado = signal<string>('close');
+  readonly waQrBase64 = signal<string | null>(null);
+  readonly waGrupos = signal<any[]>([]);
+  readonly cargandoWa = signal<boolean>(false);
+  waGrupoSeleccionadoId = '';
+  waGrupoSeleccionadoNombre = '';
 
   readonly alertas: AlertasConfig = {
     canal: 'CORREO',
@@ -547,6 +619,124 @@ export class ProfileComponent implements OnInit {
 
   abrirEditarAlertas(): void {
     this.editandoAlertas.set(true);
+    if (this.esAdminOMae()) {
+      this.consultarEstadoWhatsApp();
+    }
+  }
+
+  esAdminOMae(): boolean {
+    const u: any = this.user() || {};
+    return !!u.es_mae || this.authService.isMae() || this.authService.hasRole('ADMIN') || u.username === 'sys_default';
+  }
+
+  consultarEstadoWhatsApp(): void {
+    this.http.get<any>('/api/v1/notificacion/whatsapp/estado').subscribe({
+      next: (res) => {
+        if (res?.datos) {
+          this.waInstancia.set(res.datos.instancia || 'marabunta');
+          this.waEstado.set(res.datos.estado || 'close');
+          if (res.datos.grupoId) {
+            this.waGrupoSeleccionadoId = res.datos.grupoId;
+          }
+          if (res.datos.grupoNombre) {
+            this.waGrupoSeleccionadoNombre = res.datos.grupoNombre;
+          }
+          if (res.datos.estado === 'open') {
+            this.waQrBase64.set(null);
+            this.cargarGruposWhatsApp();
+          }
+        }
+      },
+      error: () => {}
+    });
+  }
+
+  obtenerQrWhatsApp(): void {
+    this.cargandoWa.set(true);
+    this.http.get<any>('/api/v1/notificacion/whatsapp/qr').subscribe({
+      next: (res) => {
+        this.cargandoWa.set(false);
+        const b64 = res?.datos?.base64 || res?.datos?.qrcode?.base64 || null;
+        if (b64) {
+          this.waQrBase64.set(b64);
+          this.snackBar.open('Código QR generado. Escanéelo desde su WhatsApp.', 'Aceptar', { duration: 4000 });
+        } else {
+          this.consultarEstadoWhatsApp();
+          this.snackBar.open('La instancia ya está conectada o en proceso de sincronización.', 'Aceptar', { duration: 3500 });
+        }
+      },
+      error: (err) => {
+        this.cargandoWa.set(false);
+        this.snackBar.open(err.error?.mensaje || 'No se pudo obtener el código QR', 'Cerrar', { duration: 3500 });
+      }
+    });
+  }
+
+  cargarGruposWhatsApp(): void {
+    this.cargandoWa.set(true);
+    this.http.get<any>('/api/v1/notificacion/whatsapp/grupos').subscribe({
+      next: (res) => {
+        this.cargandoWa.set(false);
+        const lista = res?.datos?.grupos || [];
+        this.waGrupos.set(lista);
+        if (res?.datos?.grupoId && !this.waGrupoSeleccionadoId) {
+          this.waGrupoSeleccionadoId = res.datos.grupoId;
+        }
+        if (lista.length > 0) {
+          this.waEstado.set('open');
+          this.waQrBase64.set(null);
+          this.snackBar.open(`Se encontraron ${lista.length} grupo(s) en la cuenta vinculada.`, 'Aceptar', { duration: 3000 });
+        } else {
+          this.snackBar.open('No se encontraron grupos o falta vincular el QR.', 'Cerrar', { duration: 3500 });
+        }
+      },
+      error: () => {
+        this.cargandoWa.set(false);
+      }
+    });
+  }
+
+  onSeleccionarGrupoWa(idGrupo: string): void {
+    const g = this.waGrupos().find(x => x.id === idGrupo);
+    if (g) {
+      this.waGrupoSeleccionadoNombre = g.subject || g.name || '';
+    }
+  }
+
+  guardarGrupoWhatsApp(): void {
+    this.cargandoWa.set(true);
+    this.http.post<any>('/api/v1/notificacion/whatsapp/grupo', {
+      grupoId: this.waGrupoSeleccionadoId,
+      grupoNombre: this.waGrupoSeleccionadoNombre
+    }).subscribe({
+      next: () => {
+        this.cargandoWa.set(false);
+        this.snackBar.open('Grupo Institucional de WhatsApp guardado exitosamente', 'Aceptar', { duration: 3500 });
+      },
+      error: (err) => {
+        this.cargandoWa.set(false);
+        this.snackBar.open(err.error?.mensaje || 'Error al guardar el grupo de WhatsApp', 'Cerrar', { duration: 3500 });
+      }
+    });
+  }
+
+  probarEnvioWhatsApp(): void {
+    const destino = this.alertas.celular || this.waGrupoSeleccionadoId;
+    if (!destino) {
+      this.snackBar.open('Ingrese su número de WhatsApp o seleccione el Grupo Institucional para enviar la prueba.', 'Cerrar', { duration: 4000 });
+      return;
+    }
+    this.cargandoWa.set(true);
+    this.http.post<any>('/api/v1/notificacion/whatsapp/probar', { destino }).subscribe({
+      next: (res) => {
+        this.cargandoWa.set(false);
+        this.snackBar.open(res.mensaje || 'Mensaje de prueba enviado con éxito por WhatsApp', 'Aceptar', { duration: 4000 });
+      },
+      error: (err) => {
+        this.cargandoWa.set(false);
+        this.snackBar.open(err.error?.mensaje || 'Error al enviar mensaje de prueba (verifique que el QR esté vinculado)', 'Cerrar', { duration: 4500 });
+      }
+    });
   }
 
   cancelarEditarAlertas(): void {
