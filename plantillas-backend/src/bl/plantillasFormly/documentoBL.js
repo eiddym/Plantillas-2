@@ -88,6 +88,7 @@ module.exports = {
           _usuario_creacion:pDatos._usuario_modificacion,
         }, tr)
         .then(pResultado => resolve(pResultado))
+        .catch(pError => reject(pError));
       }
       else resolve();
     })
@@ -156,6 +157,9 @@ module.exports = {
     .then(pResultado => {
 
       if(pResultado != null){
+        if (pResultado.estado === 'ELIMINADO') {
+          return resolve(true);
+        }
         if(pResultado.estado=='NUEVO' || pResultado.estado=='RECHAZADO'){
           if (!pResultado.nombre || pResultado.nombre.indexOf('/') === -1) {
             return module.exports.actualizarDocumento(pResultado,

@@ -1799,7 +1799,7 @@ module.exports = app => {
     }
 */
   app.delete('/api/v1/plantillasFormly/documento/:id', (req, res) => {
-    const idUsuario = req.body?.audit_usuario?.id_usuario;
+    const idUsuario = req.body?.audit_usuario?.id_usuario || req.user?.id_usuario;
     if (!idUsuario) {
       return res.status(401).send(util.formatearMensaje("ERROR", "Usuario no autenticado"));
     }

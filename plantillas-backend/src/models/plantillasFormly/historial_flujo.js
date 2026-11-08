@@ -17,7 +17,7 @@ module.exports = (sequelize, DataType) => {
         //    xlabel: 'ID_DOCUMENTO',
         //},
         accion: {
-            type: DataType.ENUM('ENVIADO', 'APROBADO','RECHAZADO','DERIVADO','CERRADO','CREADO','ELIMINADO', 'FIRMO', 'ANULADO','APROBADO_CD'),
+            type: DataType.ENUM('ENVIADO', 'APROBADO','RECHAZADO','DERIVADO','CERRADO','CREADO','ELIMINADO', 'FIRMO', 'ANULADO','APROBADO_CD', 'EMITIDO_CON_CITE'),
             xlabel: 'Accion',
         },
         observacion: {
