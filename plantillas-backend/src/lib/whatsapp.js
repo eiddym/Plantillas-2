@@ -119,6 +119,11 @@ async function obtenerQrConexion() {
  * Envía un mensaje de texto formateado por WhatsApp (a usuario individual o grupo @g.us)
  */
 async function enviarTexto(numeroDestino, mensaje) {
+  const conn = await obtenerEstadoConexion().catch(() => ({ estado: 'close' }));
+  if (conn.estado !== 'open') {
+    throw new Error('La instancia de WhatsApp no está vinculada. Ingrese a su Perfil y escanee el código QR para conectar el dispositivo.');
+  }
+
   const numero = normalizarNumero(numeroDestino);
   if (!numero) {
     throw new Error('Número de celular o ID de grupo inválido o no especificado.');
@@ -152,6 +157,11 @@ async function enviarTexto(numeroDestino, mensaje) {
  * Envía un documento PDF oficial adjunto por WhatsApp (URL o Base64)
  */
 async function enviarPdf(numeroDestino, urlOBase64Pdf, nombreArchivo, leyenda) {
+  const conn = await obtenerEstadoConexion().catch(() => ({ estado: 'close' }));
+  if (conn.estado !== 'open') {
+    throw new Error('La instancia de WhatsApp no está vinculada para enviar adjuntos.');
+  }
+
   const numero = normalizarNumero(numeroDestino);
   if (!numero) throw new Error('Número de celular o ID de grupo inválido.');
 
@@ -186,12 +196,16 @@ async function enviarPdf(numeroDestino, urlOBase64Pdf, nombreArchivo, leyenda) {
  * Obtiene la lista de grupos de WhatsApp donde participa la instancia corporativa
  */
 async function obtenerGrupos() {
+  const conn = await obtenerEstadoConexion().catch(() => ({ estado: 'close' }));
+  if (conn.estado !== 'open') {
+    return [];
+  }
   const url = `${WHATSAPP_API_URL.replace(/\/+$/, '')}/group/fetchAllGroups/${WHATSAPP_INSTANCIA}?getParticipants=false`;
   const response = await axios.get(url, {
     headers: {
       apikey: WHATSAPP_API_KEY
     },
-    timeout: 15000
+    timeout: 10000
   });
   return Array.isArray(response.data) ? response.data : [];
 }

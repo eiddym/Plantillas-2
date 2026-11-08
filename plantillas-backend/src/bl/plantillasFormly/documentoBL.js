@@ -260,7 +260,7 @@ module.exports = {
       }
       const via = parseIdsSeguro(doc.via, doc.plantilla_valor, 'via', []);
       let para = parseIdsSeguro(doc.para, doc.plantilla_valor, 'para', []);
-      const dbModelos = doc.sequelize ? doc.sequelize.models : null;
+      const dbModelos = (doc.sequelize && doc.sequelize.models) || (modeloHistorialFlujo && modeloHistorialFlujo.sequelize && modeloHistorialFlujo.sequelize.models) || null;
 
       // Si es difusión global (PARA = TODOS), asegurar que 'para' tenga todos los usuarios activos
       const esGlobal = notificar.esDocumentoDifusionGlobal(doc) || module.exports.esCircularInstructivoConvocatoria(doc);
