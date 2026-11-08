@@ -42,6 +42,11 @@ export interface DocumentoArchivo {
   nombre_plantilla: string;
   abreviacion?: string;
   categoria_institucional?: string;
+  clasificacion?: string;
+  origen_canal?: string;
+  origen_radicacion?: string;
+  codigo_hoja_ruta?: string;
+  etiquetas?: string[];
   referencia?: string;
   estado: string;
   es_institucional?: boolean;
@@ -58,6 +63,7 @@ export interface DocumentoArchivo {
       id_unidad: number;
       nombre: string;
       abreviacion: string;
+      fid_unidad_padre?: number;
     };
   };
   plantilla_valor?: string;
@@ -70,9 +76,12 @@ export interface UnidadArchivo {
   nombre: string;
   abreviacion: string;
   fid_unidad_padre?: number;
+  es_unidad_padre?: boolean;
   total_documentos: number;
+  total_con_hijos?: number;
   documentos: DocumentoArchivo[];
   agrupado_por_tipo: Record<string, DocumentoArchivo[]>;
+  agrupado_por_clasificacion?: Record<string, DocumentoArchivo[]>;
   sub_unidades?: UnidadArchivo[];
 }
 
@@ -115,7 +124,7 @@ export interface UnidadArchivo {
         </div>
 
         <div class="topbar-right">
-          @if (nivelActivo() === 'institucional' && esAdminOMae()) {
+          @if (nivelActivo() === 'institucional' && puedeCargarExternoInstitucional()) {
             <button mat-flat-button class="btn-cargar-institucional" (click)="abrirModalCarga()">
               <mat-icon>upload_file</mat-icon>
               <span>Cargar Documento Institucional</span>
@@ -124,27 +133,31 @@ export interface UnidadArchivo {
         </div>
       </header>
 
-      <!-- Selector de Nivel de Archivo -->
+      <!-- Selector de Nivel de Archivo (Jerarquizado por Permisos) -->
       <nav class="nivel-tabs-bar">
-        <button 
-          class="nivel-btn" 
-          [class.active]="nivelActivo() === 'general'" 
-          (click)="cambiarNivel('general')"
-        >
-          <mat-icon>public</mat-icon>
-          <span>Archivo General</span>
-          <span class="badge-count">{{ totalDocsGeneral() }}</span>
-        </button>
+        @if (puedeVerGeneral()) {
+          <button 
+            class="nivel-btn" 
+            [class.active]="nivelActivo() === 'general'" 
+            (click)="cambiarNivel('general')"
+          >
+            <mat-icon>public</mat-icon>
+            <span>Archivo General</span>
+            <span class="badge-count">{{ totalDocsGeneral() }}</span>
+          </button>
+        }
 
-        <button 
-          class="nivel-btn" 
-          [class.active]="nivelActivo() === 'unidad'" 
-          (click)="cambiarNivel('unidad')"
-        >
-          <mat-icon>domain</mat-icon>
-          <span>Archivo de Unidad</span>
-          <span class="badge-count">{{ totalDocsUnidad() }}</span>
-        </button>
+        @if (puedeVerUnidad()) {
+          <button 
+            class="nivel-btn" 
+            [class.active]="nivelActivo() === 'unidad'" 
+            (click)="cambiarNivel('unidad')"
+          >
+            <mat-icon>domain</mat-icon>
+            <span>Archivo de Unidad</span>
+            <span class="badge-count">{{ totalDocsUnidad() }}</span>
+          </button>
+        }
 
         <button 
           class="nivel-btn" 
@@ -155,6 +168,17 @@ export interface UnidadArchivo {
           <span>Archivo Institucional</span>
           <span class="badge-count badge-gold">{{ docsInstitucionales().length }}</span>
         </button>
+
+        @if (puedeVerEstadisticas()) {
+          <button 
+            class="nivel-btn" 
+            [class.active]="nivelActivo() === 'estadisticas'" 
+            (click)="cambiarNivel('estadisticas')"
+          >
+            <mat-icon>analytics</mat-icon>
+            <span>Estadísticas & Ventanilla</span>
+          </button>
+        }
       </nav>
 
       <!-- Layout: Catálogo Adaptativo y Visor Dinámico -->
@@ -263,31 +287,84 @@ export interface UnidadArchivo {
 
         <!-- MITAD DERECHA: CATÁLOGO Y FILTROS -->
         <main class="catalogo-panel">
-          <!-- VISTA 1: ARCHIVO GENERAL (Agrupado por Unidades y Tipos Dinámicos) -->
-          @if (nivelActivo() === 'general') {
+          <!-- VISTA 1: ARCHIVO GENERAL (Agrupado por Unidades, Tipos, Clasificación y Etiquetas) -->
+          @if (nivelActivo() === 'general' && puedeVerGeneral()) {
         <section class="section-container fade-in">
-          <!-- Filtros Dinámicos de Tipos (Solo los existentes en documentos reales) -->
-          @if (tiposDisponiblesGeneral().length > 0) {
-            <div class="dynamic-types-bar">
-              <span class="filter-caption">Tipos de Documento:</span>
-              <button 
-                class="type-pill" 
-                [class.active]="tipoFiltroGeneral() === 'TODOS'"
-                (click)="filtrarTipoGeneral('TODOS')"
-              >
-                Todos los Tipos ({{ totalDocsGeneral() }})
-              </button>
-              @for (tipo of tiposDisponiblesGeneral(); track tipo) {
-                <button 
-                  class="type-pill" 
-                  [class.active]="tipoFiltroGeneral() === tipo"
-                  (click)="filtrarTipoGeneral(tipo)"
-                >
-                  {{ tipo }} ({{ contarDocsPorTipo(tipo) }})
+          <!-- Panel Multidimensional de Clasificación por Etiquetas -->
+          <div class="facets-panel" style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+              <strong style="font-size:13px; color:#0f172a; display:flex; align-items:center; gap:6px;">
+                <mat-icon style="font-size:18px; width:18px; height:18px; color:#0284c7;">sell</mat-icon>
+                Clasificación por Etiquetas (Unidad · Tipo · Reserva · Canal · Tags)
+              </strong>
+              @if (tieneFiltrosActivosGeneral()) {
+                <button type="button" class="type-pill" style="background:#fee2e2; color:#991b1b; border-color:#fecaca;" (click)="limpiarFiltrosGeneral()">
+                  Limpiar filtros
                 </button>
               }
             </div>
-          }
+
+            <!-- 1. Por Unidad -->
+            @if (unidadesGeneral().length > 0) {
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span class="filter-caption" style="min-width:95px;">Por Unidad:</span>
+                <button class="type-pill" [class.active]="unidadFiltroGeneral() === 'TODAS'" (click)="unidadFiltroGeneral.set('TODAS')">
+                  Todas ({{ totalDocsGeneral() }})
+                </button>
+                @for (u of unidadesGeneral(); track u.id_unidad) {
+                  <button class="type-pill" [class.active]="unidadFiltroGeneral() === u.id_unidad" (click)="unidadFiltroGeneral.set(u.id_unidad)">
+                    {{ u.abreviacion || u.nombre }} ({{ u.total_documentos }})
+                  </button>
+                }
+              </div>
+            }
+
+            <!-- 2. Por Tipo de Documento -->
+            @if (tiposDisponiblesGeneral().length > 0) {
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span class="filter-caption" style="min-width:95px;">Por Tipo Doc:</span>
+                <button class="type-pill" [class.active]="tipoFiltroGeneral() === 'TODOS'" (click)="filtrarTipoGeneral('TODOS')">
+                  Todos ({{ totalDocsGeneral() }})
+                </button>
+                @for (tipo of tiposDisponiblesGeneral(); track tipo) {
+                  <button class="type-pill" [class.active]="tipoFiltroGeneral() === tipo" (click)="filtrarTipoGeneral(tipo)">
+                    {{ tipo }} ({{ contarDocsPorTipo(tipo) }})
+                  </button>
+                }
+              </div>
+            }
+
+            <!-- 3. Por Clasificación de Documento y Canal -->
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span class="filter-caption" style="min-width:95px;">Clasificación:</span>
+              @for (c of ['TODAS', 'Reservado', 'Confidencial', 'Secreto', 'Desclasificado']; track c) {
+                <button class="type-pill" [class.active]="clasificacionFiltroGeneral() === c" (click)="clasificacionFiltroGeneral.set(c)">
+                  {{ c === 'TODAS' ? 'Todas' : c }}
+                </button>
+              }
+              <span class="filter-caption" style="margin-left:12px;">Origen:</span>
+              @for (orig of origenesFiltroOpciones; track orig.val) {
+                <button class="type-pill" [class.active]="origenFiltroGeneral() === orig.val" (click)="origenFiltroGeneral.set(orig.val)">
+                  {{ orig.label }}
+                </button>
+              }
+            </div>
+
+            <!-- 4. Por Etiquetas Personalizadas (Tags) -->
+            @if (etiquetasDisponiblesGeneral().length > 0) {
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span class="filter-caption" style="min-width:95px;">Etiquetas:</span>
+                <button class="type-pill" [class.active]="etiquetaFiltroGeneral() === 'TODAS'" (click)="etiquetaFiltroGeneral.set('TODAS')">
+                  Todas
+                </button>
+                @for (item of etiquetasDisponiblesGeneral(); track item.tag) {
+                  <button class="type-pill" [class.active]="etiquetaFiltroGeneral() === item.tag" (click)="etiquetaFiltroGeneral.set(item.tag)">
+                    #{{ item.tag }} ({{ item.total }})
+                  </button>
+                }
+              </div>
+            }
+          </div>
 
           <!-- Buscador Rápido -->
           <div class="search-box-bar">
@@ -335,6 +412,10 @@ export interface UnidadArchivo {
                       <div class="meta-badges-group">
                         <span class="tipo-tag">{{ d.nombre_plantilla || 'Documento Oficial' }}</span>
                         <span class="unit-tag">{{ d.usuario_creacion?.unidad?.nombre || 'Unidad Central' }}</span>
+                        <span class="unit-tag" style="background:#f1f5f9; color:#334155;">{{ d.clasificacion || 'Reservado' }}</span>
+                        @for (tag of (d.etiquetas || []); track tag) {
+                          <span class="tipo-tag" style="background:#e0f2fe; color:#0369a1;">#{{ tag }}</span>
+                        }
                         <span class="date-badge">
                           <mat-icon class="icon-date">event</mat-icon>
                           {{ formatearFecha(d._fecha_creacion || d.fecha) }}
@@ -352,6 +433,11 @@ export interface UnidadArchivo {
                       </div>
 
                       <div class="action-btn-row" (click)="$event.stopPropagation()">
+                        @if (puedeEtiquetar()) {
+                          <button mat-icon-button (click)="abrirModalEtiquetas(d)" matTooltip="Etiquetar / Clasificar Documento" class="btn-action">
+                            <mat-icon>sell</mat-icon>
+                          </button>
+                        }
                         <button mat-icon-button (click)="verDetalle(d)" matTooltip="Ver Trazabilidad y Versiones" class="btn-action">
                           <mat-icon>history</mat-icon>
                         </button>
@@ -362,7 +448,7 @@ export interface UnidadArchivo {
                           <button 
                             mat-icon-button 
                             (click)="promoverAInstitucional(d)" 
-                            matTooltip="Promover a Archivo Institucional"
+                            matTooltip="Elevar a Archivo Institucional (Exclusivo Jefe Padre / MAE)"
                             class="btn-action promote"
                           >
                             <mat-icon>verified</mat-icon>
@@ -382,19 +468,22 @@ export interface UnidadArchivo {
               <mat-icon>corporate_fare</mat-icon>
               <h3>Unidades y Direcciones de la Institución ({{ unidadesGeneral().length }})</h3>
             </div>
-            <p class="section-desc">Estructura dinámica de unidades creadas. Se reflejan en tiempo real aunque no contengan archivos:</p>
+            <p class="section-desc">Estructura jerárquica de unidades creadas. Se reflejan en tiempo real con su clasificación padre/hija:</p>
 
             <mat-accordion multi class="unidades-accordion">
               @for (u of unidadesGeneral(); track u.id_unidad) {
                 <mat-expansion-panel class="unidad-panel">
                   <mat-expansion-panel-header>
                     <mat-panel-title class="panel-title-custom">
-                      <mat-icon class="unit-icon">account_balance</mat-icon>
+                      <mat-icon class="unit-icon">{{ u.fid_unidad_padre ? 'subdirectory_arrow_right' : 'account_balance' }}</mat-icon>
                       <span class="u-name">{{ u.nombre }} ({{ u.abreviacion }})</span>
+                      <span class="unit-tag" style="margin-left:8px; font-size:11px;">
+                        {{ u.fid_unidad_padre ? 'Sub-unidad Hija' : 'Unidad Padre' }}
+                      </span>
                     </mat-panel-title>
                     <mat-panel-description class="panel-desc-custom">
                       <span class="u-count-badge" [class.has-docs]="u.total_documentos > 0">
-                        {{ u.total_documentos }} archivo(s)
+                        {{ u.total_documentos }} propio(s){{ u.total_con_hijos && u.total_con_hijos > u.total_documentos ? ' · ' + u.total_con_hijos + ' con sub-unidades' : '' }}
                       </span>
                     </mat-panel-description>
                   </mat-expansion-panel-header>
@@ -443,18 +532,26 @@ export interface UnidadArchivo {
         </section>
       }
 
-      <!-- VISTA 2: ARCHIVO DE UNIDAD (Unidad del Usuario y Sub-unidades Dependientes) -->
-      @if (nivelActivo() === 'unidad') {
+      <!-- VISTA 2: ARCHIVO DE UNIDAD (Jerarquía Padre vs. Hijo) -->
+      @if (nivelActivo() === 'unidad' && puedeVerUnidad()) {
         <section class="section-container fade-in">
           <div class="banner-unidad-actual">
             <div class="banner-unidad-info">
-              <span class="badge-area">Área Asignada</span>
+              <span class="badge-area">
+                {{ dataUnidadActual()?.es_unidad_padre ? 'Jefatura de Unidad Padre (Unidad + Sub-unidades Hijas)' : 'Jefatura de Unidad Operativa (Visión Exclusiva de su Unidad)' }}
+              </span>
               <h2>{{ dataUnidadActual()?.unidad?.nombre || 'Mi Unidad Operativa' }}</h2>
-              <p>Acervo documental producido por usuarios de esta unidad y sub-unidades jerárquicas dependientes.</p>
+              <p>
+                @if (dataUnidadActual()?.es_unidad_padre) {
+                  Acervo documental de su unidad padre más las agrupaciones de todas sus sub-unidades dependientes.
+                } @else {
+                  Acervo documental exclusivo de su unidad operativa (aislado jerárquicamente de la unidad padre{{ dataUnidadActual()?.unidad_padre_nombre ? ': ' + dataUnidadActual()?.unidad_padre_nombre : '' }}).
+                }
+              </p>
             </div>
             <div class="banner-unidad-stat">
               <span class="stat-number">{{ dataUnidadActual()?.total_documentos || 0 }}</span>
-              <span class="stat-label">Documentos Concluidos</span>
+              <span class="stat-label">Documentos en Alcance</span>
             </div>
           </div>
 
@@ -755,10 +852,194 @@ export interface UnidadArchivo {
           </div>
         </section>
       }
+
+      <!-- VISTA 4: ESTADÍSTICAS DE VENTANILLA (INTERNA / EXTERNA) Y ARCHIVO -->
+      @if (nivelActivo() === 'estadisticas' && puedeVerEstadisticas()) {
+        <section class="section-container fade-in">
+          <!-- KPIs de Canales de Ingreso -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
+            <div class="content-card" style="padding:18px; border-left:4px solid #0284c7;">
+              <span style="font-size:12px; color:#64748b; font-weight:700;">VENTANILLA EXTERNA (VIRTUAL)</span>
+              <div style="font-size:28px; font-weight:800; color:#0f172a; margin:6px 0;">
+                {{ estadisticasData()?.resumen_canales?.ventanilla_externa?.total || 0 }}
+              </div>
+              <div style="font-size:12px; color:#475569; display:flex; gap:10px;">
+                <span>Atendidos: <strong>{{ estadisticasData()?.resumen_canales?.ventanilla_externa?.atendidos || 0 }}</strong></span>
+                <span>En curso: <strong>{{ (estadisticasData()?.resumen_canales?.ventanilla_externa?.en_curso || 0) + (estadisticasData()?.resumen_canales?.ventanilla_externa?.pendientes || 0) }}</strong></span>
+              </div>
+            </div>
+
+            <div class="content-card" style="padding:18px; border-left:4px solid #7c3aed;">
+              <span style="font-size:12px; color:#64748b; font-weight:700;">VENTANILLA INTERNA (PRESENCIAL)</span>
+              <div style="font-size:28px; font-weight:800; color:#0f172a; margin:6px 0;">
+                {{ estadisticasData()?.resumen_canales?.ventanilla_interna?.total || 0 }}
+              </div>
+              <div style="font-size:12px; color:#475569; display:flex; gap:10px;">
+                <span>Atendidos: <strong>{{ estadisticasData()?.resumen_canales?.ventanilla_interna?.atendidos || 0 }}</strong></span>
+                <span>En curso: <strong>{{ (estadisticasData()?.resumen_canales?.ventanilla_interna?.en_curso || 0) + (estadisticasData()?.resumen_canales?.ventanilla_interna?.pendientes || 0) }}</strong></span>
+              </div>
+            </div>
+
+            <div class="content-card" style="padding:18px; border-left:4px solid #16a34a;">
+              <span style="font-size:12px; color:#64748b; font-weight:700;">FLUJO DOCUMENTAL INTERNO</span>
+              <div style="font-size:28px; font-weight:800; color:#0f172a; margin:6px 0;">
+                {{ estadisticasData()?.resumen_canales?.flujo_interno?.cerrados || 0 }}
+              </div>
+              <div style="font-size:12px; color:#475569;">
+                Cerrados con CITE · En trámite: <strong>{{ estadisticasData()?.resumen_canales?.flujo_interno?.en_curso || 0 }}</strong>
+              </div>
+            </div>
+
+            <div class="content-card" style="padding:18px; border-left:4px solid #d97706;">
+              <span style="font-size:12px; color:#64748b; font-weight:700;">ARCHIVO INSTITUCIONAL</span>
+              <div style="font-size:28px; font-weight:800; color:#0f172a; margin:6px 0;">
+                {{ estadisticasData()?.resumen_canales?.institucional?.total || 0 }}
+              </div>
+              <div style="font-size:12px; color:#475569;">Normativas y documentos corporativos vigentes</div>
+            </div>
+          </div>
+
+          <!-- Agrupaciones de Ventanilla y Clasificación -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px;">
+            <div class="content-card">
+              <div class="card-top-title">
+                <mat-icon>category</mat-icon>
+                <h3>Ingresos de Ventanilla por Tipo de Trámite</h3>
+              </div>
+              @if (!estadisticasData()?.ventanilla_por_tipo_tramite?.length) {
+                <p style="color:#64748b; font-size:13px;">Sin registros de ventanilla radicados aún.</p>
+              } @else {
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                  @for (item of estadisticasData()!.ventanilla_por_tipo_tramite; track item.tipo) {
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:#f8fafc; border-radius:8px;">
+                      <span style="font-weight:600; font-size:13px; color:#1e293b;">{{ item.tipo }}</span>
+                      <span class="u-count-badge has-docs">{{ item.total }} trámite(s)</span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="content-card">
+              <div class="card-top-title">
+                <mat-icon>shield</mat-icon>
+                <h3>Distribución por Clasificación y Prioridad</h3>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                @for (c of (estadisticasData()?.por_clasificacion || []); track c.clasificacion) {
+                  <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:#f8fafc; border-radius:8px;">
+                    <span style="font-weight:600; font-size:13px; color:#1e293b;">Clasificación: {{ c.clasificacion }}</span>
+                    <span class="u-count-badge has-docs">{{ c.total }}</span>
+                  </div>
+                }
+                @for (p of (estadisticasData()?.ventanilla_por_prioridad || []); track p.prioridad) {
+                  <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:#fffbeb; border-radius:8px;">
+                    <span style="font-weight:600; font-size:13px; color:#92400e;">Prioridad Ventanilla: {{ p.prioridad }}</span>
+                    <span class="u-count-badge">{{ p.total }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Rendimiento Documental por Unidad -->
+          <div class="content-card">
+            <div class="card-top-title">
+              <mat-icon>domain</mat-icon>
+              <h3>Movimiento por Unidad (Archivo + Ventanilla Externa + Ventanilla Interna)</h3>
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                  <tr style="background:#f1f5f9; text-align:left; color:#334155;">
+                    <th style="padding:10px 12px;">Unidad / Área</th>
+                    <th style="padding:10px 12px;">Emitidos Cerrados</th>
+                    <th style="padding:10px 12px;">Vent. Externa</th>
+                    <th style="padding:10px 12px;">Vent. Interna</th>
+                    <th style="padding:10px 12px;">Vent. Atendidos</th>
+                    <th style="padding:10px 12px;">Vent. Pendientes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (u of (estadisticasData()?.por_unidad || []); track u.id_unidad) {
+                    <tr style="border-bottom:1px solid #e2e8f0;">
+                      <td style="padding:10px 12px; font-weight:600;">{{ u.nombre }} ({{ u.abreviacion }})</td>
+                      <td style="padding:10px 12px;">{{ u.producidos_cerrados }}</td>
+                      <td style="padding:10px 12px;">{{ u.ventanilla_externa_recibidos }}</td>
+                      <td style="padding:10px 12px;">{{ u.ventanilla_interna_recibidos }}</td>
+                      <td style="padding:10px 12px; color:#166534; font-weight:700;">{{ u.ventanilla_atendidos }}</td>
+                      <td style="padding:10px 12px; color:#b45309; font-weight:700;">{{ u.ventanilla_pendientes }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      }
         </main>
       </div>
 
-      <!-- MODAL: CARGAR DOCUMENTO INSTITUCIONAL (ADMIN / MAE) -->
+      <!-- MODAL: ETIQUETAR Y CLASIFICAR DOCUMENTO -->
+      @if (docAEtiquetar()) {
+        <div class="modal-overlay" (click)="cerrarModalEtiquetas()">
+          <div class="modal-card" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <div class="modal-header-title">
+                <mat-icon>sell</mat-icon>
+                <div>
+                  <h3>Clasificar y Etiquetar: {{ docAEtiquetar()?.nombre }}</h3>
+                  <p>Asigne etiquetas temáticas y nivel de reserva para el Archivo General</p>
+                </div>
+              </div>
+              <button mat-icon-button (click)="cerrarModalEtiquetas()" class="btn-close">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+            <div style="padding:20px; display:flex; flex-direction:column; gap:14px;">
+              <div>
+                <strong style="font-size:13px; color:#334155; display:block; margin-bottom:8px;">Clasificación del Documento:</strong>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  @for (c of ['Reservado', 'Confidencial', 'Secreto', 'Desclasificado']; track c) {
+                    <button type="button" class="type-pill" [class.active]="clasificacionEdicion() === c" (click)="clasificacionEdicion.set(c)">
+                      {{ c }}
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <div>
+                <strong style="font-size:13px; color:#334155; display:block; margin-bottom:8px;">Etiquetas Sugeridas (clic para activar/desactivar):</strong>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  @for (sug of etiquetasSugeridasList; track sug) {
+                    <button type="button" class="type-pill" [class.active]="etiquetasEdicion().includes(sug)" (click)="toggleEtiquetaEdicion(sug)">
+                      #{{ sug }}
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <div style="display:flex; gap:8px; align-items:center;">
+                <mat-form-field appearance="outline" style="flex:1;">
+                  <mat-label>Nueva etiqueta personalizada</mat-label>
+                  <input matInput [formControl]="nuevaEtiquetaCtrl" (keyup.enter)="agregarEtiquetaCustom()" placeholder="Ej. Asamblea2026, ContratoMinero...">
+                </mat-form-field>
+                <button type="button" mat-stroked-button color="primary" (click)="agregarEtiquetaCustom()">Añadir</button>
+              </div>
+
+              <div class="modal-actions">
+                <button type="button" mat-button (click)="cerrarModalEtiquetas()">Cancelar</button>
+                <button type="button" mat-flat-button class="btn-primary-action" (click)="guardarEtiquetasDoc()" [disabled]="guardando()">
+                  <mat-icon>save</mat-icon>
+                  <span>Guardar Clasificación</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- MODAL: CARGAR DOCUMENTO INSTITUCIONAL (MAE / SECRETARÍA / ADMIN) -->
       @if (mostrarModalCarga()) {
         <div class="modal-overlay" (click)="cerrarModalCarga()">
           <div class="modal-card" (click)="$event.stopPropagation()">
@@ -767,7 +1048,7 @@ export interface UnidadArchivo {
                 <mat-icon>upload_file</mat-icon>
                 <div>
                   <h3>Cargar Documento en Archivo Institucional</h3>
-                  <p>Exclusivo para Administración y Dirección Máxima Ejecutiva</p>
+                  <p>Exclusivo para Autoridad MAE y Secretaría</p>
                 </div>
               </div>
               <button mat-icon-button (click)="cerrarModalCarga()" class="btn-close">
@@ -2628,16 +2909,30 @@ export class ArchivoComponent implements OnInit {
   private currentObjectUrl: string | null = null;
   archivoPdfBase64: string | null = null;
 
-  readonly nivelActivo = signal<'general' | 'unidad' | 'institucional'>('general');
+  readonly nivelActivo = signal<'general' | 'unidad' | 'institucional' | 'estadisticas'>('institucional');
   readonly cargando = signal<boolean>(false);
   readonly guardando = signal<boolean>(false);
+  readonly permisosServidor = signal<any | null>(null);
 
-  // Datos de Archivo General
+  // Datos de Archivo General y Filtros por Etiquetas (Unidad, Tipo, Clasificación, Origen, Tags)
   readonly unidadesGeneral = signal<UnidadArchivo[]>([]);
   readonly docsGeneral = signal<DocumentoArchivo[]>([]);
   readonly tiposDisponiblesGeneral = signal<string[]>([]);
+  readonly etiquetasDisponiblesGeneral = signal<Array<{ tag: string; total: number }>>([]);
   readonly tipoFiltroGeneral = signal<string>('TODOS');
+  readonly unidadFiltroGeneral = signal<number | 'TODAS'>('TODAS');
+  readonly clasificacionFiltroGeneral = signal<string>('TODAS');
+  readonly origenFiltroGeneral = signal<string>('TODOS');
+  readonly etiquetaFiltroGeneral = signal<string>('TODAS');
   readonly filtroGeneralCtrl = new FormControl('');
+
+  readonly origenesFiltroOpciones = [
+    { val: 'TODOS', label: 'Todos' },
+    { val: 'FLUJO_INTERNO', label: 'Flujo Interno' },
+    { val: 'VENTANILLA_EXTERNA', label: 'Ventanilla Externa' },
+    { val: 'VENTANILLA_INTERNA', label: 'Ventanilla Interna' },
+    { val: 'INSTITUCIONAL', label: 'Institucional' }
+  ];
 
   // Datos de Archivo de Unidad
   readonly dataUnidadActual = signal<any | null>(null);
@@ -2646,12 +2941,32 @@ export class ArchivoComponent implements OnInit {
   // Datos de Archivo Institucional
   readonly docsInstitucionales = signal<DocumentoArchivo[]>([]);
 
-  // Modales
+  // Datos de Estadísticas
+  readonly estadisticasData = signal<any | null>(null);
+
+  // Modales y Edición de Etiquetas
   readonly mostrarModalCarga = signal<boolean>(false);
   readonly docAVersionar = signal<DocumentoArchivo | null>(null);
   readonly docVersionesVer = signal<DocumentoArchivo | null>(null);
+  readonly docAEtiquetar = signal<DocumentoArchivo | null>(null);
+  readonly etiquetasEdicion = signal<string[]>([]);
+  readonly clasificacionEdicion = signal<string>('Reservado');
+  readonly nuevaEtiquetaCtrl = new FormControl('');
   readonly nombreArchivoCarga = signal<string | null>(null);
   readonly nombreArchivoVersion = signal<string | null>(null);
+
+  readonly etiquetasSugeridasList = [
+    'Normativa',
+    'Urgente',
+    'Auditoría',
+    'Contratos',
+    'Operaciones Mineras',
+    'Finanzas / Contabilidad',
+    'Recursos Humanos',
+    'Consejo Administración',
+    'Consejo Vigilancia',
+    'Legal / Jurídico'
+  ];
 
   readonly cargaForm = new FormGroup({
     nombre_documento: new FormControl('', [Validators.required]),
@@ -2680,18 +2995,34 @@ export class ArchivoComponent implements OnInit {
   readonly docsGeneralesFiltrados = computed(() => {
     let list = this.docsGeneral();
     const tipo = this.tipoFiltroGeneral();
+    const unidad = this.unidadFiltroGeneral();
+    const clasif = this.clasificacionFiltroGeneral();
+    const origen = this.origenFiltroGeneral();
+    const tag = this.etiquetaFiltroGeneral();
     const query = (this.filtroGeneralCtrl.value || '').toLowerCase().trim();
 
+    if (unidad !== 'TODAS') {
+      list = list.filter(d => Number(d.usuario_creacion?.fid_unidad) === Number(unidad));
+    }
     if (tipo !== 'TODOS') {
       list = list.filter(d => (d.nombre_plantilla || '').trim() === tipo);
     }
-
+    if (clasif !== 'TODAS') {
+      list = list.filter(d => (d.clasificacion || 'Reservado').trim() === clasif);
+    }
+    if (origen !== 'TODOS') {
+      list = list.filter(d => (d.origen_canal || 'FLUJO_INTERNO') === origen);
+    }
+    if (tag !== 'TODAS') {
+      list = list.filter(d => Array.isArray(d.etiquetas) && d.etiquetas.includes(tag));
+    }
     if (query) {
       list = list.filter(d =>
         (d.nombre && d.nombre.toLowerCase().includes(query)) ||
         (d.referencia && d.referencia.toLowerCase().includes(query)) ||
         (d.usuario_creacion?.nombres && d.usuario_creacion.nombres.toLowerCase().includes(query)) ||
-        (d.usuario_creacion?.apellidos && d.usuario_creacion.apellidos.toLowerCase().includes(query))
+        (d.usuario_creacion?.apellidos && d.usuario_creacion.apellidos.toLowerCase().includes(query)) ||
+        (Array.isArray(d.etiquetas) && d.etiquetas.some(t => t.toLowerCase().includes(query)))
       );
     }
 
@@ -2719,17 +3050,52 @@ export class ArchivoComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    // Determinar pestaña inicial según permisos locales antes de consultar al servidor
+    if (this.puedeVerGeneral()) {
+      this.nivelActivo.set('general');
+    } else if (this.puedeVerUnidad()) {
+      this.nivelActivo.set('unidad');
+    } else {
+      this.nivelActivo.set('institucional');
+    }
+
     this.route.params.subscribe(params => {
       const tipo = params['tipo'];
-      if (tipo === 'unidad' || tipo === 'institucional' || tipo === 'general') {
-        this.nivelActivo.set(tipo);
+      if (tipo === 'general' && this.puedeVerGeneral()) {
+        this.nivelActivo.set('general');
+      } else if (tipo === 'unidad' && this.puedeVerUnidad()) {
+        this.nivelActivo.set('unidad');
+      } else if (tipo === 'institucional') {
+        this.nivelActivo.set('institucional');
+      } else if (tipo === 'estadisticas' && this.puedeVerEstadisticas()) {
+        this.nivelActivo.set('estadisticas');
       }
+      this.cargarDatos();
     });
 
-    this.cargarDatos();
+    this.cargarPermisosArchivo();
   }
 
-  cambiarNivel(nivel: 'general' | 'unidad' | 'institucional'): void {
+  cargarPermisosArchivo(): void {
+    this.http.get<any>('/api/v1/archivo/permisos').subscribe({
+      next: (res) => {
+        if (res.tipoMensaje === 'EXITO' && res.datos) {
+          this.permisosServidor.set(res.datos);
+          const actual = this.nivelActivo();
+          if (actual === 'general' && !this.puedeVerGeneral()) {
+            this.cambiarNivel(this.puedeVerUnidad() ? 'unidad' : 'institucional');
+          } else if (actual === 'unidad' && !this.puedeVerUnidad()) {
+            this.cambiarNivel('institucional');
+          }
+        }
+      },
+      error: () => {}
+    });
+  }
+
+  cambiarNivel(nivel: 'general' | 'unidad' | 'institucional' | 'estadisticas'): void {
+    if (nivel === 'general' && !this.puedeVerGeneral()) return;
+    if (nivel === 'unidad' && !this.puedeVerUnidad()) return;
     this.cerrarVisor();
     this.nivelActivo.set(nivel);
     this.cargarDatos();
@@ -2743,10 +3109,13 @@ export class ArchivoComponent implements OnInit {
       this.cargarArchivoUnidad();
     } else if (nivel === 'institucional') {
       this.cargarArchivoInstitucional();
+    } else if (nivel === 'estadisticas') {
+      this.cargarEstadisticas();
     }
   }
 
   cargarArchivoGeneral(): void {
+    if (!this.puedeVerGeneral()) return;
     this.cargando.set(true);
     this.http.get<any>('/api/v1/archivo/general').subscribe({
       next: (res) => {
@@ -2755,16 +3124,18 @@ export class ArchivoComponent implements OnInit {
           this.unidadesGeneral.set(res.datos.unidades || []);
           this.docsGeneral.set(res.datos.documentos || []);
           this.tiposDisponiblesGeneral.set(res.datos.tipos_disponibles || []);
+          this.etiquetasDisponiblesGeneral.set(res.datos.etiquetas_disponibles || []);
         }
       },
-      error: () => {
+      error: (err) => {
         this.cargando.set(false);
-        this.snackBar.open('Error al consultar archivo general', 'Cerrar', { duration: 3000 });
+        this.snackBar.open(err.error?.mensaje || 'Error al consultar archivo general', 'Cerrar', { duration: 3500 });
       }
     });
   }
 
   cargarArchivoUnidad(): void {
+    if (!this.puedeVerUnidad()) return;
     this.cargando.set(true);
     const user = this.authService.currentUser() as any;
     const unidadId = user?.fid_unidad || 1;
@@ -2776,9 +3147,9 @@ export class ArchivoComponent implements OnInit {
           this.dataUnidadActual.set(res.datos);
         }
       },
-      error: () => {
+      error: (err) => {
         this.cargando.set(false);
-        this.snackBar.open('Error al consultar archivo de la unidad', 'Cerrar', { duration: 3000 });
+        this.snackBar.open(err.error?.mensaje || 'Error al consultar archivo de la unidad', 'Cerrar', { duration: 3500 });
       }
     });
   }
@@ -2799,31 +3170,201 @@ export class ArchivoComponent implements OnInit {
     });
   }
 
+  cargarEstadisticas(): void {
+    this.cargando.set(true);
+    this.http.get<any>('/api/v1/archivo/estadisticas').subscribe({
+      next: (res) => {
+        this.cargando.set(false);
+        if (res.tipoMensaje === 'EXITO') {
+          this.estadisticasData.set(res.datos);
+        }
+      },
+      error: () => {
+        this.cargando.set(false);
+        this.snackBar.open('Error al consultar estadísticas de archivo y ventanilla', 'Cerrar', { duration: 3000 });
+      }
+    });
+  }
+
   filtrarTipoGeneral(tipo: string): void {
     this.tipoFiltroGeneral.set(tipo);
+  }
+
+  tieneFiltrosActivosGeneral(): boolean {
+    return (
+      this.unidadFiltroGeneral() !== 'TODAS' ||
+      this.tipoFiltroGeneral() !== 'TODOS' ||
+      this.clasificacionFiltroGeneral() !== 'TODAS' ||
+      this.origenFiltroGeneral() !== 'TODOS' ||
+      this.etiquetaFiltroGeneral() !== 'TODAS' ||
+      Boolean((this.filtroGeneralCtrl.value || '').trim())
+    );
+  }
+
+  limpiarFiltrosGeneral(): void {
+    this.unidadFiltroGeneral.set('TODAS');
+    this.tipoFiltroGeneral.set('TODOS');
+    this.clasificacionFiltroGeneral.set('TODAS');
+    this.origenFiltroGeneral.set('TODOS');
+    this.etiquetaFiltroGeneral.set('TODAS');
+    this.filtroGeneralCtrl.setValue('');
   }
 
   contarDocsPorTipo(tipo: string): number {
     return this.docsGeneral().filter(d => (d.nombre_plantilla || '').trim() === tipo).length;
   }
 
+  private tieneSubmenuMenu(ruta: string, idMenu: number): boolean {
+    const menus = this.authService.currentMenu() || [];
+    const arch = menus.find((m: any) => m.label?.toUpperCase() === 'ARCHIVO' || m.id_menu === 35);
+    const subs: any[] = Array.isArray(arch?.submenu) ? arch.submenu : [];
+    return subs.some((s: any) => s.id_menu === idMenu || (s.url || '').toLowerCase() === ruta);
+  }
+
+  puedeVerGeneral(): boolean {
+    const srv = this.permisosServidor()?.permisos;
+    if (srv && typeof srv.ver_archivo_general === 'boolean') return srv.ver_archivo_general;
+    const u: any = this.authService.currentUser() || {};
+    const cargo = String(u.cargo || '');
+    return (
+      this.esAdminOMae() ||
+      this.authService.hasRole('SECRETARIA') ||
+      /\bsecretar(ia|io|ía)\b/i.test(cargo) ||
+      this.tieneSubmenuMenu('archivo/general', 37)
+    );
+  }
+
+  puedeVerUnidad(): boolean {
+    const srv = this.permisosServidor()?.permisos;
+    if (srv && typeof srv.ver_archivo_unidad === 'boolean') return srv.ver_archivo_unidad;
+    const u: any = this.authService.currentUser() || {};
+    const cargo = String(u.cargo || '');
+    return (
+      this.esAdminOMae() ||
+      this.authService.hasRole('JEFE') ||
+      /\b(jefe|subjefe|sub\s*jefe|responsable|director|directora|presidente|presidenta|gerente|encargado|encargada|coordinador|coordinadora)\b/i.test(cargo) ||
+      this.tieneSubmenuMenu('archivo/unidad', 38)
+    );
+  }
+
+  puedeVerEstadisticas(): boolean {
+    return (
+      this.puedeVerGeneral() ||
+      this.puedeVerUnidad() ||
+      this.authService.hasRole('CORRESPONDENCIA')
+    );
+  }
+
+  /**
+   * Elevar un documento existente a Archivo Institucional:
+   * EXCLUSIVO para Jefe de Unidad Padre o MAE (y Admin).
+   */
   puedePromover(): boolean {
-    return this.authService.hasRole('JEFE') || 
-           this.authService.hasRole('MAE') || 
-           this.authService.hasRole('ADMIN') || 
-           this.authService.isMae();
+    const srv = this.permisosServidor()?.permisos;
+    if (srv && typeof srv.promover_a_institucional === 'boolean') return srv.promover_a_institucional;
+    if (this.esAdminOMae()) return true;
+    const esJefe = this.authService.hasRole('JEFE');
+    const dataU = this.dataUnidadActual();
+    if (dataU && typeof dataU.es_unidad_padre === 'boolean') {
+      return esJefe && dataU.es_unidad_padre;
+    }
+    return esJefe;
+  }
+
+  /**
+   * Cargar un documento externo a Archivo Institucional:
+   * EXCLUSIVO para MAE o Secretaría (y Admin).
+   */
+  puedeCargarExternoInstitucional(): boolean {
+    const srv = this.permisosServidor()?.permisos;
+    if (srv && typeof srv.cargar_externo_institucional === 'boolean') return srv.cargar_externo_institucional;
+    const u: any = this.authService.currentUser() || {};
+    const cargo = String(u.cargo || '');
+    return (
+      this.esAdminOMae() ||
+      this.authService.hasRole('SECRETARIA') ||
+      /\bsecretar(ia|io|ía)\b/i.test(cargo)
+    );
+  }
+
+  puedeEtiquetar(): boolean {
+    const srv = this.permisosServidor()?.permisos;
+    if (srv && typeof srv.etiquetar_documentos === 'boolean') return srv.etiquetar_documentos;
+    return this.puedeVerGeneral() || this.puedeVerUnidad();
   }
 
   puedeVersionar(): boolean {
-    return this.authService.hasRole('ADMIN') || 
-           this.authService.hasRole('JEFE') || 
-           this.authService.hasRole('MAE');
+    return (
+      this.esAdminOMae() ||
+      this.authService.hasRole('SECRETARIA') ||
+      this.puedePromover()
+    );
   }
 
   esAdminOMae(): boolean {
-    return this.authService.hasRole('ADMIN') || 
-           this.authService.hasRole('MAE') || 
-           this.authService.isMae();
+    return (
+      this.authService.hasRole('ADMIN') ||
+      this.authService.hasRole('MAE') ||
+      this.authService.isMae()
+    );
+  }
+
+  abrirModalEtiquetas(doc: DocumentoArchivo): void {
+    this.docAEtiquetar.set(doc);
+    this.etiquetasEdicion.set(Array.isArray(doc.etiquetas) ? [...doc.etiquetas] : []);
+    this.clasificacionEdicion.set(doc.clasificacion || 'Reservado');
+    this.nuevaEtiquetaCtrl.setValue('');
+  }
+
+  cerrarModalEtiquetas(): void {
+    this.docAEtiquetar.set(null);
+  }
+
+  toggleEtiquetaEdicion(tag: string): void {
+    const actual = [...this.etiquetasEdicion()];
+    const idx = actual.indexOf(tag);
+    if (idx >= 0) {
+      actual.splice(idx, 1);
+    } else {
+      actual.push(tag);
+    }
+    this.etiquetasEdicion.set(actual);
+  }
+
+  agregarEtiquetaCustom(): void {
+    const val = (this.nuevaEtiquetaCtrl.value || '').replace(/^#+/, '').trim();
+    if (!val) return;
+    const actual = [...this.etiquetasEdicion()];
+    if (!actual.includes(val)) {
+      actual.push(val);
+      this.etiquetasEdicion.set(actual);
+    }
+    this.nuevaEtiquetaCtrl.setValue('');
+  }
+
+  guardarEtiquetasDoc(): void {
+    const doc = this.docAEtiquetar();
+    if (!doc) return;
+    this.guardando.set(true);
+    this.http.post<any>(`/api/v1/archivo/etiquetas/${doc.id_documento}`, {
+      etiquetas: this.etiquetasEdicion(),
+      clasificacion: this.clasificacionEdicion()
+    }).subscribe({
+      next: (res) => {
+        this.guardando.set(false);
+        if (res.tipoMensaje === 'EXITO') {
+          doc.etiquetas = res.datos?.etiquetas || this.etiquetasEdicion();
+          doc.clasificacion = res.datos?.clasificacion || this.clasificacionEdicion();
+          this.snackBar.open('Clasificación y etiquetas actualizadas correctamente', 'Aceptar', { duration: 3000 });
+          this.cerrarModalEtiquetas();
+          this.cargarDatos();
+        }
+      },
+      error: (err) => {
+        this.guardando.set(false);
+        this.snackBar.open(err.error?.mensaje || 'Error al guardar etiquetas', 'Cerrar', { duration: 3000 });
+      }
+    });
   }
 
   promoverAInstitucional(doc: DocumentoArchivo): void {

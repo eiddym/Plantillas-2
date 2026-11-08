@@ -745,25 +745,39 @@ export class LayoutComponent implements OnInit, OnDestroy {
     // garantizamos paridad total con todos los submódulos institucionales
     const enrichedMenus = JSON.parse(JSON.stringify(rawMenus));
     
-    // 1. Archivo: asegurar 3 niveles
+    // 1. Archivo: construir submenús según jerarquía estricta (General, Unidad, Institucional)
+    const uActual: any = this.user() || {};
+    const cargoUsuario = String(uActual.cargo || '').trim();
+    const esMaeOAdmin = this.authService.isMae() || this.authService.hasRole('ADMIN') || this.authService.hasRole('MAE') || /\b(mae|presidente|directora?\s+general)\b/i.test(cargoUsuario);
+    const esSecretaria = this.authService.hasRole('SECRETARIA') || /\bsecretar(ia|io|ía)\b/i.test(cargoUsuario);
+    const esJefeOSubjefe = this.authService.hasRole('JEFE') || /\b(jefe|subjefe|sub\s*jefe|responsable|director|directora|presidente|presidenta|gerente|encargado|encargada|coordinador|coordinadora)\b/i.test(cargoUsuario);
+
+    const archivoRawGroup = rawMenus.find((m: any) => m.label?.toUpperCase() === 'ARCHIVO' || m.id_menu === 35);
+    const submenusBackend: any[] = Array.isArray(archivoRawGroup?.submenu) ? archivoRawGroup.submenu : [];
+    const tieneSubmenuExplicito = (ruta: string, idMenu: number) =>
+      submenusBackend.some((s: any) => s.id_menu === idMenu || (s.url || '').toLowerCase() === ruta);
+
+    const puedeVerGeneral = esMaeOAdmin || esSecretaria || tieneSubmenuExplicito('archivo/general', 37);
+    const puedeVerUnidad = esMaeOAdmin || esJefeOSubjefe || tieneSubmenuExplicito('archivo/unidad', 38);
+
+    const submenusArchivoPermitidos: Array<{ label: string; url: string; icon: string }> = [];
+    if (puedeVerGeneral) {
+      submenusArchivoPermitidos.push({ label: 'ARCHIVO GENERAL', url: 'archivo/general', icon: 'public' });
+    }
+    if (puedeVerUnidad) {
+      submenusArchivoPermitidos.push({ label: 'ARCHIVO DE UNIDAD', url: 'archivo/unidad', icon: 'domain' });
+    }
+    // Archivo Institucional es visible para TODO el personal sin excepción
+    submenusArchivoPermitidos.push({ label: 'ARCHIVO INSTITUCIONAL', url: 'archivo/institucional', icon: 'verified' });
+
     const archivoGroup = enrichedMenus.find((m: any) => m.label?.toUpperCase() === 'ARCHIVO');
     if (archivoGroup) {
-      if (!archivoGroup.submenu || archivoGroup.submenu.length <= 1) {
-        archivoGroup.submenu = [
-          { label: 'ARCHIVO GENERAL', url: 'archivo/general', icon: 'public' },
-          { label: 'ARCHIVO DE UNIDAD', url: 'archivo/unidad', icon: 'domain' },
-          { label: 'ARCHIVO INSTITUCIONAL', url: 'archivo/institucional', icon: 'verified' }
-        ];
-      }
+      archivoGroup.submenu = submenusArchivoPermitidos;
     } else {
       enrichedMenus.push({
         label: 'ARCHIVO',
         icon: 'archive',
-        submenu: [
-          { label: 'ARCHIVO GENERAL', url: 'archivo/general', icon: 'public' },
-          { label: 'ARCHIVO DE UNIDAD', url: 'archivo/unidad', icon: 'domain' },
-          { label: 'ARCHIVO INSTITUCIONAL', url: 'archivo/institucional', icon: 'verified' }
-        ]
+        submenu: submenusArchivoPermitidos
       });
     }
 

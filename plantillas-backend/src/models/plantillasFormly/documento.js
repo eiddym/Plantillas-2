@@ -192,6 +192,18 @@ module.exports = (sequelize, DataType) => {
             allowNull: true,
             xlabel: 'Ruta de Archivo Adjunto',
         },
+        etiquetas: {
+            type: DataType.JSONB,
+            allowNull: true,
+            defaultValue: [],
+            xlabel: 'Etiquetas de Clasificación',
+        },
+        alcance_archivo: {
+            type: DataType.STRING(50),
+            allowNull: true,
+            defaultValue: 'UNIDAD',
+            xlabel: 'Alcance de Archivo',
+        },
         _usuario_creacion: {
             type: DataType.INTEGER,
             allowNull: false,

@@ -58,6 +58,7 @@ export interface DocumentoVentanilla {
     telefono?: string;
     entidad?: string;
     tipoTramite?: string;
+    tipo_tramite?: string;
     citeExterno?: string;
     referencia?: string;
     fojas?: number;
@@ -153,6 +154,59 @@ export interface DocumentoVentanilla {
           </div>
         </button>
       </nav>
+
+      <!-- Resumen Estadístico y Agrupación de Ventanilla -->
+      <section style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
+        <div style="background:#fff; border:1px solid #e2e8f0; border-left:4px solid #0284c7; border-radius:12px; padding:12px 16px;">
+          <span style="font-size:11px; color:#64748b; font-weight:700;">TOTAL EN BANDEJA</span>
+          <div style="font-size:24px; font-weight:800; color:#0f172a;">{{ statsBandeja().total }}</div>
+        </div>
+        <div style="background:#fff; border:1px solid #e2e8f0; border-left:4px solid #f59e0b; border-radius:12px; padding:12px 16px;">
+          <span style="font-size:11px; color:#64748b; font-weight:700;">PENDIENTES DE DESPACHO</span>
+          <div style="font-size:24px; font-weight:800; color:#b45309;">{{ statsBandeja().pendientes }}</div>
+        </div>
+        <div style="background:#fff; border:1px solid #e2e8f0; border-left:4px solid #7c3aed; border-radius:12px; padding:12px 16px;">
+          <span style="font-size:11px; color:#64748b; font-weight:700;">EN DERIVACIÓN / TRÁMITE</span>
+          <div style="font-size:24px; font-weight:800; color:#6d28d9;">{{ statsBandeja().enCurso }}</div>
+        </div>
+        <div style="background:#fff; border:1px solid #e2e8f0; border-left:4px solid #16a34a; border-radius:12px; padding:12px 16px;">
+          <span style="font-size:11px; color:#64748b; font-weight:700;">CONCLUIDOS / CON CITE</span>
+          <div style="font-size:24px; font-weight:800; color:#15803d;">{{ statsBandeja().concluidos }}</div>
+        </div>
+        <div style="background:#fff; border:1px solid #e2e8f0; border-left:4px solid #dc2626; border-radius:12px; padding:12px 16px;">
+          <span style="font-size:11px; color:#64748b; font-weight:700;">PRIORIDAD URGENTE</span>
+          <div style="font-size:24px; font-weight:800; color:#b91c1c;">{{ statsBandeja().urgentes }}</div>
+        </div>
+      </section>
+
+      <!-- Barra de Clasificación y Agrupación por Tipo de Trámite, Prioridad y Estado -->
+      <section style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px 18px; display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <strong style="font-size:12px; color:#475569; min-width:110px;">Tipo de Trámite:</strong>
+          <button type="button" (click)="filtroTipoTramite.set('TODOS')" [style.background]="filtroTipoTramite() === 'TODOS' ? '#0f172a' : '#f1f5f9'" [style.color]="filtroTipoTramite() === 'TODOS' ? '#fff' : '#334155'" style="border:none; border-radius:20px; padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer;">
+            Todos ({{ documentosList().length }})
+          </button>
+          @for (t of tiposTramiteDisponibles(); track t.tipo) {
+            <button type="button" (click)="filtroTipoTramite.set(t.tipo)" [style.background]="filtroTipoTramite() === t.tipo ? '#0f172a' : '#f1f5f9'" [style.color]="filtroTipoTramite() === t.tipo ? '#fff' : '#334155'" style="border:none; border-radius:20px; padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer;">
+              {{ t.tipo }} ({{ t.total }})
+            </button>
+          }
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <strong style="font-size:12px; color:#475569; min-width:110px;">Prioridad / Estado:</strong>
+          @for (p of ['TODAS', 'NORMAL', 'URGENTE', 'MUY URGENTE']; track p) {
+            <button type="button" (click)="filtroPrioridad.set(p)" [style.background]="filtroPrioridad() === p ? '#0284c7' : '#f1f5f9'" [style.color]="filtroPrioridad() === p ? '#fff' : '#334155'" style="border:none; border-radius:20px; padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer;">
+              {{ p === 'TODAS' ? 'Toda Prioridad' : p }}
+            </button>
+          }
+          <span style="margin-left:8px; font-size:12px; color:#475569; font-weight:700;">Estado:</span>
+          @for (est of ['TODOS', 'NUEVO', 'DERIVADO', 'CERRADO']; track est) {
+            <button type="button" (click)="filtroEstado.set(est)" [style.background]="filtroEstado() === est ? '#4f46e5' : '#f1f5f9'" [style.color]="filtroEstado() === est ? '#fff' : '#334155'" style="border:none; border-radius:20px; padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer;">
+              {{ est === 'TODOS' ? 'Todos' : est }}
+            </button>
+          }
+        </div>
+      </section>
 
       <!-- Tabla y Bandeja de Correspondencia -->
       <section class="table-section">
@@ -1423,8 +1477,61 @@ export class VentanillaUnicaComponent implements OnInit, OnDestroy {
 
   readonly columnas = ['hoja_ruta', 'cite_oficial', 'remitente', 'referencia', 'estado', 'fecha', 'acciones'];
 
-  readonly documentosFiltrados = computed(() => {
+  readonly filtroTipoTramite = signal<string>('TODOS');
+  readonly filtroPrioridad = signal<string>('TODAS');
+  readonly filtroEstado = signal<string>('TODOS');
+
+  readonly statsBandeja = computed(() => {
     const list = this.documentosList();
+    let pendientes = 0;
+    let enCurso = 0;
+    let concluidos = 0;
+    let urgentes = 0;
+    for (const d of list) {
+      const est = (d.estado || '').toUpperCase();
+      if (est === 'NUEVO' || est === 'VENTANILLA_RECIBIDO' || est === 'BORRADOR') pendientes++;
+      else if (est === 'FINALIZADO' || est === 'APROBADO' || est === 'CERRADO' || est === 'CON_CITE') concluidos++;
+      else enCurso++;
+      const prio = (d.datos_remitente?.prioridad || 'NORMAL').toUpperCase();
+      if (prio === 'URGENTE' || prio === 'MUY URGENTE' || prio === 'MUY_URGENTE') urgentes++;
+    }
+    return { total: list.length, pendientes, enCurso, concluidos, urgentes };
+  });
+
+  readonly tiposTramiteDisponibles = computed(() => {
+    const list = this.documentosList();
+    const map = new Map<string, number>();
+    for (const d of list) {
+      const t = (d.datos_remitente?.tipoTramite || d.datos_remitente?.tipo_tramite || 'SIN CLASIFICAR').toUpperCase();
+      map.set(t, (map.get(t) || 0) + 1);
+    }
+    return Array.from(map.entries())
+      .map(([tipo, total]) => ({ tipo, total }))
+      .sort((a, b) => b.total - a.total);
+  });
+
+  readonly documentosFiltrados = computed(() => {
+    let list = this.documentosList();
+    const tTramite = this.filtroTipoTramite();
+    const prio = this.filtroPrioridad();
+    const est = this.filtroEstado();
+
+    if (tTramite !== 'TODOS') {
+      list = list.filter(d => (d.datos_remitente?.tipoTramite || d.datos_remitente?.tipo_tramite || 'SIN CLASIFICAR').toUpperCase() === tTramite);
+    }
+    if (prio !== 'TODAS') {
+      list = list.filter(d => (d.datos_remitente?.prioridad || 'NORMAL').toUpperCase().replace('_', ' ') === prio.replace('_', ' '));
+    }
+    if (est !== 'TODOS') {
+      list = list.filter(d => {
+        const docEst = (d.estado || '').toUpperCase();
+        if (est === 'NUEVO') return docEst === 'NUEVO' || docEst === 'VENTANILLA_RECIBIDO';
+        if (est === 'DERIVADO') return docEst === 'DERIVADO' || docEst === 'EN_REVISION';
+        if (est === 'CERRADO') return docEst === 'CERRADO' || docEst === 'FINALIZADO' || docEst === 'APROBADO';
+        return docEst === est;
+      });
+    }
+
     const filtro = (this.filtroCtrl.value || '').toLowerCase().trim();
     if (!filtro) return list;
 
@@ -1455,6 +1562,9 @@ export class VentanillaUnicaComponent implements OnInit, OnDestroy {
       } else {
         this.tipoActivo.set('externa');
       }
+      this.filtroTipoTramite.set('TODOS');
+      this.filtroPrioridad.set('TODAS');
+      this.filtroEstado.set('TODOS');
       this.cargarBandeja();
       this.cargarTotalesContadores();
     });
