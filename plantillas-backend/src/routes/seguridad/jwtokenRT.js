@@ -132,7 +132,6 @@ function xautenticacion(req, res, usar_ldap=1){
     const condicion = Op ? {
       [Op.or]: [
         { usuario: cleanUser },
-        { numero_documento: cleanUser },
         { email: cleanUser }
       ]
     } : {
@@ -347,9 +346,7 @@ function interceptar(req, res, next){
     const whereUser = Op ? {
       [Op.or]: [
         { usuario: username },
-        { email: username },
-        { numero_documento: username },
-        { usuario: { [Op.iLike]: `${username}.%` } }
+        { email: username }
       ]
     } : { usuario: username };
 
