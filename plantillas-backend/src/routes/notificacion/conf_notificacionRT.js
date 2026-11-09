@@ -272,7 +272,10 @@ module.exports = app => {
   app.get('/api/v1/notificacion/whatsapp/grupos', async (req, res) => {
     try {
       const grupos = await whatsapp.obtenerGrupos();
-      const cfg = whatsapp.leerConfigPersistencia();
+      let cfg = whatsapp.leerConfigPersistencia();
+      if (!cfg.grupoId && grupos.length > 0 && grupos[0].id) {
+        cfg = whatsapp.guardarGrupoInstitucional(grupos[0].id, grupos[0].subject || grupos[0].name || '');
+      }
       res.status(200).send(util.formatearMensaje("EXITO", "Grupos de WhatsApp obtenidos.", {
         grupoId: cfg.grupoId,
         grupoNombre: cfg.grupoNombre,
@@ -286,9 +289,18 @@ module.exports = app => {
     }
   });
 
-  app.post('/api/v1/notificacion/whatsapp/grupo', (req, res) => {
+  app.post('/api/v1/notificacion/whatsapp/grupo', async (req, res) => {
     try {
-      const { grupoId, grupoNombre } = req.body;
+      let { grupoId, grupoNombre } = req.body;
+      if (!grupoId || !String(grupoId).trim()) {
+        const grupos = await whatsapp.obtenerGrupos().catch(() => []);
+        if (grupos.length > 0 && grupos[0].id) {
+          grupoId = grupos[0].id;
+          grupoNombre = grupos[0].subject || grupos[0].name || '';
+        } else {
+          return res.status(400).send(util.formatearMensaje("ERROR", "Seleccione un grupo de WhatsApp antes de guardar."));
+        }
+      }
       const guardado = whatsapp.guardarGrupoInstitucional(grupoId, grupoNombre);
       res.status(200).send(util.formatearMensaje("EXITO", "Grupo Institucional de WhatsApp configurado exitosamente.", guardado));
     } catch (error) {

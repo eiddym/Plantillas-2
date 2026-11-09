@@ -30,7 +30,28 @@ module.exports={
       .then(pExistente => {
         const nombres = pDatos.nombre || pDatos.nombres || pDatos.givenName || 'Nombres';
         const apellidos = pDatos.apellido || pDatos.apellidos || pDatos.sn || 'Apellidos';
-        const cargo = pDatos.cargo || 'Sin cargo';
+        const cargo = pDatos.cargo || (pExistente && pExistente.cargo) || 'Sin cargo';
+        const numero_documento = pDatos.numero_documento || pDatos.cedula || (pExistente && pExistente.numero_documento) || '11111111';
+
+        const asegurarRolUsuario = (usuarioInstancia) => {
+          return pModeloUsuarioRol.findAll({
+            where: {
+              fid_usuario: usuarioInstancia.id_usuario,
+              estado: 'ACTIVO'
+            }
+          }).then(rolesActivos => {
+            if (rolesActivos && rolesActivos.length > 0) {
+              return usuarioInstancia;
+            }
+            const rolAsignar = module.exports.obtenerRol(usuarioInstancia.cargo, pDatos.memberOf);
+            return pModeloUsuarioRol.create({
+              fid_rol: rolAsignar,
+              fid_usuario: usuarioInstancia.id_usuario,
+              estado: 'ACTIVO',
+              _usuario_creacion: 1
+            }).then(() => usuarioInstancia);
+          });
+        };
 
         if (pExistente) {
           return pExistente.update({
@@ -38,18 +59,24 @@ module.exports={
             nombres: nombres,
             apellidos: apellidos,
             cargo: cargo,
-            email: email
-          }).then(pUpdate => resolve(pUpdate));
+            numero_documento: numero_documento,
+            email: email,
+            estado: 'ACTIVO'
+          })
+          .then(pUpdate => asegurarRolUsuario(pUpdate))
+          .then(pFinal => resolve(pFinal))
+          .catch(pErrUpdate => reject(pErrUpdate));
         }
 
         const insertar={
           usuario: username,
           contrasena:'',
-          numero_documento: pDatos.numero_documento || '11111111',
+          numero_documento: numero_documento,
           nombres: nombres,
           apellidos: apellidos,
           cargo: cargo,
           email: email,
+          estado: 'ACTIVO',
           _usuario_creacion:1,
         };
 
@@ -57,8 +84,9 @@ module.exports={
         .then(pRespuesta => {
           resultado=pRespuesta;
           const insertarUsuarioRol={
-            fid_rol:module.exports.obtenerRol(pRespuesta.cargo),
+            fid_rol:module.exports.obtenerRol(pRespuesta.cargo, pDatos.memberOf),
             fid_usuario:pRespuesta.id_usuario,
+            estado: 'ACTIVO',
             _usuario_creacion:pRespuesta._usuario_creacion,
           };
 
@@ -108,10 +136,12 @@ module.exports={
     @param {Texto} pCadena cadena de texto que es el cargo del usuario.
     @return {Número} retorna un numero identificador del rol en base a su cargo.
    */
-  obtenerRol:(pCadena) => {
-    const texto = pCadena.toLowerCase();
-    if(texto.search("responsable") > -1 || texto.search("jefe") > -1 ||  texto.search("director") > -1) return 2
-    else if(texto.search("secretaria") > -1) return 4;
+  obtenerRol:(pCadena, memberOf) => {
+    const grupos = Array.isArray(memberOf) ? memberOf.join(' ').toLowerCase() : String(memberOf || '').toLowerCase();
+    if (grupos.includes('intranet-admin') || grupos.includes('authentik admins')) return 1;
+    const texto = String(pCadena || '').toLowerCase();
+    if(texto.search("responsable") > -1 || texto.search("jefe") > -1 || texto.search("director") > -1 || texto.search("presidente") > -1 || texto.search("tesorero") > -1) return 2;
+    else if(texto.search("secretaria") > -1 || texto.search("secretario") > -1) return 4;
     else return 3;
   },
 

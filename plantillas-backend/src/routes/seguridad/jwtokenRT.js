@@ -72,8 +72,19 @@ module.exports = app => {
   }
 
   const OPTS = cfg.ldap;
+  try {
+    const ldapjs = require("ldapjs");
+    if (ldapjs && ldapjs.DN && ldapjs.DN.prototype) {
+      ldapjs.DN.prototype.toString = function () {
+        return this.format({ skipSpace: true });
+      };
+    }
+  } catch (e) {
+    // Fallback silencioso si ldapjs no expone DN
+  }
+
   passport.use(new LdapStrategy(OPTS, (payload, done) => {
-    const uid = payload.sAMAccountName || payload.uid || payload.cn || 'usuario';
+    const uid = payload.sAMAccountName || payload.cn || payload.uid || 'usuario';
     const fullName = payload.displayName || payload.name || payload.cn || '';
     const parsed = parseNombreCompleto(fullName, uid, payload.givenName, payload.sn);
 
@@ -83,6 +94,9 @@ module.exports = app => {
       email: payload.mail || payload.email || `${uid}@marabuntarl.com`,
       uid: uid,
       cargo: payload.title || payload.cargo || 'Sin cargo',
+      numero_documento: payload.cedula || payload.numero_documento || '11111111',
+      unidad: payload.unidad || null,
+      memberOf: payload.memberOf || [],
     });
   }));
 
@@ -130,14 +144,16 @@ function xautenticacion(req, res, usar_ldap=1){
     // Busca al usuario en base a los parametros de "email" y "contrasena".
     usuarios.findOne({where:condicion})
     .then(pUsuario => {
-      if(req.user && !pUsuario){
-
+      if(req.user){
         return bl.procesaUsuario(req.user, UsuariosRoles, Unidad, AuthUser, usuarios)
-        .then(pRespuesta => ConfNotificacion.create({
-            fid_usuario:pRespuesta.id_usuario,
-            _usuario_creacion:pRespuesta.id_usuario,
+        .then(pRespuesta => ConfNotificacion.findOrCreate({
+            where: { fid_usuario: pRespuesta.id_usuario },
+            defaults: {
+              fid_usuario: pRespuesta.id_usuario,
+              _usuario_creacion: pRespuesta.id_usuario,
+            }
           })
-          .then(pConf => pRespuesta)
+          .then(() => pRespuesta)
         )
         .catch(pErrorProceso => {throw new Error(pErrorProceso)})
       }
@@ -327,8 +343,21 @@ function interceptar(req, res, next){
   const ldapConfigured = process.env.LDAP_URL && process.env.LDAP_URL !== '' && !process.env.LDAP_URL.includes('example.abc');
 
   if (username) {
-    usuarios.findOne({ where: { usuario: username } })
+    const Op = (Sequelize && Sequelize.Op) ? Sequelize.Op : null;
+    const whereUser = Op ? {
+      [Op.or]: [
+        { usuario: username },
+        { email: username },
+        { numero_documento: username },
+        { usuario: { [Op.iLike]: `${username}.%` } }
+      ]
+    } : { usuario: username };
+
+    usuarios.findOne({ where: whereUser })
     .then(u => {
+      if (u && u.usuario) {
+        req.body.username = u.usuario;
+      }
       if (u && (u.tipo_autenticacion === 'LOCAL' || u.usuario === 'sys_default')) {
         req.ldap = false;
         req.user = null;
