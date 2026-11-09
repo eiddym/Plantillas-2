@@ -162,45 +162,11 @@ async function sincronizar() {
         });
         usrInsertados++;
       } else {
-        await existe.update({
-          fid_unidad: usr.fid_unidad !== undefined ? usr.fid_unidad : null,
-          cargo: usr.cargo !== undefined && usr.cargo !== null ? usr.cargo : '',
-          email: usr.email !== undefined && usr.email !== null ? usr.email : existe.email,
-          es_mae: usr.es_mae !== undefined ? usr.es_mae : false,
-          tipo_autenticacion: usr.tipo_autenticacion || existe.tipo_autenticacion,
-          estado: usr.estado || 'ACTIVO',
-          _usuario_modificacion: 1
-        });
         usrActualizados++;
       }
     }
 
-    // Asegurar que NO existan más usuarios que los 2 autorizados (sys_default y 10794552-1J)
-    const usuariosPermitidos = usuariosData.map(u => u.usuario);
-    const idsPermitidos = usuariosData.map(u => u.id_usuario);
-    try {
-      await models.usuario_rol.destroy({
-        where: {
-          fid_usuario: { [Op.notIn]: idsPermitidos }
-        }
-      });
-      const eliminados = await models.usuario.destroy({
-        where: {
-          usuario: { [Op.notIn]: usuariosPermitidos }
-        }
-      });
-      if (eliminados > 0) {
-        console.log(`[Usuarios] Eliminados ${eliminados} usuario(s) no autorizados.`);
-      }
-    } catch {
-      await models.usuario.update(
-        { estado: 'INACTIVO' },
-        { where: { usuario: { [Op.notIn]: usuariosPermitidos } } }
-      );
-      console.log(`[Usuarios] Usuarios no autorizados deshabilitados a estado INACTIVO.`);
-    }
-
-    console.log(`[Usuarios] Total permitidos en el sistema: ${usuariosData.length} (sys_default y 10794552-1J)`);
+    console.log(`[Usuarios] Usuarios base verificados: ${usuariosData.length} (Nuevos: ${usrInsertados}, Existentes preservados: ${usrActualizados})`);
 
     // Asegurar configuración de notificaciones para los usuarios
     for (const usr of usuariosData) {
