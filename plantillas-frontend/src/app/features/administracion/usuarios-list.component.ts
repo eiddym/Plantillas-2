@@ -13,6 +13,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { SeguridadService, UsuarioAdmin, Unidad, Rol } from '../../core/services/seguridad.service';
+import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
   selector: 'app-usuarios-list',
@@ -135,6 +136,25 @@ import { SeguridadService, UsuarioAdmin, Unidad, Rol } from '../../core/services
             <ng-container matColumnDef="email">
               <th mat-header-cell *matHeaderCellDef>Correo electrónico</th>
               <td mat-cell *matCellDef="let u">{{ u.email }}</td>
+            </ng-container>
+
+            <!-- Roles Column -->
+            <ng-container matColumnDef="roles">
+              <th mat-header-cell *matHeaderCellDef>Roles asignados</th>
+              <td mat-cell *matCellDef="let u">
+                <div style="display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
+                  @if (u.es_mae) {
+                    <span style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:2px 7px; border-radius:999px; font-size:0.7rem; font-weight:700;">
+                      ⭐ MAE
+                    </span>
+                  }
+                  @for (ur of (u.usuario_rol || []); track $index) {
+                    <span style="background:#e0f2fe; color:#0369a1; padding:2px 7px; border-radius:999px; font-size:0.7rem; font-weight:700;">
+                      {{ ur.rol?.nombre || obtenerNombreRol(ur.fid_rol) }}
+                    </span>
+                  }
+                </div>
+              </td>
             </ng-container>
 
             <!-- Tipo de autenticación Column -->
@@ -894,6 +914,7 @@ import { SeguridadService, UsuarioAdmin, Unidad, Rol } from '../../core/services
 })
 export class UsuariosListComponent implements OnInit {
   private readonly seguridadService = inject(SeguridadService);
+  private readonly authService = inject(AuthService);
   private readonly snackBar = inject(MatSnackBar);
 
   readonly displayedColumns = [
@@ -904,6 +925,7 @@ export class UsuariosListComponent implements OnInit {
     'apellidos',
     'cargo',
     'email',
+    'roles',
     'tipo_autenticacion'
   ];
 
@@ -1116,6 +1138,19 @@ export class UsuariosListComponent implements OnInit {
     return this.rolesSeleccionados().has(idRol);
   }
 
+  obtenerNombreRol(fidRol?: number): string {
+    const mapa: Record<number, string> = {
+      1: 'ADMIN',
+      2: 'JEFE',
+      3: 'OPERADOR',
+      4: 'SECRETARIA',
+      5: 'CONFIGURADOR',
+      6: 'CORRESPONDENCIA',
+      7: 'CONTACTOS'
+    };
+    return fidRol ? (mapa[fidRol] || `ROL ${fidRol}`) : 'ROL';
+  }
+
   toggleRol(idRol: number, checked: boolean): void {
     this.rolesSeleccionados.update(set => {
       const nuevo = new Set(set);
@@ -1162,13 +1197,18 @@ export class UsuariosListComponent implements OnInit {
     }
 
     if (this.modoEdicion() && this.usuarioEditandoId()) {
+      const idEditado = this.usuarioEditandoId()!;
+      const esUsuarioActual = idEditado === this.authService.currentUser()?.id;
       // Actualizar usuario existente
-      this.seguridadService.actualizarUsuario(this.usuarioEditandoId()!, payload).subscribe({
+      this.seguridadService.actualizarUsuario(idEditado, payload).subscribe({
         next: () => {
           this.guardando.set(false);
           this.cerrarModal();
           this.snackBar.open(`Usuario "${v.usuario}" actualizado exitosamente.`, 'Aceptar', { duration: 4000 });
           this.cargarUsuarios();
+          if (esUsuarioActual) {
+            this.authService.refrescarSesion().subscribe({ error: () => {} });
+          }
         },
         error: (err) => {
           this.guardando.set(false);

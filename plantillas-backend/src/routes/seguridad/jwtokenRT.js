@@ -475,33 +475,61 @@ app.get('/api/v1/refrescar', (req,res) => {
             // Verifica si la fecha actual es aun valida.
             if(moment().tz('America/La_Paz').format() <= secreto.fecha) {
 
+              return bl.obtenerRoles(UsuariosRoles, Roles, pUsuario.id_usuario)
+              .then(pRoles => bl.obtenerMenus(RolesMenus, Menus, pRoles))
+              .then(pRespuestaMenu => {
+                const rolesActualizados = pRespuestaMenu.rol;
+                const menuActualizado = pRespuestaMenu.menu;
 
-              const cifrar = {
-                id_usuario: tokenDecodificado.id_usuario,
-                usuario: tokenDecodificado.usuario,
-                secret:jwt.encode({
-                  fecha:moment().tz('America/La_Paz').add(cfg.tiempo_token,'minutes').format(),
+                const cifrar = {
+                  id_usuario: pUsuario.id_usuario,
+                  usuario: pUsuario.usuario,
+                  secret:jwt.encode({
+                    fecha:moment().tz('America/La_Paz').add(cfg.tiempo_token,'minutes').format(),
+                    clave:Uuid.v4(),
+                  }, cfg.jwtSecret),
                   clave:Uuid.v4(),
-                }, cfg.jwtSecret),
-                clave:Uuid.v4(),
-                tiempo:cfg.tiempo_token,
-                roles:tokenDecodificado.roles,
-                virtual: pUsuario.virtual,
-              }
+                  tiempo:cfg.tiempo_token,
+                  roles: rolesActualizados,
+                  virtual: pUsuario.virtual,
+                };
 
-              const token=jwt.encode(cifrar, app.src.config.config.jwtSecret);
+                const usuarioEnviar = {
+                  id: pUsuario.id_usuario,
+                  username: pUsuario.usuario,
+                  first_name: pUsuario.nombres,
+                  last_name: pUsuario.apellidos,
+                  cargo: pUsuario.cargo,
+                  doc: pUsuario.numero_documento,
+                  email: pUsuario.email,
+                  foto: pUsuario.foto,
+                  date_joined: pUsuario._fecha_creacion,
+                  ldap: pUsuario.tipo_autenticacion === 'AUTHENTIK',
+                  id_unidad: pUsuario.fid_unidad,
+                  fid_unidad: pUsuario.fid_unidad,
+                  es_mae: pUsuario.es_mae || false
+                };
 
-              // Actualiza los datos de la sesión.
-              sesion[cifrar.id_usuario].token=token;
-              sesion[cifrar.id_usuario].backup=tokenBackup;
-              sesion[cifrar.id_usuario].fecha=moment(moment().tz('America/La_Paz').format()).add(1,'minutes');
-              sesion[cifrar.id_usuario].lastActivity=Date.now();
+                const datosRefresco = {
+                  user: usuarioEnviar,
+                  menu: menuActualizado.menu,
+                  menuEntrar: menuActualizado.menuEntrar,
+                  roles: rolesActualizados,
+                };
 
-              // Aplica los cambios a la sesión.
-              app.set("sesion", sesion);
+                const token=jwt.encode(cifrar, app.src.config.config.jwtSecret);
 
+                // Actualiza los datos de la sesión.
+                sesion[cifrar.id_usuario].token=token;
+                sesion[cifrar.id_usuario].backup=tokenBackup;
+                sesion[cifrar.id_usuario].fecha=moment(moment().tz('America/La_Paz').format()).add(1,'minutes');
+                sesion[cifrar.id_usuario].lastActivity=Date.now();
 
-              res.status(200).send(util.formatearMensaje("EXITO","Acceso al sistema correcto",{},token));
+                // Aplica los cambios a la sesión.
+                app.set("sesion", sesion);
+
+                res.status(200).send(util.formatearMensaje("EXITO","Acceso al sistema correcto",datosRefresco,token));
+              });
 
               // Si el token ya expiro.
             } else throw new Error("Siga participando...");

@@ -67,13 +67,25 @@ export class AuthService {
   }
 
   refrescarSesion(): Observable<any> {
-    return this.http.get<{ tipoMensaje: string; token: string }>('/api/v1/refrescar').pipe(
+    return this.http.get<{ tipoMensaje: string; token: string; datos?: any }>('/api/v1/refrescar').pipe(
       tap((res) => {
         if (res.tipoMensaje === 'EXITO' && res.token) {
           localStorage.setItem('token', res.token);
           this.currentToken.set(res.token);
           this.ultimoRefresh = Date.now();
-          const menuActualizado = this.normalizarMenus(this.currentMenu(), this.currentRoles());
+
+          if (res.datos?.user) {
+            localStorage.setItem('user', JSON.stringify(res.datos.user));
+            this.currentUser.set(res.datos.user);
+          }
+          if (Array.isArray(res.datos?.roles)) {
+            localStorage.setItem('roles', JSON.stringify(res.datos.roles));
+            this.currentRoles.set(res.datos.roles);
+          }
+          const baseMenu = Array.isArray(res.datos?.menu) ? res.datos.menu : this.currentMenu();
+          const baseRoles = Array.isArray(res.datos?.roles) ? res.datos.roles : this.currentRoles();
+          const menuActualizado = this.normalizarMenus(baseMenu, baseRoles);
+          localStorage.setItem('menu', JSON.stringify(menuActualizado));
           this.currentMenu.set(menuActualizado);
         }
       })

@@ -55,12 +55,12 @@ module.exports={
 
         if (pExistente) {
           return pExistente.update({
-            usuario: username,
-            nombres: nombres,
-            apellidos: apellidos,
-            cargo: cargo,
-            numero_documento: numero_documento,
-            email: email,
+            usuario: pExistente.usuario || username,
+            nombres: pExistente.nombres || nombres,
+            apellidos: pExistente.apellidos || apellidos,
+            cargo: pExistente.cargo || cargo,
+            numero_documento: pExistente.numero_documento || numero_documento,
+            email: pExistente.email || email,
             estado: 'ACTIVO'
           })
           .then(pUpdate => asegurarRolUsuario(pUpdate))

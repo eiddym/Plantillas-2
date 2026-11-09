@@ -361,12 +361,26 @@ module.exports = app => {
                   });
                 }
               }
-              // Busca al usuario con su estado 'ACTIVO'.
+              // Busca al usuario con su estado 'ACTIVO' y sus roles vigentes en BD.
               Usuario.findOne({
                 where:{
                   id_usuario:tokenDecodificado.id_usuario,
                   estado:'ACTIVO',
                 },
+                include: [{
+                  model: app.src.db.models.usuario_rol,
+                  as: 'usuario_rol',
+                  attributes: ['fid_rol'],
+                  where: { estado: 'ACTIVO' },
+                  required: false,
+                  include: [{
+                    model: app.src.db.models.rol,
+                    as: 'rol',
+                    attributes: ['peso', 'nombre'],
+                    where: { estado: 'ACTIVO' },
+                    required: false,
+                  }]
+                }]
               })
               .then(pUsuario => {
                 // Verifica si existe el usuario, si es el mismo usuario del token.
@@ -381,12 +395,16 @@ module.exports = app => {
                       sesionUsuario.lastActivity = Date.now();
                       app.set("sesion", sesion);
 
+                      const rolesActivosDB = (pUsuario.usuario_rol && pUsuario.usuario_rol.length > 0)
+                        ? pUsuario.usuario_rol
+                        : tokenDecodificado.roles;
+
                       // otorga el acceso al sistema.
                       req.body = req.body || {};
                       req.body.audit_usuario={
                         id_usuario: tokenDecodificado.id_usuario,
                         usuario: tokenDecodificado.usuario,
-                        roles:tokenDecodificado.roles,
+                        roles: rolesActivosDB,
                         fid_unidad: pUsuario ? pUsuario.fid_unidad : null,
                         es_mae: pUsuario ? pUsuario.es_mae : false,
                       };
