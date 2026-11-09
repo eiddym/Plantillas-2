@@ -719,6 +719,7 @@ export class LoginComponent implements OnInit {
       this.loading.set(true);
       this.errorMessage.set(null);
       localStorage.setItem('token', ssoToken);
+      localStorage.setItem('auth_method', 'sso');
       this.authService.currentToken.set(ssoToken);
       window.history.replaceState({}, document.title, '/auth/login');
 

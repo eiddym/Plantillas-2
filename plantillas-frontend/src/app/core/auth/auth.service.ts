@@ -53,17 +53,24 @@ export class AuthService {
       this.http.post('/api/v1/cerrar_sesion', {}).subscribe({ error: () => {} });
     }
 
+    const wasSso = localStorage.getItem('auth_method') === 'sso';
+
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('menu');
     localStorage.removeItem('roles');
+    localStorage.removeItem('auth_method');
 
     this.currentUser.set(null);
     this.currentToken.set(null);
     this.currentMenu.set([]);
     this.currentRoles.set([]);
 
-    this.router.navigate(['/auth/login']);
+    if (wasSso) {
+      window.location.href = 'https://homepage.marabuntarl.com/';
+    } else {
+      this.router.navigate(['/auth/login']);
+    }
   }
 
   refrescarSesion(): Observable<any> {
