@@ -381,7 +381,24 @@ html, body {
   }
 
   .page-container {
+    padding: 10px 6px !important;
+  }
+
+  .table-responsive {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .mat-mdc-card {
     padding: 12px 10px !important;
+    border-radius: 10px !important;
+  }
+
+  button.mat-mdc-icon-button {
+    touch-action: manipulation;
   }
 }
 

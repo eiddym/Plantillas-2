@@ -291,79 +291,99 @@ export interface UnidadArchivo {
           @if (nivelActivo() === 'general' && puedeVerGeneral()) {
         <section class="section-container fade-in">
           <!-- Panel Multidimensional de Clasificación por Etiquetas -->
-          <div class="facets-panel" style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-              <strong style="font-size:13px; color:#0f172a; display:flex; align-items:center; gap:6px;">
-                <mat-icon style="font-size:18px; width:18px; height:18px; color:#0284c7;">sell</mat-icon>
-                Clasificación por Etiquetas (Unidad · Tipo · Reserva · Canal · Tags)
-              </strong>
-              @if (tieneFiltrosActivosGeneral()) {
-                <button type="button" class="type-pill" style="background:#fee2e2; color:#991b1b; border-color:#fecaca;" (click)="limpiarFiltrosGeneral()">
-                  Limpiar filtros
+          <div class="facets-panel">
+            <div class="facets-header">
+              <div class="facets-title-box">
+                <mat-icon class="facets-icon">sell</mat-icon>
+                <span class="facets-title">Clasificación por Etiquetas</span>
+                @if (tieneFiltrosActivosGeneral()) {
+                  <span class="active-filters-badge">Activo</span>
+                }
+              </div>
+              <div class="facets-header-actions">
+                @if (tieneFiltrosActivosGeneral()) {
+                  <button type="button" class="btn-clear-filters" (click)="limpiarFiltrosGeneral()" title="Restablecer filtros">
+                    <mat-icon>close</mat-icon>
+                    <span>Limpiar</span>
+                  </button>
+                }
+                <button type="button" class="btn-toggle-facets" (click)="toggleFacetsMobile()">
+                  <mat-icon>{{ facetsAbierto() ? 'expand_less' : 'tune' }}</mat-icon>
+                  <span>{{ facetsAbierto() ? 'Ocultar' : 'Filtrar' }}</span>
                 </button>
-              }
+              </div>
             </div>
 
-            <!-- 1. Por Unidad -->
-            @if (unidadesGeneral().length > 0) {
-              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span class="filter-caption" style="min-width:95px;">Por Unidad:</span>
-                <button class="type-pill" [class.active]="unidadFiltroGeneral() === 'TODAS'" (click)="unidadFiltroGeneral.set('TODAS')">
-                  Todas ({{ totalDocsGeneral() }})
-                </button>
-                @for (u of unidadesGeneral(); track u.id_unidad) {
-                  <button class="type-pill" [class.active]="unidadFiltroGeneral() === u.id_unidad" (click)="unidadFiltroGeneral.set(u.id_unidad)">
-                    {{ u.abreviacion || u.nombre }} ({{ u.total_documentos }})
-                  </button>
-                }
-              </div>
-            }
-
-            <!-- 2. Por Tipo de Documento -->
-            @if (tiposDisponiblesGeneral().length > 0) {
-              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span class="filter-caption" style="min-width:95px;">Por Tipo Doc:</span>
-                <button class="type-pill" [class.active]="tipoFiltroGeneral() === 'TODOS'" (click)="filtrarTipoGeneral('TODOS')">
-                  Todos ({{ totalDocsGeneral() }})
-                </button>
-                @for (tipo of tiposDisponiblesGeneral(); track tipo) {
-                  <button class="type-pill" [class.active]="tipoFiltroGeneral() === tipo" (click)="filtrarTipoGeneral(tipo)">
-                    {{ tipo }} ({{ contarDocsPorTipo(tipo) }})
-                  </button>
-                }
-              </div>
-            }
-
-            <!-- 3. Por Clasificación de Documento y Canal -->
-            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-              <span class="filter-caption" style="min-width:95px;">Clasificación:</span>
-              @for (c of ['TODAS', 'Reservado', 'Confidencial', 'Secreto', 'Desclasificado']; track c) {
-                <button class="type-pill" [class.active]="clasificacionFiltroGeneral() === c" (click)="clasificacionFiltroGeneral.set(c)">
-                  {{ c === 'TODAS' ? 'Todas' : c }}
-                </button>
+            <div class="facets-body" [class.is-collapsed-mobile]="!facetsAbierto()">
+              <!-- 1. Por Unidad -->
+              @if (unidadesGeneral().length > 0) {
+                <div class="facet-strip">
+                  <span class="filter-caption">Unidad:</span>
+                  <div class="facet-chips-scroll">
+                    <button class="type-pill" [class.active]="unidadFiltroGeneral() === 'TODAS'" (click)="unidadFiltroGeneral.set('TODAS')">
+                      Todas ({{ totalDocsGeneral() }})
+                    </button>
+                    @for (u of unidadesGeneral(); track u.id_unidad) {
+                      <button class="type-pill" [class.active]="unidadFiltroGeneral() === u.id_unidad" (click)="unidadFiltroGeneral.set(u.id_unidad)">
+                        {{ u.abreviacion || u.nombre }} ({{ u.total_documentos }})
+                      </button>
+                    }
+                  </div>
+                </div>
               }
-              <span class="filter-caption" style="margin-left:12px;">Origen:</span>
-              @for (orig of origenesFiltroOpciones; track orig.val) {
-                <button class="type-pill" [class.active]="origenFiltroGeneral() === orig.val" (click)="origenFiltroGeneral.set(orig.val)">
-                  {{ orig.label }}
-                </button>
+
+              <!-- 2. Por Tipo de Documento -->
+              @if (tiposDisponiblesGeneral().length > 0) {
+                <div class="facet-strip">
+                  <span class="filter-caption">Tipo Doc:</span>
+                  <div class="facet-chips-scroll">
+                    <button class="type-pill" [class.active]="tipoFiltroGeneral() === 'TODOS'" (click)="filtrarTipoGeneral('TODOS')">
+                      Todos ({{ totalDocsGeneral() }})
+                    </button>
+                    @for (tipo of tiposDisponiblesGeneral(); track tipo) {
+                      <button class="type-pill" [class.active]="tipoFiltroGeneral() === tipo" (click)="filtrarTipoGeneral(tipo)">
+                        {{ tipo }} ({{ contarDocsPorTipo(tipo) }})
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- 3. Por Clasificación de Documento y Canal -->
+              <div class="facet-strip">
+                <span class="filter-caption">Seguridad:</span>
+                <div class="facet-chips-scroll">
+                  @for (c of ['TODAS', 'Reservado', 'Confidencial', 'Secreto', 'Desclasificado']; track c) {
+                    <button class="type-pill" [class.active]="clasificacionFiltroGeneral() === c" (click)="clasificacionFiltroGeneral.set(c)">
+                      {{ c === 'TODAS' ? 'Todas' : c }}
+                    </button>
+                  }
+                  <span class="filter-caption-inline">Origen:</span>
+                  @for (orig of origenesFiltroOpciones; track orig.val) {
+                    <button class="type-pill" [class.active]="origenFiltroGeneral() === orig.val" (click)="origenFiltroGeneral.set(orig.val)">
+                      {{ orig.label }}
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <!-- 4. Por Etiquetas Personalizadas (Tags) -->
+              @if (etiquetasDisponiblesGeneral().length > 0) {
+                <div class="facet-strip">
+                  <span class="filter-caption">Tags:</span>
+                  <div class="facet-chips-scroll">
+                    <button class="type-pill" [class.active]="etiquetaFiltroGeneral() === 'TODAS'" (click)="etiquetaFiltroGeneral.set('TODAS')">
+                      Todas
+                    </button>
+                    @for (item of etiquetasDisponiblesGeneral(); track item.tag) {
+                      <button class="type-pill" [class.active]="etiquetaFiltroGeneral() === item.tag" (click)="etiquetaFiltroGeneral.set(item.tag)">
+                        #{{ item.tag }} ({{ item.total }})
+                      </button>
+                    }
+                  </div>
+                </div>
               }
             </div>
-
-            <!-- 4. Por Etiquetas Personalizadas (Tags) -->
-            @if (etiquetasDisponiblesGeneral().length > 0) {
-              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span class="filter-caption" style="min-width:95px;">Etiquetas:</span>
-                <button class="type-pill" [class.active]="etiquetaFiltroGeneral() === 'TODAS'" (click)="etiquetaFiltroGeneral.set('TODAS')">
-                  Todas
-                </button>
-                @for (item of etiquetasDisponiblesGeneral(); track item.tag) {
-                  <button class="type-pill" [class.active]="etiquetaFiltroGeneral() === item.tag" (click)="etiquetaFiltroGeneral.set(item.tag)">
-                    #{{ item.tag }} ({{ item.total }})
-                  </button>
-                }
-              </div>
-            }
           </div>
 
           <!-- Buscador Rápido -->
@@ -1369,7 +1389,121 @@ export interface UnidadArchivo {
       color: #f59e0b !important;
     }
 
-    /* Filtros Dinámicos de Tipo */
+    /* Filtros Dinámicos y Panel Multidimensional */
+    .facets-panel {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+
+    .facets-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .facets-title-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .facets-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: #0284c7;
+    }
+
+    .facets-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .active-filters-badge {
+      background: #e0f2fe;
+      color: #0369a1;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    .facets-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-clear-filters {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      mat-icon { font-size: 14px; width: 14px; height: 14px; }
+      &:hover { background: #fecaca; }
+    }
+
+    .btn-toggle-facets {
+      display: none;
+      align-items: center;
+      gap: 4px;
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    }
+
+    .facets-body {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .facet-strip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .facet-chips-scroll {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .filter-caption-inline {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #64748b;
+      margin-left: 8px;
+      margin-right: 4px;
+    }
+
     .dynamic-types-bar {
       display: flex;
       align-items: center;
@@ -2799,11 +2933,18 @@ export interface UnidadArchivo {
     }
 
     @media (max-width: 768px) {
+      .archivo-container {
+        padding: 8px 4px !important;
+        gap: 12px !important;
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+      }
+
       .archivo-topbar {
         flex-direction: column !important;
         align-items: flex-start !important;
-        gap: 14px !important;
-        padding: 16px !important;
+        gap: 12px !important;
+        padding: 14px 16px !important;
         border-radius: 12px !important;
 
         .topbar-right {
@@ -2811,44 +2952,216 @@ export interface UnidadArchivo {
           .btn-cargar-institucional {
             width: 100%;
             justify-content: center;
+            height: 38px !important;
+            font-size: 13px !important;
           }
         }
       }
 
       .topbar-left {
-        gap: 12px;
+        gap: 10px;
       }
 
       .topbar-icon {
-        width: 42px;
-        height: 42px;
-        mat-icon { font-size: 22px; width: 22px; height: 22px; }
+        width: 38px;
+        height: 38px;
+        mat-icon { font-size: 20px; width: 20px; height: 20px; }
       }
 
       .topbar-title {
-        font-size: 18px !important;
+        font-size: 16px !important;
       }
 
       .topbar-sub {
-        font-size: 12px !important;
+        font-size: 11.5px !important;
       }
 
       .nivel-tabs-bar {
         overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
         padding-bottom: 6px !important;
         flex-wrap: nowrap !important;
         gap: 8px !important;
+        scrollbar-width: none;
         &::-webkit-scrollbar { display: none; }
       }
 
       .nivel-btn {
-        padding: 8px 12px !important;
-        font-size: 12px !important;
+        padding: 7px 12px !important;
+        font-size: 11.5px !important;
         white-space: nowrap !important;
         flex-shrink: 0 !important;
       }
 
       .content-card {
+        padding: 12px 10px !important;
+        border-radius: 10px !important;
+      }
+
+      .btn-toggle-facets {
+        display: inline-flex !important;
+      }
+
+      .facets-body.is-collapsed-mobile {
+        display: none !important;
+      }
+
+      .facet-strip {
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+      }
+
+      .filter-caption {
+        font-size: 11px !important;
+        min-width: 65px !important;
+        flex-shrink: 0 !important;
+      }
+
+      .filter-caption-inline {
+        display: none !important;
+      }
+
+      .facet-chips-scroll {
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding-bottom: 4px !important;
+        scrollbar-width: none !important;
+        &::-webkit-scrollbar { display: none !important; }
+      }
+
+      .type-pill {
+        flex-shrink: 0 !important;
+        font-size: 11px !important;
+        padding: 4px 10px !important;
+      }
+
+      /* Tarjeta de Documento en Móvil: Sin desborde */
+      .doc-item-card {
+        padding: 10px 12px !important;
+        gap: 8px !important;
+        box-sizing: border-box !important;
+        width: 100% !important;
+      }
+
+      .doc-row-top {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 6px !important;
+        width: 100% !important;
+      }
+
+      .cite-group {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+      }
+
+      .cite-badge-mono {
+        max-width: calc(100% - 36px) !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        font-size: 11.5px !important;
+        padding: 3px 8px !important;
+        box-sizing: border-box !important;
+      }
+
+      .meta-badges-group {
+        gap: 4px !important;
+        width: 100% !important;
+      }
+
+      .tipo-tag, .sigla-tag, .cat-pill, .unit-tag, .version-badge {
+        font-size: 10.5px !important;
+        padding: 2px 6px !important;
+      }
+
+      .date-badge {
+        font-size: 10.5px !important;
+      }
+
+      .doc-row-bottom {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 6px !important;
+        width: 100% !important;
+      }
+
+      .doc-desc-container {
+        width: 100% !important;
+      }
+
+      .doc-desc-text {
+        font-size: 11.5px !important;
+        line-height: 1.35 !important;
+      }
+
+      .action-btn-row {
+        width: 100% !important;
+        justify-content: flex-end !important;
+        border-top: 1px dashed #f1f5f9 !important;
+        padding-top: 4px !important;
+        gap: 4px !important;
+      }
+
+      .btn-action {
+        width: 32px !important;
+        height: 32px !important;
+        mat-icon { font-size: 18px !important; width: 18px !important; height: 18px !important; }
+      }
+
+      /* Visor embebido adaptable en móviles */
+      .visor-embebido-panel {
+        max-height: 55vh !important;
+        margin-bottom: 14px !important;
+        width: 100% !important;
+      }
+
+      .visor-card {
+        max-height: 55vh !important;
+      }
+
+      .visor-header {
+        padding: 8px 12px !important;
+      }
+
+      .visor-badge-cite {
+        font-size: 11px !important;
+        max-width: 150px !important;
+      }
+
+      .visor-doc-titulo {
+        display: none !important;
+      }
+
+      /* Modales responsive */
+      .modal-card {
+        max-width: 96vw !important;
+        margin: 6px !important;
+        border-radius: 12px !important;
+      }
+
+      .modal-header {
+        padding: 14px 16px !important;
+      }
+
+      .modal-form {
+        grid-template-columns: 1fr !important;
+        padding: 14px !important;
+        gap: 10px !important;
+      }
+
+      .col-span-full {
+        grid-column: span 1 !important;
+      }
+
+      .modal-actions {
+        flex-direction: column !important;
+        button { width: 100% !important; }
+      }
+
+      .modal-body-versions {
         padding: 12px !important;
       }
     }
@@ -2933,6 +3246,11 @@ export class ArchivoComponent implements OnInit {
     { val: 'VENTANILLA_INTERNA', label: 'Ventanilla Interna' },
     { val: 'INSTITUCIONAL', label: 'Institucional' }
   ];
+
+  readonly facetsAbierto = signal<boolean>(false);
+  toggleFacetsMobile(): void {
+    this.facetsAbierto.update(v => !v);
+  }
 
   // Datos de Archivo de Unidad
   readonly dataUnidadActual = signal<any | null>(null);

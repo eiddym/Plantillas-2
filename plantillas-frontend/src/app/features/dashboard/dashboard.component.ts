@@ -264,6 +264,9 @@ interface DashboardSection {
     .home-portal-container {
       max-width: 1280px;
       margin: 0 auto;
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
       font-family: 'Plus Jakarta Sans', 'Poppins', sans-serif;
     }
 
@@ -759,32 +762,108 @@ interface DashboardSection {
       .home-welcome-header {
         flex-direction: column;
         align-items: stretch;
-        gap: 14px;
-        margin-bottom: 18px;
+        gap: 12px;
+        margin-bottom: 16px;
 
-        h1 { font-size: 1.35rem; }
+        h1 { font-size: 1.25rem; }
+        .subtitle { font-size: 0.8rem; }
         .welcome-actions { width: 100%; }
-        .btn-redactar-doc { width: 100% !important; justify-content: center !important; }
+        .btn-redactar-doc { width: 100% !important; justify-content: center !important; height: 40px !important; }
       }
 
       .kpi-grid {
         grid-template-columns: 1fr;
-        gap: 12px;
+        gap: 10px;
       }
 
       .kpi-card {
-        padding: 14px 18px;
+        padding: 12px 14px;
+        gap: 14px;
+        border-radius: 10px;
+      }
+
+      .kpi-big-number {
+        font-size: 1.75rem;
+      }
+
+      .kpi-title {
+        font-size: 0.74rem;
+      }
+
+      .kpi-desc {
+        font-size: 0.72rem;
       }
 
       .quick-actions-bar {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
         gap: 8px;
-        .actions-label { width: 100%; margin-bottom: 4px; }
-        .quick-action-btn { flex: 1 1 100%; justify-content: center; }
+        padding-bottom: 6px;
+        margin-bottom: 16px;
+        scrollbar-width: none;
+        &::-webkit-scrollbar { display: none; }
+        .actions-label { display: none; }
+        .quick-action-btn {
+          flex: 0 0 auto;
+          white-space: nowrap;
+          height: 32px !important;
+          font-size: 0.76rem !important;
+          padding: 0 12px !important;
+        }
+      }
+
+      .charts-section {
+        grid-template-columns: 1fr !important;
+        gap: 14px;
+        margin-bottom: 20px;
+      }
+
+      .chart-card {
+        padding: 14px 12px 8px 12px;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .recent-tramites-section {
+        padding: 14px 12px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+      }
+
+      .module-section-box {
+        padding: 14px 12px;
+        border-radius: 10px;
+      }
+
+      .capsules-bar {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 8px;
+        padding-bottom: 10px;
+        margin-bottom: 14px;
+        scrollbar-width: none;
+        &::-webkit-scrollbar { display: none; }
+      }
+
+      .capsule-btn {
+        flex: 0 0 auto;
+        padding: 6px 12px;
+        font-size: 0.72rem;
+        border-radius: 6px;
+        .capsule-icon { font-size: 16px; width: 16px; height: 16px; }
       }
 
       .modules-cards-grid {
         grid-template-columns: 1fr;
-        gap: 12px;
+        gap: 10px;
+      }
+
+      .module-card {
+        padding: 12px 14px;
+        gap: 8px;
       }
     }
   `]

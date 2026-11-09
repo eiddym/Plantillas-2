@@ -618,8 +618,35 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
     /* RESPONSIVE */
     @media (max-width: 860px) {
       .main-topbar {
-        padding: 0 10px;
+        padding: 0 8px;
         height: 52px;
+        gap: 6px;
+      }
+      .topbar-icon-btn {
+        width: 36px;
+        height: 36px;
+      }
+      .topbar-home-btn {
+        padding: 4px;
+      }
+      .breadcrumb-container {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: none;
+      }
+      .breadcrumb-title {
+        font-size: 0.82rem;
+      }
+      .home-topbar-brand {
+        flex: 1 1 auto;
+        min-width: 0;
+        gap: 8px;
+      }
+      .user-handle {
+        font-size: 0.85rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .action-hide-mobile {
         display: none !important;
@@ -628,13 +655,18 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
         display: none;
       }
       .main-content {
-        padding: 14px 10px;
+        padding: 10px 8px;
+        box-sizing: border-box;
       }
       .main-content-home {
-        padding: 14px 10px;
+        padding: 12px 10px;
+        box-sizing: border-box;
       }
       .sidenav-container {
         height: calc(100vh - 52px);
+      }
+      .dark-institutional-sidenav {
+        width: min(84vw, 280px) !important;
       }
     }
   `]

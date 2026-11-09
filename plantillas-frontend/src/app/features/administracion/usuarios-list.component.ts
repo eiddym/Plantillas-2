@@ -674,7 +674,21 @@ import { AuthService } from '../../core/auth/auth.service';
     }
 
     @media (max-width: 768px) {
-      .modal-columns-grid { grid-template-columns: 1fr; }
+      .modal-columns-grid { grid-template-columns: 1fr; gap: 14px; }
+      .modal-overlay { padding: 8px !important; }
+      .user-modal-card { max-height: 96vh !important; max-width: 98vw !important; border-radius: 10px !important; }
+      .user-modal-form { padding: 14px 12px !important; }
+      .modal-header-bar { padding: 10px 14px !important; }
+      .action-btn-bar {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        padding: 12px !important;
+        gap: 10px !important;
+      }
+      .filter-input-wrap { max-width: 100% !important; }
+      .btn-add-user { width: 100% !important; border-radius: 8px !important; height: 38px !important; }
+      .table-card-custom { border-radius: 10px !important; }
+      .card-header-bar { padding: 10px 14px !important; }
     }
 
     .modal-col-card {

@@ -1372,10 +1372,51 @@ export interface DocumentoVentanilla {
     }
 
     @media (max-width: 640px) {
+      .vu-page-container {
+        padding: 8px 4px !important;
+        gap: 12px !important;
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+      }
       .vu-header {
         flex-direction: column;
         align-items: flex-start;
         gap: 12px;
+        padding: 14px 16px !important;
+        border-radius: 12px !important;
+      }
+      .header-icon-box {
+        width: 40px !important;
+        height: 40px !important;
+        mat-icon { font-size: 22px !important; width: 22px !important; height: 22px !important; }
+      }
+      .header-title {
+        font-size: 17px !important;
+      }
+      .header-desc {
+        font-size: 11.5px !important;
+      }
+      .vu-tabs-nav {
+        flex-direction: column !important;
+        gap: 8px !important;
+      }
+      .vu-tab-btn {
+        padding: 10px 14px !important;
+        gap: 10px !important;
+      }
+      .form-grid-modal {
+        grid-template-columns: 1fr !important;
+      }
+      .modal-card {
+        max-width: 96vw !important;
+        margin: 6px !important;
+        border-radius: 12px !important;
+      }
+      .modal-header {
+        padding: 14px 16px !important;
+      }
+      .modal-body-form {
+        padding: 14px 14px !important;
       }
       .vu-header-actions {
         width: 100%;
