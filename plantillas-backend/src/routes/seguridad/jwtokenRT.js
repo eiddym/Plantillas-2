@@ -570,5 +570,271 @@ app.post('/api/v1/cerrar_sesion', (req, res) => {
   }
 });
 
+  const axios = require('axios');
+
+  const SSO_SECRET = process.env.SSO_SHARED_SECRET || 'marabunta_sso_shared_secret_2026_09d7a2f14e';
+
+  function verifySsoTicket(ticket) {
+    if (!ticket || typeof ticket !== 'string' || !ticket.includes('.')) return null;
+    const parts = ticket.split('.');
+    if (parts.length !== 2) return null;
+    const [b64, sig] = parts;
+
+    // Verificar firma HMAC-SHA256 con SSO_SECRET o JWT_SECRET
+    const expectedSig1 = crypto.createHmac('sha256', SSO_SECRET).update(b64).digest('hex');
+    const expectedSig2 = crypto.createHmac('sha256', cfg.jwtSecret || '').update(b64).digest('hex');
+
+    if (sig !== expectedSig1 && sig !== expectedSig2) {
+      return null;
+    }
+
+    try {
+      const jsonStr = Buffer.from(b64, 'base64').toString('utf8');
+      const data = JSON.parse(jsonStr);
+      const now = Math.floor(Date.now() / 1000);
+      if (!data.exp || data.exp < now) {
+        return null;
+      }
+      return data;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function generarSesionYToken(usuarioInstancia, esLdap = true) {
+    const pRoles = await bl.obtenerRoles(UsuariosRoles, Roles, usuarioInstancia.id_usuario);
+    const pRespuestaMenu = await bl.obtenerMenus(RolesMenus, Menus, pRoles);
+    const menu = pRespuestaMenu.menu;
+    const roles = pRespuestaMenu.rol;
+
+    const cifrar = {
+      id_usuario: usuarioInstancia.id_usuario,
+      usuario: usuarioInstancia.usuario,
+      secret: jwt.encode({
+        fecha: moment().tz('America/La_Paz').add(cfg.tiempo_token, 'minutes').format(),
+        clave: Uuid.v4(),
+      }, cfg.jwtSecret),
+      clave: Uuid.v4(),
+      tiempo: cfg.tiempo_token,
+      virtual: usuarioInstancia.virtual,
+      roles,
+    };
+
+    const usuarioEnviar = {
+      id: usuarioInstancia.id_usuario,
+      username: usuarioInstancia.usuario,
+      first_name: usuarioInstancia.nombres,
+      last_name: usuarioInstancia.apellidos,
+      cargo: usuarioInstancia.cargo,
+      doc: usuarioInstancia.numero_documento,
+      email: usuarioInstancia.email,
+      foto: usuarioInstancia.foto,
+      date_joined: usuarioInstancia._fecha_creacion,
+      ldap: esLdap,
+      id_unidad: usuarioInstancia.fid_unidad,
+      fid_unidad: usuarioInstancia.fid_unidad,
+      es_mae: usuarioInstancia.es_mae || false
+    };
+
+    const datosTemporal = {
+      user: usuarioEnviar,
+      menu: menu.menu,
+      menuEntrar: menu.menuEntrar,
+      roles,
+    };
+
+    const token = jwt.encode(cifrar, cfg.jwtSecret);
+    const sesion = app.get("sesion") || {};
+    const sesionesCerradas = app.get("sesionesCerradas") || {};
+
+    if (sesion[usuarioInstancia.id_usuario] && sesion[usuarioInstancia.id_usuario].token) {
+      sesionesCerradas[sesion[usuarioInstancia.id_usuario].token] = Date.now();
+      if (sesion[usuarioInstancia.id_usuario].backup) {
+        sesionesCerradas[sesion[usuarioInstancia.id_usuario].backup] = Date.now();
+      }
+      app.set("sesionesCerradas", sesionesCerradas);
+    }
+
+    sesion[usuarioInstancia.id_usuario] = {
+      createdAt: Date.now(),
+      lastActivity: Date.now(),
+      fecha: moment(moment().tz('America/La_Paz').format()).add(1, 'minutes'),
+      backup: null,
+      token,
+    };
+    app.set("sesion", sesion);
+
+    return { token, datosTemporal };
+  }
+
+  const oidcStateStore = new Map();
+
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, val] of oidcStateStore.entries()) {
+      if (val.exp < now) oidcStateStore.delete(key);
+    }
+  }, 300000);
+
+  /**
+   * Endpoint de consumo de tickets SSO (desde Homepage / Intranet Marabunta)
+   */
+  app.get('/api/v1/auth/sso/consume', async (req, res) => {
+    try {
+      const ticket = req.query.ticket;
+      const ticketData = verifySsoTicket(ticket);
+      if (!ticketData) {
+        return res.redirect(302, '/api/v1/auth/oidc/login');
+      }
+
+      const rawUsername = ticketData.username || ticketData.email || 'usuario';
+      const cleanUsername = rawUsername.split('@')[0].trim().toLowerCase();
+      const email = ticketData.email || `${cleanUsername}@marabuntarl.com`;
+      const fullName = ticketData.name || cleanUsername;
+      const nameObj = parseNombreCompleto(fullName, cleanUsername);
+
+      const userData = {
+        uid: cleanUsername,
+        username: cleanUsername,
+        email: email,
+        nombre: nameObj.nombres,
+        apellido: nameObj.apellidos,
+        cargo: ticketData.title || 'Socio Cooperativista',
+        numero_documento: '11111111',
+        memberOf: ticketData.groups || []
+      };
+
+      const userInstance = await bl.procesaUsuario(userData, UsuariosRoles, Unidad, AuthUser, usuarios);
+      await ConfNotificacion.findOrCreate({
+        where: { fid_usuario: userInstance.id_usuario },
+        defaults: {
+          fid_usuario: userInstance.id_usuario,
+          _usuario_creacion: userInstance.id_usuario,
+        }
+      });
+
+      const { token } = await generarSesionYToken(userInstance, true);
+      return res.redirect(302, `/auth/login?sso_token=${encodeURIComponent(token)}`);
+    } catch (err) {
+      console.error('Error en consumo de ticket SSO:', err);
+      return res.redirect(302, '/auth/login?error=sso_failed');
+    }
+  });
+
+  /**
+   * Endpoint para iniciar autenticación OIDC con Authentik
+   */
+  app.get('/api/v1/auth/oidc/login', (req, res) => {
+    try {
+      const clientId = process.env.OIDC_CLIENT_ID || 'marabunta-plantillas-d472c91a03e8';
+      const redirectUri = process.env.OIDC_REDIRECT_URI || 'https://docs.marabuntarl.com/api/v1/auth/oidc/callback';
+      const authEndpoint = 'https://auth.marabuntarl.com/application/o/authorize/';
+
+      const state = crypto.randomBytes(16).toString('hex');
+      oidcStateStore.set(state, { exp: Date.now() + 10 * 60 * 1000 });
+
+      const params = new URLSearchParams({
+        response_type: 'code',
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        scope: 'openid profile email',
+        state: state
+      });
+
+      return res.redirect(302, `${authEndpoint}?${params.toString()}`);
+    } catch (err) {
+      console.error('Error iniciando OIDC login:', err);
+      return res.redirect(302, '/auth/login?error=oidc_start_failed');
+    }
+  });
+
+  /**
+   * Callback OIDC tras autorización exitosa en Authentik
+   */
+  app.get('/api/v1/auth/oidc/callback', async (req, res) => {
+    try {
+      const { code, state, error } = req.query;
+      if (error) {
+        console.error('Error recibido de OIDC provider:', error);
+        return res.redirect(302, `/auth/login?error=${encodeURIComponent(error)}`);
+      }
+
+      if (!code || !state || !oidcStateStore.has(state)) {
+        return res.redirect(302, '/auth/login?error=state_invalido');
+      }
+      oidcStateStore.delete(state);
+
+      const clientId = process.env.OIDC_CLIENT_ID || 'marabunta-plantillas-d472c91a03e8';
+      const clientSecret = process.env.OIDC_CLIENT_SECRET || 'bja_plantillas_sec_99a8f27b5e408c16';
+      const redirectUri = process.env.OIDC_REDIRECT_URI || 'https://docs.marabuntarl.com/api/v1/auth/oidc/callback';
+
+      const tokenRes = await axios.post('https://auth.marabuntarl.com/application/o/token/', 
+        new URLSearchParams({
+          grant_type: 'authorization_code',
+          code: code,
+          redirect_uri: redirectUri,
+          client_id: clientId,
+          client_secret: clientSecret
+        }).toString(),
+        {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          timeout: 10000
+        }
+      );
+
+      const accessToken = tokenRes.data && tokenRes.data.access_token;
+      if (!accessToken) {
+        throw new Error('No se recibió access_token de Authentik');
+      }
+
+      const userInfoRes = await axios.get('https://auth.marabuntarl.com/application/o/userinfo/', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        timeout: 10000
+      });
+
+      const info = userInfoRes.data || {};
+      const rawUsername = info.preferred_username || info.email || info.sub || 'usuario';
+      const cleanUsername = rawUsername.split('@')[0].trim().toLowerCase();
+      const email = info.email || `${cleanUsername}@marabuntarl.com`;
+      const fullName = info.name || cleanUsername;
+      const nameObj = parseNombreCompleto(fullName, cleanUsername, info.given_name, info.family_name);
+
+      let cargo = info.cargo || info.title || (info.attributes && info.attributes.cargo);
+      if (!cargo) {
+        if (cleanUsername === 'ariel.ayaviri' || cleanUsername === 'admin') {
+          cargo = 'Presidente del Consejo de Vigilancia';
+        } else {
+          cargo = 'Socio Cooperativista';
+        }
+      }
+
+      const userData = {
+        uid: cleanUsername,
+        username: cleanUsername,
+        email: email,
+        nombre: nameObj.nombres,
+        apellido: nameObj.apellidos,
+        cargo: cargo,
+        numero_documento: '11111111',
+        memberOf: info.groups || []
+      };
+
+      const userInstance = await bl.procesaUsuario(userData, UsuariosRoles, Unidad, AuthUser, usuarios);
+      await ConfNotificacion.findOrCreate({
+        where: { fid_usuario: userInstance.id_usuario },
+        defaults: {
+          fid_usuario: userInstance.id_usuario,
+          _usuario_creacion: userInstance.id_usuario,
+        }
+      });
+
+      const { token } = await generarSesionYToken(userInstance, true);
+      return res.redirect(302, `/auth/login?sso_token=${encodeURIComponent(token)}`);
+    } catch (err) {
+      console.error('Error en OIDC callback:', err);
+      return res.redirect(302, '/auth/login?error=oidc_callback_failed');
+    }
+  });
+
 
 };

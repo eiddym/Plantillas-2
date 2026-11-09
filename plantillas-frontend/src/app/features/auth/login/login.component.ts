@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -101,6 +101,17 @@ import { AuthService } from '../../../core/auth/auth.service';
               {{ loading() ? 'INICIANDO SESIÓN...' : 'INICIAR SESIÓN' }}
             </button>
           </form>
+
+          <!-- Acceso SSO Marabunta ID -->
+          <div class="sso-container">
+            <div class="sso-separator">
+              <span>o accede directamente</span>
+            </div>
+            <a href="/api/v1/auth/oidc/login" class="btn-sso">
+              <mat-icon class="sso-icon">vpn_key</mat-icon>
+              <span>Acceder con Marabunta ID (SSO)</span>
+            </a>
+          </div>
 
           <!-- Enlaces Públicos Destacados Institucionales -->
           <div class="enlaces-publicos">
@@ -341,6 +352,68 @@ import { AuthService } from '../../../core/auth/auth.service';
       }
     }
 
+    /* --- BOTÓN SSO MARABUNTA ID --- */
+    .sso-container {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .sso-separator {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      color: rgba(15, 32, 39, 0.45);
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+
+      &::before,
+      &::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid rgba(15, 32, 39, 0.12);
+      }
+
+      span {
+        padding: 0 10px;
+      }
+    }
+
+    .btn-sso {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 44px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, #1b3842 0%, #0f2027 100%);
+      color: #e0f2f1;
+      font-weight: 600;
+      font-size: 13px;
+      text-decoration: none;
+      letter-spacing: 0.3px;
+      box-shadow: 0 2px 8px rgba(15, 32, 39, 0.2);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+
+      &:hover {
+        background: linear-gradient(135deg, #244b58 0%, #152c35 100%);
+        color: #ffffff;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(15, 32, 39, 0.3);
+      }
+
+      .sso-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: #80cbc4;
+      }
+    }
+
     /* --- ENLACES PÚBLICOS DESTACADOS --- */
     .enlaces-publicos {
       display: flex;
@@ -544,6 +617,17 @@ import { AuthService } from '../../../core/auth/auth.service';
         margin-top: 3px;
       }
 
+      .sso-container {
+        margin-top: 10px;
+        gap: 8px;
+      }
+
+      .btn-sso {
+        height: 40px;
+        font-size: 12px;
+        border-radius: 20px;
+      }
+
       .enlaces-publicos {
         margin-top: 14px;
         gap: 8px;
@@ -602,7 +686,7 @@ import { AuthService } from '../../../core/auth/auth.service';
     }
   `]
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
@@ -619,6 +703,47 @@ export class LoginComponent {
   readonly hidePassword = signal(true);
   readonly loading = signal(false);
   readonly errorMessage = signal<string | null>(null);
+
+  ngOnInit(): void {
+    const params = new URLSearchParams(window.location.search);
+    const ssoToken = params.get('sso_token');
+    const ssoError = params.get('error');
+
+    if (ssoError) {
+      this.errorMessage.set('Error en la autenticación SSO. Inicie sesión con sus credenciales.');
+      window.history.replaceState({}, document.title, '/auth/login');
+      return;
+    }
+
+    if (ssoToken) {
+      this.loading.set(true);
+      this.errorMessage.set(null);
+      localStorage.setItem('token', ssoToken);
+      this.authService.currentToken.set(ssoToken);
+      window.history.replaceState({}, document.title, '/auth/login');
+
+      this.authService.refrescarSesion().subscribe({
+        next: (res) => {
+          this.loading.set(false);
+          if (res.tipoMensaje === 'EXITO') {
+            this.authService.iniciarMonitoreoActividad();
+            const roles = this.authService.currentRoles();
+            if (roles && roles.length > 1) {
+              this.router.navigate(['/elegir']);
+            } else {
+              this.router.navigate(['/dashboard']);
+            }
+          } else {
+            this.errorMessage.set(res.mensaje || 'Error al validar sesión SSO');
+          }
+        },
+        error: () => {
+          this.loading.set(false);
+          this.errorMessage.set('No se pudo verificar la sesión SSO.');
+        }
+      });
+    }
+  }
 
   onLogoError(): void {
     if (!this.fallbackTried) {

@@ -163,6 +163,11 @@ services:
       CITE_GUIA: ${CITE_GUIA:-PLANTILLAS}
       CITE_DIGITOS: ${CITE_DIGITOS:-5}
       SYS_DEFAULT_USER: ${SYS_DEFAULT_USER:-sys_default}
+      AUTHENTIK_ISSUER: ${AUTHENTIK_ISSUER:-https://auth.marabuntarl.com/application/o/plantillas/}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-marabunta-plantillas-d472c91a03e8}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-bja_plantillas_sec_99a8f27b5e408c16}
+      OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:-https://docs.marabuntarl.com/api/v1/auth/oidc/callback}
+      SSO_SHARED_SECRET: ${SSO_SHARED_SECRET:-marabunta_sso_shared_secret_2026_09d7a2f14e}
       SYS_DEFAULT_PASSWORD: ${SYS_DEFAULT_PASSWORD:-Developer}
       DEMO_CD_USER: ${DEMO_CD_USER:-10794552-1J}
       IDENTIFICADOR_DIRECTOR: ${IDENTIFICADOR_DIRECTOR:-2}
