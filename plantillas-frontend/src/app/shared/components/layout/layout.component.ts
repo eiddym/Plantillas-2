@@ -213,12 +213,12 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
       font-family: var(--font-ui);
     }
 
-    /* TOPBAR INSTITUCIONAL */
+    /* TOPBAR MODERNO */
     .main-topbar {
       position: sticky;
       top: 0;
       z-index: 1000;
-      background: var(--petrol);
+      background: var(--petrol-gradient);
       color: #ffffff;
       height: 56px;
       padding: 0 16px;
@@ -226,6 +226,7 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
       align-items: center;
       gap: 12px;
       border-bottom: 2px solid var(--gold);
+      box-shadow: 0 4px 16px rgba(11, 36, 42, 0.18);
     }
 
     .topbar-icon-btn.mat-mdc-icon-button {
@@ -297,8 +298,8 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
     .home-avatar-circle {
       width: 34px;
       height: 34px;
-      border-radius: 8px;
-      background: var(--gold);
+      border-radius: 10px;
+      background: linear-gradient(135deg, #d6a84f 0%, #b38222 100%);
       color: #ffffff;
       display: flex;
       align-items: center;
@@ -307,6 +308,7 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
       font-size: 0.9rem;
       overflow: hidden;
       flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(214, 168, 79, 0.3);
     }
 
     .avatar-circle-img {
@@ -395,8 +397,8 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
     /* DARK INSTITUTIONAL SIDENAV */
     .dark-institutional-sidenav {
       width: 266px;
-      background: var(--petrol);
-      color: rgba(255, 255, 255, 0.85);
+      background: linear-gradient(180deg, #0b242a 0%, #10353d 100%);
+      color: rgba(255, 255, 255, 0.88);
       border-right: 1px solid rgba(255, 255, 255, 0.08);
       display: flex;
       flex-direction: column;
@@ -569,12 +571,12 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
     }
 
     .active-subitem.subitem-link {
-      background: rgba(214, 168, 79, 0.16);
-      color: #f2e3c0;
+      background: linear-gradient(90deg, rgba(14, 116, 144, 0.34), rgba(214, 168, 79, 0.14));
+      color: #f8e5b5;
       font-weight: 700;
       border-left-color: var(--gold);
       .subitem-icon {
-        color: #f2e3c0;
+        color: #f8e5b5;
       }
     }
 

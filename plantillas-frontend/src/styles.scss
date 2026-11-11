@@ -3,32 +3,32 @@
 @include mat.core();
 
 /* ==========================================================================
-   SISTEMA DE DISEÑO INSTITUCIONAL — COOPERATIVA MINERA MARABUNTA R.L.
-   Paleta sobria de archivo documental alineada al ecosistema Marabunta:
-     1. Papel mineral   (#f4f5f2)  — Canvas de descanso visual
-     2. Superficie      (#ffffff)  — Hoja y paneles operativos
-     3. Tinta mineral   (#141b12)  — Tinta primaria de alto contraste
-     4. Petról oscuro   (#162c2f)  — Estructura institucional y acción primaria
-     5. Oro Marabunta   (#b38222)  — Único acento institucional (enfoque, sellos, activos)
+   SISTEMA DE DISEÑO MODERNO — COOPERATIVA MINERA MARABUNTA R.L.
+   Estética contemporánea limpia y luminosa alineada al ecosistema Marabunta:
+     1. Slate claro     (#f1f5f9)  — Canvas nítido con contraste limpio
+     2. Superficie      (#ffffff)  — Tarjetas y paneles elevados
+     3. Tinta pizarra   (#0f172a)  — Tipografía nítida de alto contraste
+     4. Petról oceánico (#0f2e34)  — Estructura y gradiente institucional
+     5. Teal & Oro      (#0e7490 / #d6a84f) — Acentos vivos y estado activo
    ========================================================================== */
 
 $marabunta-petrol-palette: (
-  50: #e9eeef,
-  100: #c8d4d6,
-  200: #a3b7ba,
-  300: #7d9a9e,
-  400: #60848a,
-  500: #446e75,
-  600: #375d63,
-  700: #27484d,
-  800: #162c2f,
-  900: #0c1b1d,
+  50: #ecfeff,
+  100: #cffafe,
+  200: #a5f3fc,
+  300: #67e8f9,
+  400: #22d3ee,
+  500: #0e7490,
+  600: #155e75,
+  700: #164e63,
+  800: #0f2e34,
+  900: #081e22,
   contrast: (
-    50: #141b12,
-    100: #141b12,
-    200: #141b12,
-    300: #141b12,
-    400: #ffffff,
+    50: #0f172a,
+    100: #0f172a,
+    200: #0f172a,
+    300: #0f172a,
+    400: #0f172a,
     500: #ffffff,
     600: #ffffff,
     700: #ffffff,
@@ -87,9 +87,9 @@ $marabunta-warn-palette: (
   )
 );
 
-$marabunta-primary: mat.define-palette($marabunta-petrol-palette, 800, 600, 900);
-$marabunta-accent: mat.define-palette($marabunta-gold-palette, 700, 500, 800);
-$marabunta-warn: mat.define-palette($marabunta-warn-palette, 700, 600, 800);
+$marabunta-primary: mat.define-palette($marabunta-petrol-palette, 500, 300, 800);
+$marabunta-accent: mat.define-palette($marabunta-gold-palette, 600, 500, 800);
+$marabunta-warn: mat.define-palette($marabunta-warn-palette, 600, 500, 800);
 
 $marabunta-typography: mat.define-typography-config(
   $font-family: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
@@ -108,30 +108,33 @@ $marabunta-theme: mat.define-light-theme((
 @include mat.all-component-themes($marabunta-theme);
 
 :root {
-  /* Paleta Central (6 tokens principales) */
-  --paper-canvas: #f4f5f2;
+  /* Paleta Central Moderna */
+  --paper-canvas: #f1f5f9;
   --surface: #ffffff;
-  --ink: #141b12;
-  --ink-muted: #525e4e;
-  --petrol: #162c2f;
-  --petrol-soft: #203d41;
-  --gold: #b38222;
-  --gold-hover: #936814;
-  --gold-soft: rgba(179, 130, 34, 0.12);
-  --line: #dde2da;
-  --line-strong: #c7cfc2;
+  --surface-tinted: #f8fafc;
+  --ink: #0f172a;
+  --ink-muted: #475569;
+  --petrol: #0f2e34;
+  --petrol-soft: #154d57;
+  --petrol-bright: #0e7490;
+  --petrol-gradient: linear-gradient(135deg, #0b242a 0%, #13444e 55%, #0e6b78 100%);
+  --gold: #d6a84f;
+  --gold-hover: #b38222;
+  --gold-soft: rgba(214, 168, 79, 0.16);
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
 
-  /* Estados Semánticos Discretos */
-  --state-ok: #15803d;
-  --state-ok-bg: #eef7f0;
-  --state-warn: #b45309;
-  --state-warn-bg: #fdf6e9;
-  --state-err: #b91c1c;
-  --state-err-bg: #fdf0f0;
-  --state-info: #1e4d5c;
-  --state-info-bg: #edf4f6;
+  /* Estados Semánticos Vivos */
+  --state-ok: #059669;
+  --state-ok-bg: #d1fae5;
+  --state-warn: #d97706;
+  --state-warn-bg: #fef3c7;
+  --state-err: #dc2626;
+  --state-err-bg: #fee2e2;
+  --state-info: #0284c7;
+  --state-info-bg: #e0f2fe;
 
-  /* Fuentes reales cargadas */
+  /* Fuentes reales cargadas (UI siempre Plus Jakarta Sans; Literata reservada a papel físico) */
   --font-ui: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-serif: 'Literata', Georgia, serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;

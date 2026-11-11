@@ -277,38 +277,41 @@ interface DashboardSection {
 
       h1 {
         margin: 0;
-        font-family: var(--font-serif);
-        font-size: 1.65rem;
-        font-weight: 700;
+        font-family: var(--font-ui);
+        font-size: 1.7rem;
+        font-weight: 800;
         color: var(--ink);
-        letter-spacing: -0.015em;
+        letter-spacing: -0.025em;
       }
 
       .subtitle {
         margin: 4px 0 0 0;
-        font-size: 0.88rem;
+        font-size: 0.9rem;
         color: var(--ink-muted);
       }
     }
 
     .btn-redactar-doc.mat-mdc-raised-button {
-      background-color: var(--petrol);
+      background: linear-gradient(135deg, #0f3a42 0%, #0e7490 100%);
       color: #ffffff;
-      border-radius: 8px;
-      padding: 0 20px;
-      height: 42px;
-      font-weight: 600;
+      border-radius: 12px;
+      padding: 0 22px;
+      height: 44px;
+      font-weight: 700;
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      box-shadow: none;
+      box-shadow: 0 6px 16px rgba(14, 116, 144, 0.25);
+      transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
 
       &:hover {
-        background-color: var(--petrol-soft);
+        transform: translateY(-1px);
+        box-shadow: 0 10px 22px rgba(14, 116, 144, 0.32);
+        filter: brightness(1.06);
       }
 
       mat-icon {
-        color: #ead196;
+        color: #f5dfaa;
       }
     }
 
@@ -322,7 +325,8 @@ interface DashboardSection {
       grid-template-columns: repeat(3, 1fr);
       background: var(--surface);
       border: 1px solid var(--line);
-      border-radius: 10px;
+      border-radius: 14px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
       overflow: hidden;
     }
 
@@ -341,20 +345,20 @@ interface DashboardSection {
       }
 
       &:hover {
-        background: var(--paper-canvas);
+        background: var(--surface-tinted);
       }
     }
 
     .tray-dot {
-      width: 9px;
-      height: 9px;
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
       flex-shrink: 0;
     }
 
-    .dot-petrol { background: var(--petrol); }
-    .dot-warn { background: var(--state-warn); }
-    .dot-ok { background: var(--state-ok); }
+    .dot-petrol { background: var(--state-info); box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.14); }
+    .dot-warn { background: var(--state-warn); box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.14); }
+    .dot-ok { background: var(--state-ok); box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.14); }
 
     .tray-metric-body {
       flex: 1;
@@ -376,10 +380,10 @@ interface DashboardSection {
     }
 
     .tray-value {
-      font-size: 1.5rem;
-      font-weight: 700;
+      font-size: 1.55rem;
+      font-weight: 800;
       font-variant-numeric: tabular-nums;
-      color: var(--petrol);
+      color: var(--state-info);
     }
 
     .value-warn { color: var(--state-warn); }
@@ -402,7 +406,7 @@ interface DashboardSection {
     }
 
     .quick-action-btn.mat-mdc-outlined-button {
-      border-radius: 8px;
+      border-radius: 10px;
       border-color: var(--line-strong);
       color: var(--ink);
       background: var(--surface);
@@ -410,18 +414,23 @@ interface DashboardSection {
       font-size: 0.82rem;
       height: 36px;
 
-      mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--ink-muted); }
+      mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--petrol-bright); }
 
       &:hover {
-        border-color: var(--gold);
+        border-color: var(--petrol-bright);
+        background: #f0f9ff;
         color: var(--petrol);
       }
 
       &.highlight-vu-btn {
-        border-color: rgba(179, 130, 34, 0.5);
-        background: var(--gold-soft);
-        color: var(--ink);
-        mat-icon { color: var(--gold-hover); }
+        border-color: #a7f3d0;
+        background: #ecfdf5;
+        color: #065f46;
+        mat-icon { color: #059669; }
+        &:hover {
+          background: #d1fae5;
+          border-color: #059669;
+        }
       }
     }
 
@@ -436,7 +445,8 @@ interface DashboardSection {
     .chart-card {
       background: var(--surface);
       border: 1px solid var(--line);
-      border-radius: 10px;
+      border-radius: 14px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
       padding: 18px 20px 12px;
       display: flex;
       flex-direction: column;
@@ -453,7 +463,7 @@ interface DashboardSection {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 0.9rem;
+      font-size: 0.92rem;
       font-weight: 700;
       color: var(--ink);
 
@@ -462,25 +472,26 @@ interface DashboardSection {
         width: 19px;
         height: 19px;
       }
-      .icon-flow { color: var(--petrol); }
-      .icon-dist { color: var(--gold-hover); }
+      .icon-flow { color: var(--petrol-bright); }
+      .icon-dist { color: var(--gold); }
     }
 
     .chart-tag {
       font-size: 0.72rem;
       font-weight: 600;
       color: var(--ink-muted);
-      background: var(--paper-canvas);
+      background: var(--surface-tinted);
       border: 1px solid var(--line);
-      padding: 2px 8px;
-      border-radius: 6px;
+      padding: 2px 9px;
+      border-radius: 999px;
     }
 
     /* TABLA DE PENDIENTES */
     .recent-tramites-section {
       background: var(--surface);
       border: 1px solid var(--line);
-      border-radius: 10px;
+      border-radius: 14px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
       padding: 18px 20px;
       margin-bottom: 24px;
     }
@@ -492,18 +503,17 @@ interface DashboardSection {
       margin-bottom: 14px;
       h2 {
         margin: 0;
-        font-family: var(--font-serif);
-        font-size: 1.05rem;
+        font-family: var(--font-ui);
+        font-size: 1.08rem;
         font-weight: 700;
         color: var(--ink);
       }
       .link-ver-todo {
         font-size: 0.82rem;
-        font-weight: 600;
-        color: var(--petrol);
+        font-weight: 700;
+        color: var(--petrol-bright);
         text-decoration: none;
-        border-bottom: 1px solid var(--gold);
-        &:hover { color: var(--gold-hover); }
+        &:hover { text-decoration: underline; }
       }
     }
 
@@ -571,7 +581,8 @@ interface DashboardSection {
     .module-section-box {
       background: var(--surface);
       border: 1px solid var(--line);
-      border-radius: 10px;
+      border-radius: 14px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
       padding: 16px 20px 20px;
     }
 
@@ -591,7 +602,7 @@ interface DashboardSection {
       padding: 10px 14px;
       background: transparent;
       color: var(--ink-muted);
-      font-size: 0.84rem;
+      font-size: 0.85rem;
       font-weight: 600;
       border: none;
       border-bottom: 2px solid transparent;
@@ -612,12 +623,12 @@ interface DashboardSection {
       }
 
       &.is-active {
-        color: var(--petrol);
+        color: var(--petrol-bright);
         font-weight: 700;
-        border-bottom-color: var(--gold);
+        border-bottom-color: var(--petrol-bright);
 
         .module-tab-icon {
-          color: var(--gold-hover);
+          color: var(--petrol-bright);
         }
       }
     }
@@ -638,37 +649,39 @@ interface DashboardSection {
       width: 100%;
       text-align: left;
       font-family: inherit;
-      background: var(--paper-canvas);
+      background: var(--surface-tinted);
       border: 1px solid var(--line);
-      border-radius: 8px;
+      border-radius: 12px;
       padding: 14px 16px;
       display: flex;
       align-items: center;
       gap: 14px;
       cursor: pointer;
-      transition: border-color 0.15s ease, background-color 0.15s ease;
+      transition: transform 0.16s ease, border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
 
       &:hover {
         background: var(--surface);
-        border-color: var(--gold);
+        border-color: var(--petrol-bright);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(14, 116, 144, 0.1);
 
         .module-chevron {
-          color: var(--petrol);
+          color: var(--petrol-bright);
           transform: translateX(2px);
         }
       }
     }
 
     .module-icon-box {
-      width: 38px;
-      height: 38px;
-      border-radius: 8px;
-      background: var(--surface);
-      border: 1px solid var(--line);
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #ecfeff 0%, #e0f2fe 100%);
+      border: 1px solid #bae6fd;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--petrol);
+      color: var(--petrol-bright);
       flex-shrink: 0;
 
       mat-icon {
@@ -1251,12 +1264,12 @@ export class DashboardComponent implements OnInit {
               smooth: true,
               showSymbol: true,
               symbolSize: 6,
-              itemStyle: { color: '#162c2f' },
-              lineStyle: { width: 2.5, color: '#162c2f' },
+              itemStyle: { color: '#0e7490' },
+              lineStyle: { width: 3, color: '#0e7490' },
               areaStyle: {
                 color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                  { offset: 0, color: 'rgba(179, 130, 34, 0.28)' },
-                  { offset: 1, color: 'rgba(179, 130, 34, 0.02)' }
+                  { offset: 0, color: 'rgba(14, 116, 144, 0.28)' },
+                  { offset: 1, color: 'rgba(14, 116, 144, 0.02)' }
                 ])
               },
               data: cantidades
@@ -1273,9 +1286,9 @@ export class DashboardComponent implements OnInit {
         this.distribucionOptions.set({
           tooltip: {
             trigger: 'item',
-            backgroundColor: 'rgba(20, 27, 18, 0.92)',
-            borderColor: '#b38222',
-            textStyle: { color: '#f4f5f2', fontSize: 12 },
+            backgroundColor: 'rgba(15, 23, 42, 0.92)',
+            borderColor: '#d6a84f',
+            textStyle: { color: '#f8fafc', fontSize: 12 },
             formatter: '{b}: <strong>{c}</strong> ({d}%)'
           },
           legend: {
@@ -1284,9 +1297,9 @@ export class DashboardComponent implements OnInit {
             icon: 'circle',
             itemWidth: 8,
             itemHeight: 8,
-            textStyle: { color: '#525e4e', fontSize: 11 }
+            textStyle: { color: '#475569', fontSize: 11 }
           },
-          color: ['#162c2f', '#15803d', '#525e4e', '#b38222'],
+          color: ['#0284c7', '#059669', '#64748b', '#d6a84f'],
           series: [
             {
               name: 'Estado de Flujo',

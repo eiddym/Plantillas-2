@@ -399,7 +399,7 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
     }
 
     .public-nav {
-      background: var(--petrol);
+      background: var(--petrol-gradient);
       color: #ffffff;
       padding: 14px 32px;
       display: flex;
@@ -451,12 +451,13 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
       border-radius: 8px;
     }
 
-    /* Cabecera Editorial */
+    /* Cabecera Moderna */
     .hero-section {
-      background: var(--surface);
-      color: var(--ink);
-      padding: 32px 24px 26px;
-      border-bottom: 1px solid var(--line);
+      background:
+        radial-gradient(circle at 84% 24%, rgba(214, 168, 79, 0.2), transparent 46%),
+        var(--petrol-gradient);
+      color: #ffffff;
+      padding: 36px 24px 56px;
       display: flex;
       justify-content: center;
     }
@@ -467,35 +468,35 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
       display: flex;
       flex-direction: column;
       align-items: flex-start;
-      gap: 8px;
+      gap: 10px;
     }
 
     .hero-badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 3px 10px;
-      background: var(--gold-soft);
-      border: 1px solid rgba(179, 130, 34, 0.3);
-      border-radius: 6px;
+      padding: 4px 12px;
+      background: rgba(16, 185, 129, 0.18);
+      border: 1px solid rgba(52, 211, 153, 0.45);
+      border-radius: 999px;
       font-size: 0.76rem;
-      color: var(--gold-hover);
-      font-weight: 600;
-      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+      color: #6ee7b7;
+      font-weight: 700;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; color: #34d399; }
     }
 
     .hero-title {
-      font-family: var(--font-serif);
-      font-size: 1.85rem;
-      font-weight: 700;
+      font-family: var(--font-ui);
+      font-size: 2rem;
+      font-weight: 800;
       margin: 0;
-      color: var(--ink);
-      letter-spacing: -0.02em;
+      color: #ffffff;
+      letter-spacing: -0.025em;
     }
 
     .hero-subtitle {
-      font-size: 0.94rem;
-      color: var(--ink-muted);
+      font-size: 0.96rem;
+      color: rgba(255, 255, 255, 0.84);
       line-height: 1.55;
       max-width: 72ch;
       margin: 0;
@@ -506,14 +507,16 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
       flex: 1;
       max-width: 980px;
       width: 100%;
-      margin: 24px auto 40px;
+      margin: -30px auto 40px;
       padding: 0 20px;
+      position: relative;
+      z-index: 2;
     }
 
     .portal-card {
       background: var(--surface);
-      border-radius: 10px;
-      box-shadow: 0 1px 4px rgba(20, 27, 18, 0.05);
+      border-radius: 16px;
+      box-shadow: 0 18px 42px rgba(15, 46, 52, 0.12);
       overflow: hidden;
       border: 1px solid var(--line);
     }
@@ -521,7 +524,7 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
     .portal-tabs-header {
       display: flex;
       border-bottom: 1px solid var(--line);
-      background: var(--paper-canvas);
+      background: var(--surface-tinted);
     }
 
     .p-tab-btn {
@@ -532,7 +535,7 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
       gap: 10px;
       padding: 16px;
       border: none;
-      border-bottom: 2px solid transparent;
+      border-bottom: 3px solid transparent;
       background: transparent;
       font-family: inherit;
       font-size: 0.92rem;
@@ -544,11 +547,11 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
       &:hover { color: var(--ink); }
 
       &.p-tab-active {
-        color: var(--petrol);
+        color: var(--petrol-bright);
         font-weight: 700;
         background: var(--surface);
-        border-bottom-color: var(--gold);
-        mat-icon { color: var(--gold-hover); }
+        border-bottom-color: var(--petrol-bright);
+        mat-icon { color: var(--petrol-bright); }
       }
     }
 
@@ -651,16 +654,16 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
     }
 
     .btn-radicar-public.mat-mdc-raised-button {
-      background: var(--petrol);
+      background: linear-gradient(135deg, #0f3a42 0%, #0e7490 100%);
       color: #ffffff;
       padding: 0 28px;
-      height: 44px;
+      height: 46px;
       font-size: 0.92rem;
-      font-weight: 600;
-      border-radius: 8px;
-      box-shadow: none;
+      font-weight: 700;
+      border-radius: 12px;
+      box-shadow: 0 6px 16px rgba(14, 116, 144, 0.25);
       &:hover:not(:disabled) {
-        background: var(--petrol-soft);
+        filter: brightness(1.06);
       }
     }
 

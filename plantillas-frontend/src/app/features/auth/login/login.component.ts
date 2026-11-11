@@ -153,8 +153,11 @@ import { AuthService } from '../../../core/auth/auth.service';
       align-items: center;
       justify-content: center;
       padding: 20px;
-      background: linear-gradient(rgba(15, 27, 25, 0.86), rgba(22, 44, 47, 0.9)),
-                  url('/assets/images/bg.jpg') no-repeat center center fixed;
+      background:
+        radial-gradient(circle at 20% 25%, rgba(14, 116, 144, 0.34), transparent 52%),
+        radial-gradient(circle at 82% 78%, rgba(214, 168, 79, 0.22), transparent 48%),
+        linear-gradient(145deg, rgba(10, 26, 30, 0.88), rgba(14, 48, 56, 0.9)),
+        url('/assets/images/bg.jpg') no-repeat center center fixed;
       background-size: cover;
       font-family: var(--font-ui);
       box-sizing: border-box;
@@ -163,19 +166,19 @@ import { AuthService } from '../../../core/auth/auth.service';
     .login-card-horizontal {
       display: flex;
       width: 100%;
-      max-width: 840px;
-      min-height: 460px;
+      max-width: 850px;
+      min-height: 470px;
       background-color: var(--surface);
-      border-radius: 12px;
-      border: 1px solid rgba(214, 168, 79, 0.28);
-      box-shadow: 0 22px 48px rgba(12, 20, 14, 0.45);
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      box-shadow: 0 28px 60px rgba(8, 22, 26, 0.5);
       overflow: hidden;
     }
 
     /* --- PANEL IZQUIERDO --- */
     .panel-izquierdo {
       flex: 0.95;
-      background: var(--petrol);
+      background: linear-gradient(155deg, #0b242a 0%, #13444e 55%, #0e6b78 100%);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -184,32 +187,49 @@ import { AuthService } from '../../../core/auth/auth.service';
       padding: 36px 28px;
       position: relative;
       border-right: 3px solid var(--gold);
+
+      &::before {
+        content: '';
+        position: absolute;
+        width: 240px;
+        height: 240px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(214, 168, 79, 0.2) 0%, transparent 70%);
+        pointer-events: none;
+      }
     }
 
     .folio-badge {
-      font-size: 0.76rem;
-      font-weight: 600;
-      color: #ead196;
-      letter-spacing: 0.04em;
-      padding: 4px 12px;
-      border: 1px solid rgba(214, 168, 79, 0.35);
-      border-radius: 6px;
-      background: rgba(214, 168, 79, 0.08);
+      position: relative;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #f5dfaa;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border: 1px solid rgba(214, 168, 79, 0.45);
+      border-radius: 999px;
+      background: rgba(214, 168, 79, 0.14);
+      backdrop-filter: blur(8px);
     }
 
     .logo-cooperativa {
+      position: relative;
       width: 100%;
       max-width: 220px;
       height: auto;
       max-height: 200px;
       object-fit: contain;
+      filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.35));
     }
 
     .folio-caption {
+      position: relative;
       margin: 0;
-      font-family: var(--font-serif);
-      font-size: 0.92rem;
-      color: rgba(255, 255, 255, 0.84);
+      font-family: var(--font-ui);
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.88);
       text-align: center;
     }
 
@@ -225,20 +245,22 @@ import { AuthService } from '../../../core/auth/auth.service';
 
     .cabecera-sistema {
       text-align: left;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--ink-muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--petrol-bright);
       margin-bottom: 4px;
     }
 
     .titulo-docs {
       text-align: left;
-      font-family: var(--font-serif);
-      font-size: 2rem;
-      font-weight: 700;
+      font-family: var(--font-ui);
+      font-size: 2.1rem;
+      font-weight: 800;
       color: var(--ink);
       margin: 0 0 22px 0;
-      letter-spacing: 0.04em;
+      letter-spacing: -0.02em;
     }
 
     .login-form {
@@ -256,30 +278,31 @@ import { AuthService } from '../../../core/auth/auth.service';
 
     .input-blanco {
       width: 100%;
-      height: 44px;
-      background-color: var(--paper-canvas);
-      border: 1px solid var(--line-strong);
-      border-radius: 8px;
+      height: 45px;
+      background-color: var(--surface-tinted);
+      border: 1.5px solid var(--line-strong);
+      border-radius: 11px;
       padding: 0 42px;
       font-size: 0.92rem;
       font-family: var(--font-ui);
       color: var(--ink);
-      transition: border-color 0.15s ease, background-color 0.15s ease;
+      transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
 
       &::placeholder {
-        color: var(--ink-muted);
+        color: #94a3b8;
         font-weight: 400;
       }
 
       &:hover {
+        border-color: #94a3b8;
         background-color: var(--surface);
       }
 
       &:focus {
         outline: none;
         background-color: var(--surface);
-        border-color: var(--petrol);
-        box-shadow: 0 0 0 3px var(--gold-soft);
+        border-color: var(--petrol-bright);
+        box-shadow: 0 0 0 3px rgba(14, 116, 144, 0.16);
       }
     }
 
@@ -327,23 +350,26 @@ import { AuthService } from '../../../core/auth/auth.service';
 
     .login-btn {
       width: 100%;
-      height: 44px;
+      height: 46px;
       margin-top: 4px;
-      background: var(--petrol);
+      background: linear-gradient(135deg, #0f3a42 0%, #0e7490 100%);
       color: #ffffff;
       border: none;
-      border-radius: 8px;
+      border-radius: 12px;
       font-family: var(--font-ui);
-      font-weight: 600;
+      font-weight: 700;
       font-size: 0.92rem;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background-color 0.15s ease;
+      box-shadow: 0 6px 18px rgba(14, 116, 144, 0.28);
+      transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
 
       &:hover:not(:disabled) {
-        background: var(--petrol-soft);
+        transform: translateY(-1px);
+        box-shadow: 0 10px 24px rgba(14, 116, 144, 0.36);
+        filter: brightness(1.06);
       }
 
       &:disabled {
@@ -365,8 +391,8 @@ import { AuthService } from '../../../core/auth/auth.service';
       align-items: center;
       text-align: center;
       color: var(--ink-muted);
-      font-size: 0.76rem;
-      font-weight: 500;
+      font-size: 0.74rem;
+      font-weight: 600;
 
       &::before,
       &::after {
@@ -384,26 +410,28 @@ import { AuthService } from '../../../core/auth/auth.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      height: 42px;
-      border-radius: 8px;
-      background: var(--surface);
-      color: var(--ink);
-      font-weight: 600;
+      gap: 9px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #f8fafc;
+      font-weight: 700;
       font-size: 0.88rem;
       text-decoration: none;
-      border: 1px solid var(--line-strong);
-      transition: border-color 0.15s ease, background-color 0.15s ease;
+      border: 1px solid rgba(214, 168, 79, 0.45);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.14);
+      transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
 
       &:hover {
-        background: var(--paper-canvas);
+        transform: translateY(-1px);
         border-color: var(--gold);
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.22);
       }
 
       .sso-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
+        font-size: 19px;
+        width: 19px;
+        height: 19px;
         color: var(--gold);
       }
     }
@@ -412,7 +440,7 @@ import { AuthService } from '../../../core/auth/auth.service';
     .enlaces-publicos {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
       margin-top: 18px;
       padding-top: 14px;
       border-top: 1px solid var(--line);
@@ -422,41 +450,62 @@ import { AuthService } from '../../../core/auth/auth.service';
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 10px 12px;
-      border-radius: 8px;
+      padding: 11px 14px;
+      border-radius: 12px;
       text-decoration: none;
       color: var(--ink);
-      background: var(--paper-canvas);
       border: 1px solid var(--line);
-      transition: border-color 0.15s ease, background-color 0.15s ease;
+      transition: transform 0.16s ease, border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
 
-      &:hover {
-        background: var(--surface);
-        border-color: var(--gold);
+      &.card-verificar {
+        background: #f0f9ff;
+        border-color: #bae6fd;
+
+        &:hover {
+          background: #e0f2fe;
+          border-color: #0284c7;
+          transform: translateY(-1px);
+          box-shadow: 0 6px 16px rgba(2, 132, 199, 0.14);
+        }
+      }
+
+      &.card-ventanilla {
+        background: #ecfdf5;
+        border-color: #a7f3d0;
+
+        &:hover {
+          background: #d1fae5;
+          border-color: #059669;
+          transform: translateY(-1px);
+          box-shadow: 0 6px 16px rgba(5, 150, 105, 0.14);
+        }
       }
     }
 
     .card-icon-wrap {
-      width: 34px;
-      height: 34px;
-      border-radius: 8px;
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      background: var(--petrol);
+      background: linear-gradient(135deg, #0284c7 0%, #0e7490 100%);
+      box-shadow: 0 4px 10px rgba(2, 132, 199, 0.25);
 
       mat-icon {
-        color: #f2e3c0;
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
+        color: #ffffff;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
       }
 
       &.icon-petroleo-secundario {
-        background: var(--gold-soft);
+        background: linear-gradient(135deg, #059669 0%, #0d9488 100%);
+        box-shadow: 0 4px 10px rgba(5, 150, 105, 0.25);
+
         mat-icon {
-          color: var(--gold-hover);
+          color: #ffffff;
         }
       }
     }

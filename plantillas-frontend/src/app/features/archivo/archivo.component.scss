@@ -28,10 +28,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: var(--petrol);
+  background: var(--petrol-gradient);
   padding: 20px 26px;
-  border-radius: 10px;
+  border-radius: 14px;
   border-bottom: 2px solid var(--gold);
+  box-shadow: 0 8px 24px rgba(15, 46, 52, 0.14);
   color: #ffffff;
 }
 
@@ -57,10 +58,10 @@
 
 .topbar-title {
   margin: 0;
-  font-family: var(--font-serif);
-  font-size: 1.38rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-family: var(--font-ui);
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: #ffffff;
 }
 
@@ -307,7 +308,7 @@
   color: var(--ink);
   h3 {
     margin: 0;
-    font-family: var(--font-serif);
+    font-family: var(--font-ui);
     font-size: 1.05rem;
     font-weight: 700;
   }
@@ -633,10 +634,10 @@
 
 /* Banners de Unidad e Institucional */
 :where(.banner-unidad-actual, .banner-institucional) {
-  background: var(--petrol);
+  background: var(--petrol-gradient);
   color: #ffffff;
   padding: 20px 26px;
-  border-radius: 10px;
+  border-radius: 14px;
   border-bottom: 2px solid var(--gold);
   display: flex;
   justify-content: space-between;
@@ -645,9 +646,10 @@
 
   h2 {
     margin: 6px 0 2px;
-    font-family: var(--font-serif);
-    font-size: 1.32rem;
-    font-weight: 700;
+    font-family: var(--font-ui);
+    font-size: 1.34rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
     color: #ffffff;
   }
   p {
