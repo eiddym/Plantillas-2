@@ -795,7 +795,7 @@ export interface DocumentoVentanilla {
       gap: 22px;
       max-width: 1440px;
       margin: 0 auto;
-      font-family: 'Inter', -apple-system, Roboto, sans-serif;
+      font-family: var(--font-ui);
     }
 
     /* Header */

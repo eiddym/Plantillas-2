@@ -152,7 +152,7 @@ import { SeguridadService, UsuarioAdmin } from '../../core/services/seguridad.se
       display: flex;
       flex-direction: column;
       max-height: 90vh;
-      font-family: 'Plus Jakarta Sans', 'Poppins', sans-serif;
+      font-family: var(--font-ui);
     }
 
     .dialog-header {

@@ -159,7 +159,7 @@ export interface HitoHistorial {
       background: #ffffff;
       border-radius: 16px;
       overflow: hidden;
-      font-family: 'Inter', Roboto, sans-serif;
+      font-family: var(--font-ui);
     }
 
     .dialog-header {

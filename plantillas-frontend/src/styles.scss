@@ -1,94 +1,223 @@
 @use '@angular/material' as mat;
-@import '@angular/material/prebuilt-themes/indigo-pink.css';
+
+@include mat.core();
 
 /* ==========================================================================
-   SISTEMA DE DISEÑO INSTITUCIONAL COOPERATIVA MARABUNTA R.L. (ORIGINAL + v17)
+   SISTEMA DE DISEÑO INSTITUCIONAL — COOPERATIVA MINERA MARABUNTA R.L.
+   Paleta sobria de archivo documental alineada al ecosistema Marabunta:
+     1. Papel mineral   (#f4f5f2)  — Canvas de descanso visual
+     2. Superficie      (#ffffff)  — Hoja y paneles operativos
+     3. Tinta mineral   (#141b12)  — Tinta primaria de alto contraste
+     4. Petról oscuro   (#162c2f)  — Estructura institucional y acción primaria
+     5. Oro Marabunta   (#b38222)  — Único acento institucional (enfoque, sellos, activos)
    ========================================================================== */
 
-/* Variables Semánticas y Tokens de Identidad (6 Tokens Intencionales) */
+$marabunta-petrol-palette: (
+  50: #e9eeef,
+  100: #c8d4d6,
+  200: #a3b7ba,
+  300: #7d9a9e,
+  400: #60848a,
+  500: #446e75,
+  600: #375d63,
+  700: #27484d,
+  800: #162c2f,
+  900: #0c1b1d,
+  contrast: (
+    50: #141b12,
+    100: #141b12,
+    200: #141b12,
+    300: #141b12,
+    400: #ffffff,
+    500: #ffffff,
+    600: #ffffff,
+    700: #ffffff,
+    800: #ffffff,
+    900: #ffffff,
+  )
+);
+
+$marabunta-gold-palette: (
+  50: #faf4e6,
+  100: #f2e3c0,
+  200: #ead196,
+  300: #e1bf6c,
+  400: #dab14d,
+  500: #d6a84f,
+  600: #c69635,
+  700: #b38222,
+  800: #936814,
+  900: #6e4c0b,
+  contrast: (
+    50: #141b12,
+    100: #141b12,
+    200: #141b12,
+    300: #141b12,
+    400: #141b12,
+    500: #141b12,
+    600: #141b12,
+    700: #ffffff,
+    800: #ffffff,
+    900: #ffffff,
+  )
+);
+
+$marabunta-warn-palette: (
+  50: #fef2f2,
+  100: #fee2e2,
+  200: #fecaca,
+  300: #fca5a5,
+  400: #f87171,
+  500: #ef4444,
+  600: #dc2626,
+  700: #b91c1c,
+  800: #991b1b,
+  900: #7f1d1d,
+  contrast: (
+    50: #141b12,
+    100: #141b12,
+    200: #141b12,
+    300: #141b12,
+    400: #ffffff,
+    500: #ffffff,
+    600: #ffffff,
+    700: #ffffff,
+    800: #ffffff,
+    900: #ffffff,
+  )
+);
+
+$marabunta-primary: mat.define-palette($marabunta-petrol-palette, 800, 600, 900);
+$marabunta-accent: mat.define-palette($marabunta-gold-palette, 700, 500, 800);
+$marabunta-warn: mat.define-palette($marabunta-warn-palette, 700, 600, 800);
+
+$marabunta-typography: mat.define-typography-config(
+  $font-family: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
+);
+
+$marabunta-theme: mat.define-light-theme((
+  color: (
+    primary: $marabunta-primary,
+    accent: $marabunta-accent,
+    warn: $marabunta-warn,
+  ),
+  typography: $marabunta-typography,
+  density: 0,
+));
+
+@include mat.all-component-themes($marabunta-theme);
+
 :root {
-  /* 1. Canvas / Fondo de trabajo */
-  --color-canvas: #f8fafc;
-  --color-canvas-dark: #0f141c;
+  /* Paleta Central (6 tokens principales) */
+  --paper-canvas: #f4f5f2;
+  --surface: #ffffff;
+  --ink: #141b12;
+  --ink-muted: #525e4e;
+  --petrol: #162c2f;
+  --petrol-soft: #203d41;
+  --gold: #b38222;
+  --gold-hover: #936814;
+  --gold-soft: rgba(179, 130, 34, 0.12);
+  --line: #dde2da;
+  --line-strong: #c7cfc2;
 
-  /* 2. Superficie */
-  --color-surface: #ffffff;
-  --color-surface-dark: #171e29;
+  /* Estados Semánticos Discretos */
+  --state-ok: #15803d;
+  --state-ok-bg: #eef7f0;
+  --state-warn: #b45309;
+  --state-warn-bg: #fdf6e9;
+  --state-err: #b91c1c;
+  --state-err-bg: #fdf0f0;
+  --state-info: #1e4d5c;
+  --state-info-bg: #edf4f6;
 
-  /* 3. Hoja de documento físico */
-  --color-document: #ffffff;
+  /* Fuentes reales cargadas */
+  --font-ui: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Literata', Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  /* 4. Tinta de alta legibilidad (WCAG AAA) */
-  --color-ink: #0f172a;
-  --color-ink-muted: #64748b;
-  --color-ink-dark: #f1f5f9;
-
-  /* 5. Acento de acción primaria (Azul Cerúleo Profundo) */
-  --color-brand: #0284c7;
-  --color-brand-hover: #0369a1;
-
-  /* 6. Sistema Semántico de Estados */
-  --color-status-aprobado: #059669;  /* Verde Esmeralda */
-  --color-status-revision: #d97706;  /* Ámbar Ocre */
-  --color-status-observado: #dc2626; /* Carmín */
-
-  /* Identidad Institucional y Gradientes Petróleo Originales */
-  --color-primary: #0f2027;
-  --color-secondary: #203a43;
-  --color-info: #2c5364;
-
-  --color-gradient-dark: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
-  --color-gradient-petroleo: linear-gradient(145deg, #0f2027 0%, #15303c 50%, #0f3d3e 100%);
-  --color-gradient-card: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-
-  --color-cyan: #00e5ff;
-  --color-cyan-alt: #00b8d4;
-  --color-electric-blue: #0284c7;
-
-  /* Colores de Estados Documentales */
-  --color-pendiente: #ffab00;
-  --color-sin-datos: #00b8d4;
-  --color-con-datos: #304ffe;
-  --color-enviado: #7b1fa2;
-  --color-observado: #f44336;
-  --color-verificado: #4caf50;
-  --color-aprobado: #10b981;
-
-  --color-danger: #ef4444;
-  --color-warning: #f59e0b;
-  --color-success: #10b981;
-
-  --bg-body: #f8fafc;
-  --bg-card: #ffffff;
-  --border-color: #e2e8f0;
+  /* Compatibilidad con variables legadas en vistas existentes */
+  --color-canvas: var(--paper-canvas);
+  --color-surface: var(--surface);
+  --color-document: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-brand: var(--petrol);
+  --color-brand-hover: var(--petrol-soft);
+  --color-primary: var(--petrol);
+  --color-secondary: var(--petrol-soft);
+  --color-info: var(--state-info);
+  --color-accent: var(--gold);
+  --color-status-aprobado: var(--state-ok);
+  --color-status-revision: var(--state-warn);
+  --color-status-observado: var(--state-err);
+  --color-aprobado: var(--state-ok);
+  --color-verificado: var(--state-ok);
+  --color-observado: var(--state-err);
+  --color-danger: var(--state-err);
+  --color-warning: var(--state-warn);
+  --color-success: var(--state-ok);
+  --bg-body: var(--paper-canvas);
+  --bg-card: var(--surface);
+  --border-color: var(--line);
 }
 
-html, body {
-  height: 100%;
-  margin: 0;
-  font-family: 'Plus Jakarta Sans', 'Poppins', sans-serif;
-  background-color: var(--color-canvas);
-  color: var(--color-ink);
-  -webkit-font-smoothing: antialiased;
-}
-
-/* Tipografía de lectura documental (Literata con máx 75 caracteres por línea) */
-.document-prose, .hoja-contenido, .documento-cuerpo {
-  font-family: 'Literata', Georgia, serif;
-  font-size: 1.05rem;
-  line-height: 1.75;
-  color: var(--color-ink);
-  max-width: 75ch; /* Regla estricta para descanso visual */
-  margin: 0 auto;
-}
-
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
+html,
+body {
+  height: 100%;
+  max-width: 100vw;
+  margin: 0;
+  overflow-x: hidden;
+  font-family: var(--font-ui);
+  background-color: var(--paper-canvas);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ==========================================================================
-   FORMATOS DE PAPEL INSTITUCIONALES (CARTA Y OFICIO - SIN A4)
+   TIPOGRAFÍA DOCUMENTAL Y FORMATOS DE PAPEL (CARTA Y OFICIO)
    ========================================================================== */
+
+.document-prose,
+.hoja-contenido,
+.documento-cuerpo {
+  font-family: var(--font-serif);
+  font-size: 1.03rem;
+  line-height: 1.75;
+  color: var(--ink);
+  max-width: 75ch;
+  margin: 0 auto;
+}
+
+.cite-code {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
 
 .pagina-carta {
   width: 21.6cm;
@@ -96,11 +225,11 @@ html, body {
   height: auto;
   padding: 2cm 2.2cm;
   margin: 20px auto;
-  background: #ffffff;
-  box-shadow: 0 4px 14px rgba(15, 32, 39, 0.12);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 14px rgba(20, 27, 18, 0.08);
   border-radius: 4px;
   position: relative;
-  box-sizing: border-box;
 }
 
 .pagina-oficio {
@@ -109,22 +238,22 @@ html, body {
   height: auto;
   padding: 2.2cm 2.2cm;
   margin: 20px auto;
-  background: #ffffff;
-  box-shadow: 0 4px 14px rgba(15, 32, 39, 0.12);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 14px rgba(20, 27, 18, 0.08);
   border-radius: 4px;
   position: relative;
-  box-sizing: border-box;
 }
 
 @media (max-width: 860px) {
-  .pagina-carta, .pagina-oficio {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-height: auto !important;
-    padding: 1.25rem 0.85rem !important;
-    margin: 8px 0 !important;
-    box-shadow: 0 2px 8px rgba(15, 32, 39, 0.08) !important;
-    border-radius: 8px !important;
+  .pagina-carta,
+  .pagina-oficio {
+    width: 100%;
+    max-width: 100%;
+    min-height: auto;
+    padding: 1.25rem 0.9rem;
+    margin: 8px 0;
+    border-radius: 8px;
   }
 }
 
@@ -133,87 +262,70 @@ html, body {
     size: letter;
     margin: 1.5cm;
   }
-  .pagina-carta {
-    width: 100% !important;
-    min-height: 0 !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
+  .pagina-carta,
   .pagina-oficio {
-    width: 100% !important;
-    min-height: 0 !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
+    width: 100%;
+    min-height: 0;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
   }
 }
 
 /* ==========================================================================
-   PASTILLAS DE ESTADOS DOCUMENTALES INSTITUCIONALES
+   INSIGNIAS DE ESTADO DOCUMENTAL
    ========================================================================== */
 
-.badge-tag, .badge-doc-estado {
+.badge-tag,
+.badge-doc-estado {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   line-height: 1.4;
 }
 
 .badge-pendiente {
-  background-color: #fffbeb;
-  color: #b45309;
-  border: 1px solid #fde68a;
+  background-color: var(--state-warn-bg);
+  color: var(--state-warn);
+  border: 1px solid rgba(180, 83, 9, 0.25);
 }
 
-.badge-sin-datos {
-  background-color: #ecfeff;
-  color: #0e7490;
-  border: 1px solid #a5f3fc;
-}
-
+.badge-sin-datos,
 .badge-con-datos {
-  background-color: #eef2ff;
-  color: #3730a3;
-  border: 1px solid #c7d2fe;
+  background-color: var(--state-info-bg);
+  color: var(--state-info);
+  border: 1px solid rgba(30, 77, 92, 0.22);
 }
 
 .badge-enviado {
-  background-color: #f5f3ff;
-  color: #6d28d9;
-  border: 1px solid #ddd6fe;
+  background-color: var(--gold-soft);
+  color: var(--gold-hover);
+  border: 1px solid rgba(179, 130, 34, 0.28);
 }
 
-.badge-observado {
-  background-color: #fef2f2;
-  color: #b91c1c;
-  border: 1px solid #fecaca;
-}
-
-.badge-verificado, .badge-aprobado {
-  background-color: #ecfdf5;
-  color: #047857;
-  border: 1px solid #a7f3d0;
-}
-
-.badge-activo {
-  background-color: #ecfdf5;
-  color: #047857;
-}
-
+.badge-observado,
 .badge-inactivo {
-  background-color: #fef2f2;
-  color: #b91c1c;
+  background-color: var(--state-err-bg);
+  color: var(--state-err);
+  border: 1px solid rgba(185, 28, 28, 0.25);
+}
+
+.badge-verificado,
+.badge-aprobado,
+.badge-activo {
+  background-color: var(--state-ok-bg);
+  color: var(--state-ok);
+  border: 1px solid rgba(21, 128, 61, 0.25);
 }
 
 /* ==========================================================================
-   UTILIDADES GENERALES DE MAQUETACIÓN
+   UTILIDADES DE MAQUETACIÓN Y SUPERFICIES MATERIAL
    ========================================================================== */
 
 .flex-row {
@@ -231,101 +343,97 @@ html, body {
   flex: 1 1 auto;
 }
 
-/* Ajustes Visuales de Material Components para Coincidir con el Estilo Original */
-mat-toolbar.mat-primary {
-  background: var(--color-primary) !important;
-  color: #ffffff !important;
+.mat-toolbar.mat-primary {
+  background: var(--petrol);
+  color: #ffffff;
 }
 
-.table-card {
-  border-radius: 12px !important;
-  box-shadow: 0 2px 12px rgba(15, 32, 39, 0.06) !important;
-  border: 1px solid #e2e8f0 !important;
+.table-card.mat-mdc-card {
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(20, 27, 18, 0.05);
+  border: 1px solid var(--line);
   overflow: hidden;
+  background: var(--surface);
 }
 
 .table-responsive {
   width: 100%;
+  max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  margin: 0;
-  padding: 0;
+  scrollbar-width: thin;
 }
 
+/* Modales y visor PDF */
 @media (max-width: 860px) {
-  .mat-mdc-dialog-container .mdc-dialog__surface {
-    max-width: 96vw !important;
-    max-height: 94vh !important;
-    border-radius: 12px !important;
-  }
-
   .cdk-overlay-pane {
     max-width: 96vw !important;
   }
+  .mat-mdc-dialog-container .mdc-dialog__surface {
+    max-width: 96vw;
+    max-height: 94vh;
+    border-radius: 10px;
+  }
 }
 
-.modal-sin-padding {
-  .mat-mdc-dialog-container .mdc-dialog__surface,
-  .mdc-dialog__surface {
-    padding: 0 !important;
-    overflow: hidden !important;
-    border-radius: 12px !important;
-  }
+.modal-sin-padding .mdc-dialog__surface {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 10px;
 }
 
 .modal-vista-previa-escala {
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  width: auto !important;
-  max-width: 700px !important;
-  height: 86vh !important;
-  max-height: 86vh !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: auto;
+  max-width: 700px;
+  height: 86vh;
+  max-height: 86vh;
 
   .mat-mdc-dialog-container {
-    padding: 0 !important;
-    background: transparent !important;
-    width: auto !important;
-    height: 100% !important;
-    display: flex !important;
-    justify-content: center !important;
+    padding: 0;
+    background: transparent;
+    width: auto;
+    height: 100%;
+    display: flex;
+    justify-content: center;
   }
 
-  .mat-mdc-dialog-container .mdc-dialog__surface,
   .mdc-dialog__surface {
-    padding: 0 !important;
-    overflow: hidden !important;
-    border-radius: 12px !important;
-    background: #ffffff !important;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45) !important;
-    display: flex !important;
-    flex-direction: column !important;
-    width: 700px !important;
-    max-width: 92vw !important;
-    height: 86vh !important;
-    max-height: 86vh !important;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: 0 18px 44px rgba(20, 27, 18, 0.35);
+    display: flex;
+    flex-direction: column;
+    width: 700px;
+    max-width: 92vw;
+    height: 86vh;
+    max-height: 86vh;
   }
 
   app-visor-pdf-dialog {
-    display: flex !important;
-    flex-direction: column !important;
-    height: 100% !important;
-    width: 100% !important;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
   }
 }
 
-/* ==========================================================================
-   CORRECCIÓN GLOBAL DE LIGADURAS MATERIAL ICONS
-   ========================================================================== */
-mat-icon, .material-icons, .material-icons-outlined {
-  font-family: 'Material Icons' !important;
-  font-weight: normal !important;
-  font-style: normal !important;
+/* Ligaduras Material Icons */
+mat-icon,
+.material-icons,
+.material-icons-outlined {
+  font-family: 'Material Icons';
+  font-weight: normal;
+  font-style: normal;
   font-size: 20px;
   line-height: 1;
   letter-spacing: normal;
   text-transform: none;
-  display: inline-flex !important;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   white-space: nowrap;
@@ -336,65 +444,46 @@ mat-icon, .material-icons, .material-icons-outlined {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ==========================================================================
-   OPTIMIZACIONES MÓVILES GLOBALES (RESPONSIVE VIEWPORTS)
-   ========================================================================== */
-
-/* Prevenir desbordamiento horizontal en el viewport */
-html, body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-/* Tab headers horizontales con scroll nativo táctil en pantallas móviles */
+/* Tabs horizontales táctiles sin botones de paginación rotos en móvil */
 .mat-mdc-tab-header {
-  max-width: 100% !important;
-  overflow-x: auto !important;
+  max-width: 100%;
+  overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 
 .mat-mdc-tab-label-container {
-  overflow: visible !important;
+  overflow: visible;
 }
 
 .mat-mdc-tab-header-pagination {
-  display: none !important;
+  display: none;
 }
 
-/* Ajustes globales de filtros y formularios en móviles */
 @media (max-width: 768px) {
-  .search-field, 
+  .search-field,
   .mat-mdc-form-field {
-    max-width: 100% !important;
+    max-width: 100%;
   }
 
   .toolbar-filter {
-    flex-wrap: wrap !important;
-    gap: 10px !important;
-    padding: 12px 14px !important;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px 14px;
   }
 
   .page-header {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 12px !important;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
 
   .page-container {
-    padding: 10px 6px !important;
-  }
-
-  .table-responsive {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
+    padding: 10px 8px;
   }
 
   .mat-mdc-card {
-    padding: 12px 10px !important;
-    border-radius: 10px !important;
+    padding: 12px 10px;
+    border-radius: 10px;
   }
 
   button.mat-mdc-icon-button {
@@ -402,35 +491,31 @@ html, body {
   }
 }
 
-/* ==========================================================================
-   CONTENCIÓN DE MÁRGENES DOCUMENTALES (IMÁGENES, TABLAS Y TEXTO SIN DESBORDE)
-   ========================================================================== */
-
+/* Contención de contenido documental rico (TinyMCE y vista previa) */
 .document-prose,
 .tox-editor-container,
 .editor-texto-container,
 .preview-mode-container {
-  overflow-wrap: break-word !important;
-  word-wrap: break-word !important;
-  word-break: break-word !important;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
 
   p, div, span, h1, h2, h3, h4, h5, h6, blockquote, li {
-    overflow-wrap: break-word !important;
-    word-wrap: break-word !important;
-    word-break: break-word !important;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
   }
 
   img {
-    max-width: 100% !important;
-    height: auto !important;
+    max-width: 100%;
+    height: auto;
     object-fit: contain;
-    box-sizing: border-box;
     display: block;
     margin: 12px auto;
   }
 
   table {
-    max-width: 100% !important;
+    max-width: 100%;
     width: 100%;
     table-layout: auto;
     word-break: break-word;
@@ -445,7 +530,7 @@ html, body {
   }
 
   pre, code {
-    white-space: pre-wrap !important;
-    word-break: break-all !important;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
 }

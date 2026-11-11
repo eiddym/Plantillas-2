@@ -181,7 +181,7 @@ export interface DestinatarioDialogData {
     .destinatario-dialog {
       min-width: 520px;
       max-width: 680px;
-      font-family: 'Plus Jakarta Sans', 'Poppins', sans-serif;
+      font-family: var(--font-ui);
     }
     .dialog-header {
       display: flex;

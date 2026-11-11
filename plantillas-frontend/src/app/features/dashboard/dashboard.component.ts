@@ -50,57 +50,59 @@ interface DashboardSection {
       <!-- Encabezado de Bienvenida Institucional -->
       <header class="home-welcome-header">
         <div class="welcome-text">
-          <h1>{{ saludo() }}, {{ user()?.first_name || user()?.username || 'system' }}</h1>
-          <p class="subtitle">{{ user()?.cargo || 'Default system user' }} &bull; Cooperativa Minera Marabunta R.L.</p>
+          <h1>{{ saludo() }}, {{ user()?.first_name || user()?.username || 'usuario' }}</h1>
+          <p class="subtitle">{{ user()?.cargo || 'Personal institucional' }} — Cooperativa Minera Marabunta R.L.</p>
         </div>
         <div class="welcome-actions">
           <button mat-raised-button class="btn-redactar-doc" (click)="abrirNuevoDocumento()">
             <mat-icon>add_circle_outline</mat-icon>
-            <span>Redactar Documento</span>
+            <span>Redactar documento</span>
           </button>
         </div>
       </header>
 
-      <!-- Resumen de Bandeja Activa (KPIs) -->
-      <section class="kpi-summary-section">
-        <h2 class="section-title">RESUMEN DE BANDEJA ACTIVA</h2>
-        <div class="kpi-grid">
-          <div class="kpi-card kpi-card-activos" routerLink="/documentos">
-            <div class="kpi-big-number">{{ totalDocs() }}</div>
-            <div class="kpi-meta">
-              <strong class="kpi-title">DOCUMENTOS ACTIVOS</strong>
-              <span class="kpi-desc">Documentos en redacción y curso</span>
+      <!-- Estado de Bandeja Activa -->
+      <section class="tray-overview-section" aria-label="Resumen de bandeja activa">
+        <div class="tray-overview-strip">
+          <a class="tray-metric" routerLink="/documentos">
+            <span class="tray-dot dot-petrol"></span>
+            <div class="tray-metric-body">
+              <span class="tray-label">Documentos activos</span>
+              <span class="tray-sub">En redacción y curso</span>
             </div>
-          </div>
+            <strong class="tray-value">{{ totalDocs() }}</strong>
+          </a>
 
-          <div class="kpi-card kpi-card-revision" routerLink="/aprobacion">
-            <div class="kpi-big-number">{{ totalPendientes() }}</div>
-            <div class="kpi-meta">
-              <strong class="kpi-title">DOCUMENTOS PENDIENTES</strong>
-              <span class="kpi-desc">Documentos pendientes de atención y revisión</span>
+          <a class="tray-metric" routerLink="/aprobacion">
+            <span class="tray-dot dot-warn"></span>
+            <div class="tray-metric-body">
+              <span class="tray-label">Pendientes de atención</span>
+              <span class="tray-sub">Requieren revisión o derivación</span>
             </div>
-          </div>
+            <strong class="tray-value value-warn">{{ totalPendientes() }}</strong>
+          </a>
 
-          <div class="kpi-card kpi-card-aprobados" routerLink="/firmar">
-            <div class="kpi-big-number">{{ totalAprobados() }}</div>
-            <div class="kpi-meta">
-              <strong class="kpi-title">APROBADOS Y VALIDADOS</strong>
-              <span class="kpi-desc">Certificados para archivo digital</span>
+          <a class="tray-metric" routerLink="/firmar">
+            <span class="tray-dot dot-ok"></span>
+            <div class="tray-metric-body">
+              <span class="tray-label">Aprobados y validados</span>
+              <span class="tray-sub">Listos para archivo oficial</span>
             </div>
-          </div>
+            <strong class="tray-value value-ok">{{ totalAprobados() }}</strong>
+          </a>
         </div>
       </section>
 
       <!-- Barra de Acciones Rápidas -->
       <section class="quick-actions-bar">
-        <span class="actions-label">Acciones rápidas:</span>
+        <span class="actions-label">Accesos directos:</span>
         <button mat-stroked-button (click)="abrirNuevoDocumento()" class="quick-action-btn">
           <mat-icon>add</mat-icon>
-          <span>Nuevo Documento</span>
+          <span>Nuevo documento</span>
         </button>
         <button mat-stroked-button routerLink="/documentos" class="quick-action-btn">
           <mat-icon>search</mat-icon>
-          <span>Buscar Documento</span>
+          <span>Buscar documento</span>
         </button>
         <button mat-stroked-button routerLink="/catalogos" class="quick-action-btn">
           <mat-icon>folder_open</mat-icon>
@@ -114,67 +116,63 @@ interface DashboardSection {
         }
       </section>
 
-      <!-- Métricas Visuales Inteligentes con Apache ECharts -->
+      <!-- Métricas Operativas -->
       <section class="charts-section">
         <div class="chart-card">
           <div class="chart-header">
             <div class="chart-title">
               <mat-icon class="icon-flow">show_chart</mat-icon>
-              <span>Flujo de Gestión y Despacho Mensual</span>
+              <span>Flujo de despacho mensual</span>
             </div>
             <span class="chart-tag">Últimos 6 meses</span>
           </div>
-          <app-echart [options]="tendenciaOptions()" [loading]="cargandoMetricas()" height="260px"></app-echart>
+          <app-echart [options]="tendenciaOptions()" [loading]="cargandoMetricas()" height="240px"></app-echart>
         </div>
 
         <div class="chart-card">
           <div class="chart-header">
             <div class="chart-title">
               <mat-icon class="icon-dist">donut_large</mat-icon>
-              <span>Distribución Operativa del Flujo</span>
+              <span>Distribución operativa</span>
             </div>
             <span class="chart-tag">Estado actual</span>
           </div>
-          <app-echart [options]="distribucionOptions()" [loading]="cargandoMetricas()" height="260px"></app-echart>
+          <app-echart [options]="distribucionOptions()" [loading]="cargandoMetricas()" height="240px"></app-echart>
         </div>
       </section>
 
-      <!-- Mis Documentos Pendientes de Atención (Tabla Directa) -->
+      <!-- Mis Documentos Pendientes de Atención -->
       <section class="recent-tramites-section">
         <div class="section-header-line">
-          <h2>Mis Documentos Pendientes de Atención</h2>
-          <a routerLink="/aprobacion" class="link-ver-todo">Ver bandeja de pendientes</a>
+          <h2>Documentos pendientes de atención</h2>
+          <a routerLink="/aprobacion" class="link-ver-todo">Ver bandeja completa</a>
         </div>
 
         <div class="table-responsive">
           <table mat-table [dataSource]="recentDocs()" class="w-full recent-table">
-            <!-- CITE Column -->
             <ng-container matColumnDef="nombre">
-              <th mat-header-cell *matHeaderCellDef>CITE OFICIAL</th>
+              <th mat-header-cell *matHeaderCellDef>CITE oficial</th>
               <td mat-cell *matCellDef="let d">
-                <strong class="doc-code">{{ d.nombre }}</strong>
+                <span class="doc-code cite-code">{{ d.nombre }}</span>
               </td>
             </ng-container>
 
-            <!-- De / Para Column -->
             <ng-container matColumnDef="de">
-              <th mat-header-cell *matHeaderCellDef>REMITENTE / DESTINO</th>
+              <th mat-header-cell *matHeaderCellDef>Remitente / Destino</th>
               <td mat-cell *matCellDef="let d">
                 <span class="text-de">{{ getParticipanteTexto(d) }}</span>
               </td>
             </ng-container>
 
-            <!-- Asunto Column -->
             <ng-container matColumnDef="ref">
-              <th mat-header-cell *matHeaderCellDef>ASUNTO / REFERENCIA</th>
+              <th mat-header-cell *matHeaderCellDef>Asunto o referencia</th>
               <td mat-cell *matCellDef="let d">
                 <span class="text-ref">{{ getReferencia(d) }}</span>
               </td>
             </ng-container>
 
-            <!-- Estado Column -->
             <ng-container matColumnDef="estado">
-              <th mat-header-cell *matHeaderCellDef>ESTADO</th>
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
               <td mat-cell *matCellDef="let d">
                 <span class="status-indicator" [ngClass]="getStatusClass(d.estado)">
                   {{ d.estado }}
@@ -182,9 +180,8 @@ interface DashboardSection {
               </td>
             </ng-container>
 
-            <!-- Acción Column -->
             <ng-container matColumnDef="accion">
-              <th mat-header-cell *matHeaderCellDef class="text-right">ACCIÓN</th>
+              <th mat-header-cell *matHeaderCellDef class="text-right">Acción</th>
               <td mat-cell *matCellDef="let d" class="text-right">
                 <button mat-button class="btn-revisar" (click)="irAWorkbench(d)">
                   <mat-icon>edit_note</mat-icon>
@@ -196,7 +193,7 @@ interface DashboardSection {
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
             <tr class="mat-row" *matNoDataRow>
-              <td class="mat-cell" colspan="5" style="text-align: center; padding: 24px; color: #64748b; font-size: 13px;">
+              <td class="mat-cell empty-table-cell" colspan="5">
                 No tiene documentos pendientes de atención en su bandeja.
               </td>
             </tr>
@@ -204,70 +201,67 @@ interface DashboardSection {
         </div>
       </section>
 
-      <!-- Módulos del Sistema en Cápsulas Interactivas (Modelo Fiel) -->
+      <!-- Directorio de Módulos del Sistema -->
       <section class="modules-portal-section">
-        <h2 class="section-title">MÓDULOS DEL SISTEMA</h2>
+        <div class="section-header-line">
+          <h2>Módulos habilitados</h2>
+        </div>
 
         <div class="module-section-box">
-          <!-- Barra Horizontal de Cápsulas de Menús Padre -->
-          <div class="capsules-bar">
+          <div class="module-tabs-bar" role="tablist">
             @for (seccion of secciones(); track seccion.label) {
               <button
                 type="button"
-                class="capsule-btn"
-                [ngClass]="[seccion.colorClass, seccionActual()?.label === seccion.label ? 'is-active' : 'is-inactive']"
+                role="tab"
+                class="module-tab-btn"
+                [attr.aria-selected]="seccionActual()?.label === seccion.label"
+                [class.is-active]="seccionActual()?.label === seccion.label"
                 (click)="seleccionarSeccion(seccion.label)"
               >
-                <mat-icon class="capsule-icon">{{ seccion.icon }}</mat-icon>
-                <span class="capsule-label">{{ seccion.label }}</span>
+                <mat-icon class="module-tab-icon">{{ seccion.icon }}</mat-icon>
+                <span class="module-tab-label">{{ formatModuleTitle(seccion.label) }}</span>
               </button>
             }
           </div>
 
-          <!-- Grilla de Tarjetas del Módulo Seleccionado -->
           @if (seccionActual(); as actual) {
-            <div class="modules-cards-grid fade-in">
+            <div class="modules-cards-grid">
               @for (item of actual.items; track item.label) {
-                <div class="module-card" (click)="irARuta(item.url)">
-                  <!-- Fila Superior: Icono a la izquierda, Conteo a la derecha -->
-                  <div class="card-header-row">
-                    <div class="module-icon-box" [ngClass]="'bg-' + item.color">
-                      <mat-icon>{{ item.icon }}</mat-icon>
-                    </div>
-                    <span class="module-count-badge">{{ item.count }}</span>
+                <button type="button" class="module-card" (click)="irARuta(item.url)">
+                  <div class="module-icon-box">
+                    <mat-icon>{{ item.icon }}</mat-icon>
                   </div>
 
-                  <!-- Cuerpo de la Tarjeta -->
                   <div class="module-card-body">
-                    <h4 class="module-name">{{ item.label }}</h4>
+                    <div class="module-title-row">
+                      <span class="module-name">{{ formatModuleTitle(item.label) }}</span>
+                      @if (item.count > 0) {
+                        <span class="module-count-badge">{{ item.count }}</span>
+                      }
+                    </div>
                     <p class="module-desc">{{ item.desc }}</p>
                   </div>
 
-                  <!-- Enlace de Acción Inferior: Ir a [MÓDULO] → -->
-                  <div class="module-card-link">
-                    <span>Ir a {{ item.label }} &rarr;</span>
-                  </div>
-                </div>
+                  <mat-icon class="module-chevron">chevron_right</mat-icon>
+                </button>
               }
             </div>
           }
         </div>
       </section>
 
-      <!-- Footer Institucional de la Cooperativa -->
       <footer class="home-portal-footer">
-        <p>COOPERATIVA MINERA MARABUNTA R.L. &bull; Sistema Digital de Plantillas y Aprobación 2026</p>
+        <p>Cooperativa Minera Marabunta R.L. — Sistema de Gestión Documental</p>
       </footer>
     </div>
   `,
   styles: [`
     .home-portal-container {
-      max-width: 1280px;
+      max-width: 1240px;
       margin: 0 auto;
       width: 100%;
       min-width: 0;
-      box-sizing: border-box;
-      font-family: 'Plus Jakarta Sans', 'Poppins', sans-serif;
+      font-family: var(--font-ui);
     }
 
     /* ENCABEZADO DE BIENVENIDA */
@@ -275,165 +269,175 @@ interface DashboardSection {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
       flex-wrap: wrap;
       gap: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
 
       h1 {
         margin: 0;
+        font-family: var(--font-serif);
         font-size: 1.65rem;
-        font-weight: 800;
-        color: #0f172a;
-        letter-spacing: -0.3px;
+        font-weight: 700;
+        color: var(--ink);
+        letter-spacing: -0.015em;
       }
 
       .subtitle {
         margin: 4px 0 0 0;
-        color: #64748b;
         font-size: 0.88rem;
+        color: var(--ink-muted);
       }
     }
 
-    .btn-redactar-doc {
-      background-color: #0f2027 !important;
-      color: #ffffff !important;
-      border-radius: 24px !important;
-      padding: 0 22px !important;
-      height: 44px !important;
-      font-weight: 700 !important;
-      display: flex !important;
-      align-items: center !important;
-      gap: 8px !important;
-      box-shadow: 0 4px 14px rgba(15, 32, 39, 0.25) !important;
-      transition: all 0.2s ease !important;
+    .btn-redactar-doc.mat-mdc-raised-button {
+      background-color: var(--petrol);
+      color: #ffffff;
+      border-radius: 8px;
+      padding: 0 20px;
+      height: 42px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: none;
 
       &:hover {
-        background-color: #1e293b !important;
-        transform: translateY(-1px);
+        background-color: var(--petrol-soft);
       }
 
       mat-icon {
-        color: #22d3ee;
+        color: #ead196;
       }
     }
 
-    .section-title {
-      font-size: 0.88rem;
-      font-weight: 800;
-      color: #0f172a;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      margin: 0 0 14px 0;
+    /* FRANJA OPERATIVA DE BANDEJA ACTIVA */
+    .tray-overview-section {
+      margin-bottom: 18px;
     }
 
-    /* RESUMEN DE BANDEJA ACTIVA (KPIs) */
-    .kpi-summary-section {
-      margin-bottom: 24px;
-    }
-
-    .kpi-grid {
+    .tray-overview-strip {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(3, 1fr);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
     }
 
-    .kpi-card {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 20px 24px;
+    .tray-metric {
       display: flex;
       align-items: center;
-      gap: 20px;
-      cursor: pointer;
-      box-shadow: 0 2px 6px rgba(15, 32, 39, 0.03);
-      transition: all 0.2s ease;
+      gap: 14px;
+      padding: 16px 20px;
+      text-decoration: none;
+      color: var(--ink);
+      border-right: 1px solid var(--line);
+      transition: background-color 0.15s ease;
+
+      &:last-child {
+        border-right: none;
+      }
 
       &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(15, 32, 39, 0.08);
+        background: var(--paper-canvas);
       }
     }
 
-    .kpi-big-number {
-      font-size: 2.2rem;
-      font-weight: 800;
-      line-height: 1;
-      font-feature-settings: "tnum";
-      font-variant-numeric: tabular-nums;
+    .tray-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
     }
 
-    .kpi-card-activos .kpi-big-number { color: #0284c7; }
-    .kpi-card-revision .kpi-big-number { color: #d97706; }
-    .kpi-card-aprobados .kpi-big-number { color: #059669; }
+    .dot-petrol { background: var(--petrol); }
+    .dot-warn { background: var(--state-warn); }
+    .dot-ok { background: var(--state-ok); }
 
-    .kpi-meta {
+    .tray-metric-body {
+      flex: 1;
+      min-width: 0;
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 2px;
     }
 
-    .kpi-title {
-      font-size: 0.78rem;
-      font-weight: 800;
-      color: #0f172a;
-      letter-spacing: 0.4px;
+    .tray-label {
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: var(--ink);
     }
 
-    .kpi-desc {
+    .tray-sub {
       font-size: 0.76rem;
-      color: #64748b;
+      color: var(--ink-muted);
     }
+
+    .tray-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--petrol);
+    }
+
+    .value-warn { color: var(--state-warn); }
+    .value-ok { color: var(--state-ok); }
 
     /* BARRA DE ACCIONES RÁPIDAS */
     .quick-actions-bar {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 24px;
+      gap: 8px;
+      margin-bottom: 22px;
       flex-wrap: wrap;
     }
 
     .actions-label {
       font-size: 0.82rem;
-      font-weight: 700;
-      color: #64748b;
+      font-weight: 600;
+      color: var(--ink-muted);
       margin-right: 4px;
     }
 
-    .quick-action-btn {
-      border-radius: 20px !important;
-      border-color: #cbd5e1 !important;
-      color: #1e293b !important;
-      font-weight: 600 !important;
-      font-size: 0.82rem !important;
-      height: 36px !important;
-      mat-icon { font-size: 18px; width: 18px; height: 18px; }
-      &:hover { background: #ffffff !important; border-color: #0284c7 !important; color: #0284c7 !important; }
+    .quick-action-btn.mat-mdc-outlined-button {
+      border-radius: 8px;
+      border-color: var(--line-strong);
+      color: var(--ink);
+      background: var(--surface);
+      font-weight: 600;
+      font-size: 0.82rem;
+      height: 36px;
+
+      mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--ink-muted); }
+
+      &:hover {
+        border-color: var(--gold);
+        color: var(--petrol);
+      }
 
       &.highlight-vu-btn {
-        border-color: #00b4db !important;
-        color: #0083b0 !important;
-        background: #f0fdf4 !important;
-        &:hover { background: #e0f2fe !important; border-color: #0284c7 !important; }
+        border-color: rgba(179, 130, 34, 0.5);
+        background: var(--gold-soft);
+        color: var(--ink);
+        mat-icon { color: var(--gold-hover); }
       }
     }
 
-    /* TRÁMITES RECIENTES EN CURSO */
-    /* GRÁFICOS VISUALES APACHE ECHARTS */
+    /* GRÁFICOS OPERATIVOS */
     .charts-section {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-      gap: 20px;
-      margin-bottom: 28px;
+      gap: 18px;
+      margin-bottom: 24px;
     }
 
     .chart-card {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 18px 20px 12px 20px;
-      box-shadow: 0 2px 8px rgba(15, 32, 39, 0.04);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px 20px 12px;
       display: flex;
       flex-direction: column;
     }
@@ -449,65 +453,87 @@ interface DashboardSection {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 0.88rem;
-      font-weight: 800;
-      color: #0f172a;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--ink);
 
       mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
+        font-size: 19px;
+        width: 19px;
+        height: 19px;
       }
-      .icon-flow { color: #2563eb; }
-      .icon-dist { color: #059669; }
+      .icon-flow { color: var(--petrol); }
+      .icon-dist { color: var(--gold-hover); }
     }
 
     .chart-tag {
       font-size: 0.72rem;
-      font-weight: 700;
-      color: #64748b;
-      background: #f1f5f9;
-      padding: 3px 8px;
-      border-radius: 12px;
+      font-weight: 600;
+      color: var(--ink-muted);
+      background: var(--paper-canvas);
+      border: 1px solid var(--line);
+      padding: 2px 8px;
+      border-radius: 6px;
     }
 
+    /* TABLA DE PENDIENTES */
     .recent-tramites-section {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 28px;
-      box-shadow: 0 2px 8px rgba(15, 32, 39, 0.04);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 24px;
     }
 
     .section-header-line {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
-      h2 { margin: 0; font-size: 1rem; font-weight: 800; color: #0f172a; }
-      .link-ver-todo { font-size: 0.82rem; font-weight: 600; color: #0284c7; text-decoration: none; &:hover { text-decoration: underline; } }
+      margin-bottom: 14px;
+      h2 {
+        margin: 0;
+        font-family: var(--font-serif);
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--ink);
+      }
+      .link-ver-todo {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--petrol);
+        text-decoration: none;
+        border-bottom: 1px solid var(--gold);
+        &:hover { color: var(--gold-hover); }
+      }
     }
 
     .recent-table {
       width: 100%;
       th.mat-mdc-header-cell {
-        background-color: #0f2027 !important;
-        color: #ffffff !important;
-        font-size: 12px;
+        background-color: var(--paper-canvas);
+        color: var(--ink-muted);
+        border-bottom: 1px solid var(--line-strong);
+        font-size: 0.76rem;
         font-weight: 700;
-        letter-spacing: 0.6px;
       }
       td.mat-mdc-cell {
         font-size: 0.85rem;
-        padding: 12px 16px;
+        padding: 11px 14px;
+        border-bottom-color: var(--line);
       }
     }
 
-    .doc-code { color: #0f172a; font-weight: 700; }
-    .text-de { color: #334155; }
+    .empty-table-cell {
+      text-align: center;
+      padding: 24px;
+      color: var(--ink-muted);
+      font-size: 0.84rem;
+    }
+
+    .doc-code { color: var(--ink); font-weight: 600; }
+    .text-de { color: var(--ink); }
     .text-ref {
-      color: #475569;
+      color: var(--ink-muted);
       display: -webkit-box;
       -webkit-line-clamp: 1;
       -webkit-box-orient: vertical;
@@ -516,241 +542,195 @@ interface DashboardSection {
 
     .status-indicator {
       display: inline-block;
-      padding: 3px 10px;
-      border-radius: 12px;
+      padding: 2px 9px;
+      border-radius: 6px;
       font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.4px;
-      text-transform: uppercase;
+      font-weight: 600;
     }
 
-    .status-aprobado { background: #ecfdf5; color: #059669; }
-    .status-revision { background: #fffbeb; color: #d97706; }
-    .status-observado { background: #fef2f2; color: #dc2626; }
-    .status-default { background: #f1f5f9; color: #475569; }
+    .status-aprobado { background: var(--state-ok-bg); color: var(--state-ok); }
+    .status-revision { background: var(--state-warn-bg); color: var(--state-warn); }
+    .status-observado { background: var(--state-err-bg); color: var(--state-err); }
+    .status-default { background: var(--paper-canvas); color: var(--ink-muted); }
 
-    .btn-revisar {
-      color: #0284c7 !important;
-      font-weight: 700 !important;
-      font-size: 0.82rem !important;
-      mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
-      &:hover { background: #f0f9ff !important; }
+    .btn-revisar.mat-mdc-button {
+      color: var(--petrol);
+      font-weight: 600;
+      font-size: 0.82rem;
+      mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; color: var(--gold-hover); }
+      &:hover { background: var(--paper-canvas); }
     }
 
     .text-right { text-align: right; }
 
-    /* MÓDULOS DEL SISTEMA (CÁPSULAS INTERACTIVAS SEGÚN MODELO) */
+    /* DIRECTORIO DE MÓDULOS */
     .modules-portal-section {
-      margin-bottom: 32px;
+      margin-bottom: 28px;
     }
 
     .module-section-box {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 14px;
-      padding: 22px 24px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 16px 20px 20px;
     }
 
-    /* Barra Horizontal de Cápsulas de Menú Padre */
-    .capsules-bar {
+    .module-tabs-bar {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 4px;
       align-items: center;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid #f1f5f9;
+      margin-bottom: 18px;
+      border-bottom: 1px solid var(--line);
     }
 
-    .capsule-btn {
+    .module-tab-btn {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 18px;
-      border-radius: 8px;
-      color: #ffffff;
-      font-size: 0.82rem;
-      font-weight: 800;
-      letter-spacing: 0.6px;
-      text-transform: uppercase;
-      border: 2px solid transparent;
+      padding: 10px 14px;
+      background: transparent;
+      color: var(--ink-muted);
+      font-size: 0.84rem;
+      font-weight: 600;
+      border: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
       cursor: pointer;
       font-family: inherit;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-      user-select: none;
+      transition: color 0.15s ease, border-color 0.15s ease;
 
-      .capsule-icon {
+      .module-tab-icon {
         font-size: 18px;
         width: 18px;
         height: 18px;
-        color: #ffffff;
+        color: var(--ink-muted);
       }
 
-      &.is-inactive {
-        opacity: 0.82;
-        filter: saturate(0.9);
-
-        &:hover {
-          opacity: 1;
-          filter: saturate(1);
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
-        }
+      &:hover {
+        color: var(--ink);
       }
 
       &.is-active {
-        opacity: 1;
-        filter: saturate(1.15);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
-        border-color: rgba(255, 255, 255, 0.8);
-        outline: 3px solid rgba(37, 99, 235, 0.28);
+        color: var(--petrol);
+        font-weight: 700;
+        border-bottom-color: var(--gold);
+
+        .module-tab-icon {
+          color: var(--gold-hover);
+        }
       }
     }
 
-    /* Colores de las Cápsulas según Modelo */
-    .pill-purple { background: #7c3aed; }      /* CONFIGURACIÓN */
-    .pill-green { background: #059669; }       /* ADMINISTRACIÓN */
-    .pill-blue { background: #1e40af; }        /* DOCUMENTOS (Azul oscuro profundo) */
-    .pill-teal { background: #0d9488; }        /* CATALOGOS */
-    .pill-blue-bright { background: #2563eb; } /* VENTANILLA ÚNICA */
-    .pill-slate { background: #334155; }       /* ARCHIVO */
-
-    /* Grilla de Tarjetas (4 por fila en desktop como en el modelo) */
     .modules-cards-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 18px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
     }
 
-    @media (max-width: 1200px) {
+    @media (max-width: 1100px) {
       .modules-cards-grid {
-        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      }
-    }
-
-    .fade-in {
-      animation: fadeInCards 0.2s ease-out;
-    }
-    @keyframes fadeInCards {
-      from {
-        opacity: 0;
-        transform: translateY(4px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
 
     .module-card {
-      background: #ffffff;
-      border: 1px solid #f1f5f9;
-      border-radius: 10px;
-      padding: 16px 18px;
+      width: 100%;
+      text-align: left;
+      font-family: inherit;
+      background: var(--paper-canvas);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px 16px;
       display: flex;
-      flex-direction: column;
-      gap: 10px;
+      align-items: center;
+      gap: 14px;
       cursor: pointer;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: border-color 0.15s ease, background-color 0.15s ease;
 
       &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 18px rgba(15, 32, 39, 0.08);
-        border-color: #cbd5e1;
+        background: var(--surface);
+        border-color: var(--gold);
 
-        .module-card-link {
-          color: #1d4ed8;
-          text-decoration: underline;
+        .module-chevron {
+          color: var(--petrol);
+          transform: translateX(2px);
         }
       }
     }
 
-    .card-header-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-    }
-
     .module-icon-box {
-      width: 42px;
-      height: 42px;
-      border-radius: 9px;
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      background: var(--surface);
+      border: 1px solid var(--line);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #ffffff;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      color: var(--petrol);
+      flex-shrink: 0;
 
       mat-icon {
-        font-size: 22px;
-        width: 22px;
-        height: 22px;
-        color: #ffffff;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
       }
-    }
-
-    /* Colores de iconos de módulos */
-    .bg-teal { background: #0d9488; }
-    .bg-purple { background: #7c3aed; }
-    .bg-green { background: #059669; }
-    .bg-orange { background: #ea580c; }
-    .bg-blue { background: #2563eb; }
-    .bg-indigo { background: #4f46e5; }
-    .bg-slate { background: #334155; }
-
-    .module-count-badge {
-      font-size: 1.15rem;
-      font-weight: 800;
-      color: #0f172a;
-      font-feature-settings: "tnum";
     }
 
     .module-card-body {
       flex: 1;
+      min-width: 0;
+    }
+
+    .module-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .module-name {
-      margin: 0;
       font-size: 0.88rem;
-      font-weight: 800;
-      color: #0f172a;
-      letter-spacing: 0.4px;
-      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .module-count-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--petrol);
+      background: var(--gold-soft);
+      padding: 1px 7px;
+      border-radius: 999px;
+      font-variant-numeric: tabular-nums;
     }
 
     .module-desc {
-      margin: 4px 0 0 0;
+      margin: 2px 0 0 0;
       font-size: 0.78rem;
-      color: #64748b;
+      color: var(--ink-muted);
       line-height: 1.35;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
-    .module-card-link {
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: #2563eb;
-      letter-spacing: 0.2px;
-      transition: color 0.15s ease;
+    .module-chevron {
+      color: var(--ink-muted);
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      transition: transform 0.15s ease, color 0.15s ease;
     }
 
     /* FOOTER */
     .home-portal-footer {
-      margin-top: 24px;
-      padding: 20px 0;
-      border-top: 1px solid #e2e8f0;
+      margin-top: 20px;
+      padding: 16px 0;
+      border-top: 1px solid var(--line);
       text-align: center;
-      p { margin: 0; font-size: 0.75rem; color: #94a3b8; font-weight: 500; }
-    }
-
-    .table-responsive {
-      width: 100%;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
+      p { margin: 0; font-size: 0.76rem; color: var(--ink-muted); }
     }
 
     .table-responsive .recent-table {
@@ -765,33 +745,32 @@ interface DashboardSection {
         gap: 12px;
         margin-bottom: 16px;
 
-        h1 { font-size: 1.25rem; }
+        h1 { font-size: 1.3rem; }
         .subtitle { font-size: 0.8rem; }
         .welcome-actions { width: 100%; }
-        .btn-redactar-doc { width: 100% !important; justify-content: center !important; height: 40px !important; }
+        .btn-redactar-doc.mat-mdc-raised-button {
+          width: 100%;
+          justify-content: center;
+          height: 40px;
+        }
       }
 
-      .kpi-grid {
+      .tray-overview-strip {
         grid-template-columns: 1fr;
-        gap: 10px;
       }
 
-      .kpi-card {
+      .tray-metric {
+        border-right: none;
+        border-bottom: 1px solid var(--line);
         padding: 12px 14px;
-        gap: 14px;
-        border-radius: 10px;
+
+        &:last-child {
+          border-bottom: none;
+        }
       }
 
-      .kpi-big-number {
-        font-size: 1.75rem;
-      }
-
-      .kpi-title {
-        font-size: 0.74rem;
-      }
-
-      .kpi-desc {
-        font-size: 0.72rem;
+      .tray-value {
+        font-size: 1.25rem;
       }
 
       .quick-actions-bar {
@@ -805,65 +784,50 @@ interface DashboardSection {
         scrollbar-width: none;
         &::-webkit-scrollbar { display: none; }
         .actions-label { display: none; }
-        .quick-action-btn {
+        .quick-action-btn.mat-mdc-outlined-button {
           flex: 0 0 auto;
           white-space: nowrap;
-          height: 32px !important;
-          font-size: 0.76rem !important;
-          padding: 0 12px !important;
+          height: 34px;
+          font-size: 0.78rem;
+          padding: 0 12px;
         }
       }
 
       .charts-section {
-        grid-template-columns: 1fr !important;
+        grid-template-columns: 1fr;
         gap: 14px;
-        margin-bottom: 20px;
+        margin-bottom: 18px;
       }
 
       .chart-card {
-        padding: 14px 12px 8px 12px;
+        padding: 14px 12px 8px;
         min-width: 0;
         overflow: hidden;
       }
 
-      .recent-tramites-section {
-        padding: 14px 12px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-      }
-
+      .recent-tramites-section,
       .module-section-box {
         padding: 14px 12px;
-        border-radius: 10px;
       }
 
-      .capsules-bar {
+      .module-tabs-bar {
         flex-wrap: nowrap;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        gap: 8px;
-        padding-bottom: 10px;
-        margin-bottom: 14px;
         scrollbar-width: none;
         &::-webkit-scrollbar { display: none; }
       }
 
-      .capsule-btn {
+      .module-tab-btn {
         flex: 0 0 auto;
-        padding: 6px 12px;
-        font-size: 0.72rem;
-        border-radius: 6px;
-        .capsule-icon { font-size: 16px; width: 16px; height: 16px; }
+        white-space: nowrap;
+        padding: 8px 12px;
+        font-size: 0.8rem;
       }
 
       .modules-cards-grid {
         grid-template-columns: 1fr;
         gap: 10px;
-      }
-
-      .module-card {
-        padding: 12px 14px;
-        gap: 8px;
       }
     }
   `]
@@ -1161,6 +1125,12 @@ export class DashboardComponent implements OnInit {
     });
   }
 
+  formatModuleTitle(label: string): string {
+    const clean = (label || '').trim();
+    if (!clean) return '';
+    return clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+  }
+
   getParticipanteTexto(d: any): string {
     try {
       const pv = typeof d?.plantilla_valor === 'string' ? JSON.parse(d.plantilla_valor) : d?.plantilla_valor;
@@ -1266,13 +1236,13 @@ export class DashboardComponent implements OnInit {
             type: 'category',
             boundaryGap: false,
             data: mesesLabels,
-            axisLine: { lineStyle: { color: '#cbd5e1' } },
-            axisLabel: { color: '#64748b', fontSize: 11 }
+            axisLine: { lineStyle: { color: '#c7cfc2' } },
+            axisLabel: { color: '#525e4e', fontSize: 11 }
           },
           yAxis: {
             type: 'value',
-            splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
-            axisLabel: { color: '#64748b', fontSize: 11 }
+            splitLine: { lineStyle: { color: '#eceee9', type: 'dashed' } },
+            axisLabel: { color: '#525e4e', fontSize: 11 }
           },
           series: [
             {
@@ -1281,12 +1251,12 @@ export class DashboardComponent implements OnInit {
               smooth: true,
               showSymbol: true,
               symbolSize: 6,
-              itemStyle: { color: '#2563eb' },
-              lineStyle: { width: 3, color: '#2563eb' },
+              itemStyle: { color: '#162c2f' },
+              lineStyle: { width: 2.5, color: '#162c2f' },
               areaStyle: {
                 color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                  { offset: 0, color: 'rgba(37, 99, 235, 0.40)' },
-                  { offset: 1, color: 'rgba(37, 99, 235, 0.02)' }
+                  { offset: 0, color: 'rgba(179, 130, 34, 0.28)' },
+                  { offset: 1, color: 'rgba(179, 130, 34, 0.02)' }
                 ])
               },
               data: cantidades
@@ -1303,9 +1273,9 @@ export class DashboardComponent implements OnInit {
         this.distribucionOptions.set({
           tooltip: {
             trigger: 'item',
-            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-            borderColor: '#334155',
-            textStyle: { color: '#f8fafc', fontSize: 12 },
+            backgroundColor: 'rgba(20, 27, 18, 0.92)',
+            borderColor: '#b38222',
+            textStyle: { color: '#f4f5f2', fontSize: 12 },
             formatter: '{b}: <strong>{c}</strong> ({d}%)'
           },
           legend: {
@@ -1314,9 +1284,9 @@ export class DashboardComponent implements OnInit {
             icon: 'circle',
             itemWidth: 8,
             itemHeight: 8,
-            textStyle: { color: '#475569', fontSize: 11 }
+            textStyle: { color: '#525e4e', fontSize: 11 }
           },
-          color: ['#0284c7', '#059669', '#6366f1', '#d97706'],
+          color: ['#162c2f', '#15803d', '#525e4e', '#b38222'],
           series: [
             {
               name: 'Estado de Flujo',

@@ -324,7 +324,7 @@ import { MenuAdmin, Rol, SeguridadService } from '../../core/services/seguridad.
     .page-container {
       max-width: 1250px;
       margin: 0 auto;
-      font-family: 'Plus Jakarta Sans', 'Poppins', sans-serif;
+      font-family: var(--font-ui);
     }
 
     .page-header {
@@ -522,7 +522,7 @@ import { MenuAdmin, Rol, SeguridadService } from '../../core/services/seguridad.
     }
 
     .route-code {
-      font-family: 'Fira Code', 'Roboto Mono', monospace;
+      font-family: var(--font-mono);
       font-size: 0.82rem;
       background: #f1f5f9;
       color: #0369a1;

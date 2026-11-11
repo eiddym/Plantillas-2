@@ -391,37 +391,39 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
   styles: [`
     .public-portal-container {
       min-height: 100vh;
-      background: #f1f5f9;
+      background: var(--paper-canvas);
       display: flex;
       flex-direction: column;
-      font-family: 'Inter', -apple-system, Roboto, sans-serif;
+      font-family: var(--font-ui);
+      color: var(--ink);
     }
 
     .public-nav {
-      background: #0f2027;
-      color: #fff;
-      padding: 16px 36px;
+      background: var(--petrol);
+      color: #ffffff;
+      padding: 14px 32px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      border-bottom: 2px solid var(--gold);
     }
 
     .nav-brand {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 14px;
     }
 
     .logo-circle {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%);
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: rgba(214, 168, 79, 0.16);
+      border: 1px solid rgba(214, 168, 79, 0.4);
       display: flex;
       align-items: center;
       justify-content: center;
-      mat-icon { color: #fff; }
+      mat-icon { color: #ead196; }
     }
 
     .brand-text {
@@ -430,91 +432,96 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
     }
 
     .system-title {
-      font-size: 17px;
-      font-weight: 800;
-      letter-spacing: -0.3px;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
     }
 
     .system-sub {
-      font-size: 12px;
-      color: rgba(255, 255, 255, 0.65);
+      font-size: 0.76rem;
+      color: rgba(255, 255, 255, 0.72);
     }
 
-    .btn-login-nav {
-      color: #00b4db !important;
-      border-color: rgba(0, 180, 219, 0.5) !important;
-      display: flex;
+    .btn-login-nav.mat-mdc-outlined-button {
+      color: #ead196;
+      border-color: rgba(214, 168, 79, 0.55);
+      display: inline-flex;
       align-items: center;
       gap: 6px;
+      border-radius: 8px;
     }
 
-    /* Hero */
+    /* Cabecera Editorial */
     .hero-section {
-      background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
-      color: #fff;
-      padding: 50px 36px;
-      text-align: center;
+      background: var(--surface);
+      color: var(--ink);
+      padding: 32px 24px 26px;
+      border-bottom: 1px solid var(--line);
       display: flex;
       justify-content: center;
     }
 
     .hero-content {
-      max-width: 820px;
+      width: 100%;
+      max-width: 940px;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 14px;
+      align-items: flex-start;
+      gap: 8px;
     }
 
     .hero-badge {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 6px 16px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 20px;
-      font-size: 13px;
-      color: #38ef7d;
+      gap: 6px;
+      padding: 3px 10px;
+      background: var(--gold-soft);
+      border: 1px solid rgba(179, 130, 34, 0.3);
+      border-radius: 6px;
+      font-size: 0.76rem;
+      color: var(--gold-hover);
       font-weight: 600;
-      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
     }
 
     .hero-title {
-      font-size: 32px;
-      font-weight: 800;
+      font-family: var(--font-serif);
+      font-size: 1.85rem;
+      font-weight: 700;
       margin: 0;
-      letter-spacing: -0.8px;
+      color: var(--ink);
+      letter-spacing: -0.02em;
     }
 
     .hero-subtitle {
-      font-size: 15.5px;
-      color: rgba(255, 255, 255, 0.75);
-      line-height: 1.5;
+      font-size: 0.94rem;
+      color: var(--ink-muted);
+      line-height: 1.55;
+      max-width: 72ch;
       margin: 0;
     }
 
-    /* Main */
+    /* Contenedor Principal */
     .main-content {
       flex: 1;
       max-width: 980px;
       width: 100%;
-      margin: -35px auto 40px;
+      margin: 24px auto 40px;
       padding: 0 20px;
-      z-index: 10;
     }
 
     .portal-card {
-      background: #fff;
-      border-radius: 18px;
-      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
+      background: var(--surface);
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(20, 27, 18, 0.05);
       overflow: hidden;
-      border: 1px solid #e2e8f0;
+      border: 1px solid var(--line);
     }
 
     .portal-tabs-header {
       display: flex;
-      border-bottom: 2px solid #e2e8f0;
-      background: #f8fafc;
+      border-bottom: 1px solid var(--line);
+      background: var(--paper-canvas);
     }
 
     .p-tab-btn {
@@ -523,27 +530,30 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
       align-items: center;
       justify-content: center;
       gap: 10px;
-      padding: 18px;
+      padding: 16px;
       border: none;
+      border-bottom: 2px solid transparent;
       background: transparent;
-      font-size: 15px;
-      font-weight: 700;
-      color: #64748b;
+      font-family: inherit;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--ink-muted);
       cursor: pointer;
-      transition: all 0.25s ease;
+      transition: color 0.15s ease, background-color 0.15s ease;
 
-      &:hover { color: #0f172a; }
+      &:hover { color: var(--ink); }
 
       &.p-tab-active {
-        color: #0083b0;
-        background: #fff;
-        border-bottom: 3px solid #0083b0;
-        mat-icon { color: #0083b0; }
+        color: var(--petrol);
+        font-weight: 700;
+        background: var(--surface);
+        border-bottom-color: var(--gold);
+        mat-icon { color: var(--gold-hover); }
       }
     }
 
     .tab-body {
-      padding: 32px;
+      padding: 28px 32px;
     }
 
     .stepper-indicator {
@@ -551,88 +561,87 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
       align-items: center;
       justify-content: center;
       gap: 12px;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
     }
 
     .step-num {
-      width: 32px;
-      height: 32px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
-      background: #e2e8f0;
-      color: #64748b;
+      background: var(--paper-canvas);
+      border: 1px solid var(--line-strong);
+      color: var(--ink-muted);
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 700;
+      font-size: 0.85rem;
 
       &.active {
-        background: #00b4db;
-        color: #fff;
+        background: var(--petrol);
+        border-color: var(--petrol);
+        color: #ffffff;
       }
     }
 
     .step-line {
-      width: 60px;
-      height: 2px;
-      background: #e2e8f0;
+      width: 56px;
+      height: 1px;
+      background: var(--line-strong);
     }
 
     .public-form-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 18px;
+      gap: 16px;
     }
 
     .col-span-full { grid-column: span 2; }
     .mt-4 { margin-top: 14px; }
 
-    @media (max-width: 640px) {
-      .public-form-grid { grid-template-columns: 1fr; }
-      .col-span-full { grid-column: span 1; }
-    }
-
     .form-section-title {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 15px;
+      font-size: 0.92rem;
       font-weight: 700;
-      color: #0f2027;
+      color: var(--ink);
       margin-bottom: 6px;
-      mat-icon { color: #00b4db; }
+      mat-icon { color: var(--gold-hover); }
     }
 
     .file-upload-card {
-      border: 2px dashed #cbd5e1;
-      border-radius: 12px;
-      padding: 24px;
+      border: 1.5px dashed var(--line-strong);
+      border-radius: 8px;
+      padding: 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 16px;
-      background: #f8fafc;
+      background: var(--paper-canvas);
     }
 
     .upload-icon-box {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      background: #e0f2fe;
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      background: var(--surface);
+      border: 1px solid var(--line);
       display: flex;
       align-items: center;
       justify-content: center;
-      mat-icon { color: #0284c7; }
+      mat-icon { color: var(--petrol); }
     }
 
     .upload-text {
       flex: 1;
-      h4 { margin: 0; font-size: 14.5px; font-weight: 700; color: #1e293b; }
-      p { margin: 2px 0 0; font-size: 12.5px; color: #64748b; }
+      h4 { margin: 0; font-size: 0.9rem; font-weight: 700; color: var(--ink); }
+      p { margin: 2px 0 0; font-size: 0.78rem; color: var(--ink-muted); }
     }
 
-    .btn-browse-file {
-      border-color: #00b4db !important;
-      color: #0083b0 !important;
+    .btn-browse-file.mat-mdc-outlined-button {
+      border-color: var(--petrol);
+      color: var(--petrol);
     }
 
     .form-actions-full {
@@ -641,71 +650,74 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
       margin-top: 12px;
     }
 
-    .btn-radicar-public {
-      background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%) !important;
-      color: #fff !important;
-      padding: 0 32px !important;
-      height: 48px;
-      font-size: 15px;
-      font-weight: 700;
-      border-radius: 10px;
+    .btn-radicar-public.mat-mdc-raised-button {
+      background: var(--petrol);
+      color: #ffffff;
+      padding: 0 28px;
+      height: 44px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      border-radius: 8px;
+      box-shadow: none;
+      &:hover:not(:disabled) {
+        background: var(--petrol-soft);
+      }
     }
 
     /* Comprobante */
     .receipt-card {
-      padding: 36px;
+      padding: 32px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 24px;
+      gap: 22px;
     }
 
     .receipt-success-badge {
       display: flex;
       align-items: center;
       gap: 10px;
-      color: #16a34a;
-      font-size: 20px;
-      font-weight: 800;
-      mat-icon { font-size: 32px; width: 32px; height: 32px; }
+      color: var(--state-ok);
+      font-size: 1.2rem;
+      font-weight: 700;
+      mat-icon { font-size: 30px; width: 30px; height: 30px; }
     }
 
     .receipt-body {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 14px;
-      padding: 24px;
+      background: var(--paper-canvas);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 22px;
       width: 100%;
       max-width: 820px;
       display: flex;
-      gap: 28px;
+      gap: 24px;
       align-items: stretch;
     }
 
     .qr-verification-box {
-      width: 250px;
-      min-width: 250px;
+      width: 240px;
+      min-width: 240px;
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
-      background: #fff;
-      border: 2px solid #e2e8f0;
-      border-radius: 14px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 10px;
       padding: 16px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
       gap: 10px;
     }
 
     .qr-img-wrapper {
-      width: 190px;
-      height: 190px;
+      width: 184px;
+      height: 184px;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #fff;
-      border-radius: 10px;
-      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      border-radius: 8px;
+      border: 1px solid var(--line);
       padding: 6px;
     }
 
@@ -727,24 +739,22 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      font-size: 11px;
+      font-size: 0.72rem;
       font-weight: 700;
-      color: #0083b0;
-      text-transform: uppercase;
+      color: var(--gold-hover);
       mat-icon { font-size: 14px; width: 14px; height: 14px; }
     }
 
     .qr-hr-code {
-      font-size: 18px;
-      font-weight: 800;
-      color: #0f2027;
-      font-family: monospace;
-      letter-spacing: 0.5px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--ink);
+      font-family: var(--font-mono);
     }
 
     .qr-lbl-url {
-      font-size: 10.5px;
-      color: #64748b;
+      font-size: 0.68rem;
+      color: var(--ink-muted);
       margin-top: 4px;
     }
 
@@ -752,13 +762,13 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
       display: flex;
       align-items: center;
       gap: 4px;
-      font-size: 10.5px;
-      color: #0284c7;
+      font-size: 0.68rem;
+      color: var(--petrol);
       text-decoration: none;
       word-break: break-all;
       line-height: 1.3;
       padding: 4px 6px;
-      background: #f0f9ff;
+      background: var(--paper-canvas);
       border-radius: 6px;
       margin-top: 2px;
       mat-icon { font-size: 13px; width: 13px; height: 13px; flex-shrink: 0; }
@@ -774,22 +784,23 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
     .r-row {
       display: flex;
       justify-content: space-between;
-      border-bottom: 1px dashed #e2e8f0;
+      border-bottom: 1px dashed var(--line-strong);
       padding-bottom: 6px;
+      gap: 12px;
     }
 
-    .r-lbl { font-size: 12.5px; color: #64748b; }
-    .r-val { font-size: 13.5px; color: #0f172a; text-align: right; }
-    .r-code { color: #0083b0; font-size: 15px; }
+    .r-lbl { font-size: 0.8rem; color: var(--ink-muted); }
+    .r-val { font-size: 0.84rem; color: var(--ink); text-align: right; }
+    .r-code { color: var(--petrol); font-family: var(--font-mono); font-size: 0.92rem; }
 
     .receipt-actions {
       display: flex;
-      gap: 14px;
+      gap: 12px;
     }
 
-    .btn-print-receipt {
-      background: #0f2027 !important;
-      color: #fff !important;
+    .btn-print-receipt.mat-mdc-raised-button {
+      background: var(--petrol);
+      color: #ffffff;
     }
 
     /* Consulta de Trámite */
@@ -797,7 +808,7 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
       display: flex;
       gap: 12px;
       max-width: 640px;
-      margin: 0 auto 30px;
+      margin: 0 auto 28px;
     }
 
     .tracking-input {
@@ -805,18 +816,19 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
       margin-bottom: -1.25em;
     }
 
-    .btn-track {
-      background: #0083b0 !important;
-      color: #fff !important;
+    .btn-track.mat-mdc-raised-button {
+      background: var(--petrol);
+      color: #ffffff;
       height: 52px;
-      padding: 0 24px !important;
+      padding: 0 24px;
+      box-shadow: none;
     }
 
     .tracking-result-card {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 14px;
-      padding: 24px;
+      background: var(--paper-canvas);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 22px;
       max-width: 640px;
       margin: 0 auto;
     }
@@ -825,96 +837,100 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
       display: flex;
       align-items: center;
       gap: 14px;
-      border-bottom: 1px solid #e2e8f0;
+      border-bottom: 1px solid var(--line);
       padding-bottom: 16px;
-      margin-bottom: 20px;
-      mat-icon { color: #00b4db; font-size: 32px; width: 32px; height: 32px; }
-      h3 { margin: 0; font-size: 16px; font-weight: 700; color: #0f172a; }
-      p { margin: 2px 0 0; font-size: 12.5px; color: #64748b; }
+      margin-bottom: 18px;
+      mat-icon { color: var(--petrol); font-size: 30px; width: 30px; height: 30px; }
+      h3 { margin: 0; font-size: 1rem; font-weight: 700; color: var(--ink); }
+      p { margin: 2px 0 0; font-size: 0.8rem; color: var(--ink-muted); }
     }
 
     .status-badge-active {
       margin-left: auto;
-      font-size: 12px;
+      font-size: 0.76rem;
       padding: 4px 10px;
-      border-radius: 12px;
-      background: #dcfce7;
-      color: #15803d;
+      border-radius: 6px;
+      background: var(--state-ok-bg);
+      color: var(--state-ok);
       font-weight: 700;
     }
 
     .tr-timeline {
       display: flex;
       flex-direction: column;
-      gap: 18px;
+      gap: 16px;
     }
 
     .tl-item {
       display: flex;
       gap: 14px;
+      margin-bottom: 14px;
     }
 
     .tl-dot {
-      width: 32px;
-      height: 32px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
-      background: #e2e8f0;
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
       display: flex;
       align-items: center;
       justify-content: center;
-      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+      mat-icon { font-size: 17px; width: 17px; height: 17px; }
     }
 
     .tl-item.done .tl-dot {
-      background: #dcfce7;
-      mat-icon { color: #16a34a; }
+      background: var(--state-ok-bg);
+      border-color: rgba(21, 128, 61, 0.3);
+      mat-icon { color: var(--state-ok); }
     }
 
     .tl-item.current .tl-dot {
-      background: #e0f2fe;
-      mat-icon { color: #0284c7; }
+      background: var(--gold-soft);
+      border-color: rgba(179, 130, 34, 0.35);
+      mat-icon { color: var(--gold-hover); }
     }
 
     .email-alert-box {
       margin-top: 14px;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
       display: flex;
       align-items: center;
       gap: 14px;
-      background: #ecfdf5;
-      border: 1px solid #a7f3d0;
-      border-left: 5px solid #10b981;
-      padding: 14px 18px;
+      background: var(--state-ok-bg);
+      border: 1px solid rgba(21, 128, 61, 0.25);
+      border-left: 4px solid var(--state-ok);
+      padding: 12px 16px;
       border-radius: 8px;
-      color: #065f46;
+      color: var(--ink);
       mat-icon {
-        font-size: 28px;
-        width: 28px;
-        height: 28px;
-        color: #10b981;
+        font-size: 26px;
+        width: 26px;
+        height: 26px;
+        color: var(--state-ok);
       }
       p {
         margin: 2px 0 0;
-        font-size: 13px;
-        color: #047857;
+        font-size: 0.82rem;
+        color: var(--ink-muted);
       }
     }
 
     .status-pill {
       display: inline-block;
-      padding: 4px 12px;
-      background: #e0f2fe;
-      color: #0369a1;
-      border-radius: 999px;
-      font-size: 12px;
+      padding: 3px 10px;
+      background: var(--state-info-bg);
+      color: var(--state-info);
+      border-radius: 6px;
+      font-size: 0.76rem;
       font-weight: 700;
     }
 
     .tr-header-info {
       flex: 1;
-      h3 { margin: 0; font-size: 18px; color: #0f172a; font-weight: 700; }
-      .tr-ref { margin: 4px 0 2px; font-size: 14px; color: #334155; }
-      .tr-sub { margin: 0; font-size: 12.5px; color: #64748b; }
+      h3 { margin: 0; font-size: 1.08rem; color: var(--ink); font-weight: 700; }
+      .tr-ref { margin: 4px 0 2px; font-size: 0.88rem; color: var(--ink); }
+      .tr-sub { margin: 0; font-size: 0.78rem; color: var(--ink-muted); }
     }
 
     .tr-badges {
@@ -929,22 +945,22 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
       align-items: center;
       gap: 6px;
       padding: 4px 10px;
-      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      background: var(--petrol);
       color: #ffffff;
       border-radius: 6px;
-      font-size: 11.5px;
-      font-weight: 700;
-      letter-spacing: 0.3px;
-      mat-icon { font-size: 15px; width: 15px; height: 15px; }
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 600;
+      mat-icon { font-size: 15px; width: 15px; height: 15px; color: #ead196; }
     }
 
     .tr-details-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 14px;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
       padding: 16px;
       margin: 18px 0;
     }
@@ -953,57 +969,35 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
       display: flex;
       flex-direction: column;
       gap: 3px;
-      .tr-lbl { font-size: 11.5px; text-transform: uppercase; color: #64748b; font-weight: 600; }
-      strong { font-size: 13.5px; color: #1e293b; }
-      span { font-size: 13px; color: #334155; }
-      .cite-text { color: #0284c7; font-family: monospace; }
+      .tr-lbl { font-size: 0.74rem; color: var(--ink-muted); font-weight: 600; }
+      strong { font-size: 0.85rem; color: var(--ink); }
+      span { font-size: 0.82rem; color: var(--ink-muted); }
+      .cite-text { color: var(--petrol); font-family: var(--font-mono); }
     }
 
     .tl-title {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin: 20px 0 12px;
-      font-size: 15px;
+      margin: 18px 0 12px;
+      font-size: 0.92rem;
       font-weight: 700;
-      color: #0f172a;
-      mat-icon { color: #0284c7; }
-    }
-
-    .tl-item {
-      display: flex;
-      gap: 14px;
-      margin-bottom: 16px;
+      color: var(--ink);
+      mat-icon { color: var(--gold-hover); }
     }
 
     .tl-header-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      .tl-date { font-size: 11.5px; color: #94a3b8; }
+      .tl-date { font-size: 0.74rem; color: var(--ink-muted); }
     }
 
     .tl-obs {
-      font-size: 12.5px;
-      color: #475569;
+      font-size: 0.8rem;
+      color: var(--ink-muted);
       margin-top: 2px;
       line-height: 1.4;
-    }
-
-    .tl-dot {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: #e2e8f0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      mat-icon { font-size: 18px; width: 18px; height: 18px; }
-    }
-
-    .tl-item.done .tl-dot {
-      background: #dcfce7;
-      mat-icon { color: #16a34a; }
     }
 
     .tl-info {
@@ -1011,66 +1005,56 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
       flex-direction: column;
       gap: 2px;
       flex: 1;
-      strong { font-size: 13.5px; color: #1e293b; }
-      span { font-size: 12px; color: #64748b; }
+      strong { font-size: 0.85rem; color: var(--ink); }
+      span { font-size: 0.76rem; color: var(--ink-muted); }
     }
 
     /* Footer */
     .public-footer {
-      background: #0f2027;
-      color: rgba(255, 255, 255, 0.65);
-      padding: 24px;
+      background: var(--petrol);
+      color: rgba(255, 255, 255, 0.72);
+      padding: 20px;
       text-align: center;
-      font-size: 13px;
+      font-size: 0.8rem;
+      border-top: 2px solid var(--gold);
       p { margin: 0; }
     }
 
     .footer-powered {
       display: block;
       margin-top: 4px;
-      font-size: 11px;
-      color: rgba(255, 255, 255, 0.4);
-    }
-
-    .fade-in {
-      animation: fadeIn 0.3s ease-in-out;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
+      font-size: 0.7rem;
+      color: rgba(255, 255, 255, 0.45);
     }
 
     @media (max-width: 640px) {
       .public-nav {
-        padding: 12px 16px;
+        padding: 12px 14px;
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
         align-items: stretch;
       }
       .nav-brand {
         justify-content: center;
       }
-      .btn-login-nav {
+      .btn-login-nav.mat-mdc-outlined-button {
         width: 100%;
         justify-content: center;
       }
       .hero-section {
-        padding: 30px 14px 24px;
+        padding: 20px 14px;
       }
       .hero-title {
-        font-size: 21px;
-        letter-spacing: -0.4px;
+        font-size: 1.35rem;
       }
       .hero-subtitle {
-        font-size: 13.5px;
+        font-size: 0.84rem;
       }
       .main-content {
         padding: 0 10px;
-        margin: -15px auto 25px;
+        margin: 14px auto 24px;
         width: 100%;
         max-width: 100%;
-        box-sizing: border-box;
       }
       .portal-tabs-header {
         overflow-x: auto;
@@ -1078,10 +1062,9 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
       }
       .p-tab-btn {
         padding: 12px 8px;
-        font-size: 12.5px;
+        font-size: 0.8rem;
         flex-direction: column;
         gap: 4px;
-        text-align: center;
         min-width: 130px;
       }
       .tab-body {
@@ -1089,14 +1072,14 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
       }
       .public-form-grid {
         grid-template-columns: 1fr;
-        gap: 14px;
+        gap: 12px;
       }
       .col-span-full {
         grid-column: span 1;
       }
       mat-form-field {
-        width: 100% !important;
-        max-width: 100% !important;
+        width: 100%;
+        max-width: 100%;
       }
       .file-upload-card {
         flex-direction: column;
@@ -1104,14 +1087,13 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
         padding: 16px 12px;
         gap: 12px;
       }
-      .btn-browse-file {
+      .btn-browse-file.mat-mdc-outlined-button,
+      .btn-radicar-public.mat-mdc-raised-button,
+      .btn-track.mat-mdc-raised-button {
         width: 100%;
       }
       .form-actions-full {
         justify-content: stretch;
-      }
-      .btn-radicar-public {
-        width: 100%;
       }
       .receipt-card {
         padding: 16px 10px;
@@ -1121,12 +1103,10 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
         padding: 14px 10px;
         gap: 16px;
         width: 100%;
-        box-sizing: border-box;
       }
       .qr-verification-box {
         width: 100%;
         min-width: 0;
-        box-sizing: border-box;
       }
       .qr-img-wrapper {
         width: 160px;
@@ -1144,13 +1124,9 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
         flex-direction: column;
         width: 100%;
       }
-      .btn-track {
-        width: 100%;
-      }
       .tracking-result-card {
         padding: 16px 10px;
         width: 100%;
-        box-sizing: border-box;
       }
       .tr-header {
         flex-direction: column;
@@ -1164,8 +1140,8 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
         align-items: flex-start;
       }
       .public-footer {
-        padding: 18px 12px;
-        font-size: 12px;
+        padding: 16px 12px;
+        font-size: 0.75rem;
       }
     }
   `]

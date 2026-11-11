@@ -245,7 +245,7 @@ interface AlertasConfig {
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
       border-radius: 4px;
       overflow: hidden;
-      font-family: 'Plus Jakarta Sans', 'Poppins', sans-serif;
+      font-family: var(--font-ui);
     }
 
     /* BANNER / PORTADA (Imagen 3) */

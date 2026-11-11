@@ -162,7 +162,7 @@ interface FirmaConfigResp {
       max-width: 1080px;
       margin: 0 auto;
       padding: 24px;
-      font-family: 'Plus Jakarta Sans', 'Poppins', sans-serif;
+      font-family: var(--font-ui);
     }
 
     .header-section {

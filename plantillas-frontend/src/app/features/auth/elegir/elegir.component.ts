@@ -123,7 +123,7 @@ interface UsuarioVirtualItem {
       justify-content: center;
       padding: 24px;
       background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
-      font-family: 'Poppins', Roboto, sans-serif;
+      font-family: var(--font-ui);
       box-sizing: border-box;
     }
     .elegir-card {

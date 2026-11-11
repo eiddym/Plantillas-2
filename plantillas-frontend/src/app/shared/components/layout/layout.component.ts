@@ -58,7 +58,7 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
           </div>
         </ng-container>
 
-        <!-- VISTA HOME (isHomePage): Perfil & Título Panel de Control (Imagen 2) -->
+        <!-- VISTA HOME (isHomePage): Perfil & Título Panel de Control -->
         <ng-container *ngIf="isHomePage()">
           <div class="home-topbar-brand" (click)="irAPerfil()" title="Mi Perfil" style="cursor: pointer;">
             <div class="home-avatar-circle">
@@ -66,15 +66,15 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
               <span *ngIf="!user()?.foto">{{ userInitial() }}</span>
             </div>
             <div class="home-brand-text">
-              <span class="user-handle">.{{ user()?.username || 'system' }}</span>
-              <span class="panel-subtitle">{{ user()?.cargo || 'Default system user' }} - panel de control</span>
+              <span class="user-handle">{{ user()?.username || 'usuario' }}</span>
+              <span class="panel-subtitle">{{ user()?.cargo || 'Gestión documental' }}</span>
             </div>
           </div>
         </ng-container>
 
         <span class="flex-spacer"></span>
 
-        <!-- Acciones a la derecha (Pantalla Completa, Notificaciones, Menú Opciones) -->
+        <!-- Acciones a la derecha (Bandeja pendiente, Pantalla Completa, Menú Opciones) -->
         <div class="topbar-right-actions">
           <button 
             mat-icon-button 
@@ -85,16 +85,16 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
             <mat-icon>{{ isFullScreen() ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
           </button>
 
-          <button 
-            mat-icon-button 
-            matTooltip="Notificaciones" 
+          <a
+            mat-icon-button
+            routerLink="/aprobacion"
+            matTooltip="Bandeja de pendientes"
             class="topbar-icon-btn"
           >
-            <mat-icon class="bell-icon">notifications</mat-icon>
-            <span class="notification-indicator"></span>
-          </button>
+            <mat-icon class="inbox-shortcut-icon">inbox</mat-icon>
+          </a>
 
-          <!-- Menú de opciones de usuario (Imagen 1 Prod: Mi cuenta / Perfil, Cambio de usuario, Salir) -->
+          <!-- Menú de opciones de usuario -->
           <button 
             mat-icon-button 
             [matMenuTriggerFor]="optionsMenu" 
@@ -151,9 +151,9 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
             </div>
             <div class="sidebar-user-info">
               <h4 class="sidebar-user-name">
-                {{ user()?.first_name ? (user()?.first_name + ' ' + (user()?.last_name || '')) : (user()?.username || 'system default') }}
+                {{ user()?.first_name ? (user()?.first_name + ' ' + (user()?.last_name || '')) : (user()?.username || 'Usuario institucional') }}
               </h4>
-              <p class="sidebar-user-email">{{ user()?.email || 'docs@marabuntarl.com' }}</p>
+              <p class="sidebar-user-email">{{ user()?.email || 'Sin correo institucional' }}</p>
             </div>
           </div>
 
@@ -209,33 +209,36 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      background: #f1f5f9;
-      font-family: 'Plus Jakarta Sans', 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--paper-canvas);
+      font-family: var(--font-ui);
     }
 
-    /* TOPBAR INSTITUCIONAL (Imagen 2 & Imagen 3) */
+    /* TOPBAR INSTITUCIONAL */
     .main-topbar {
       position: sticky;
       top: 0;
       z-index: 1000;
-      background: #0f2027; /* Petróleo oscuro institucional */
+      background: var(--petrol);
       color: #ffffff;
       height: 56px;
       padding: 0 16px;
       display: flex;
       align-items: center;
       gap: 12px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      border-bottom: 2px solid var(--gold);
     }
 
-    .topbar-icon-btn {
-      color: #ffffff !important;
+    .topbar-icon-btn.mat-mdc-icon-button {
+      color: #ffffff;
       width: 40px;
       height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       mat-icon {
-        font-size: 22px;
-        width: 22px;
-        height: 22px;
+        font-size: 21px;
+        width: 21px;
+        height: 21px;
       }
     }
 
@@ -268,23 +271,23 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
     }
 
     .breadcrumb-separator {
-      color: #64748b;
-      font-size: 1.1rem;
-      font-weight: 300;
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 1rem;
+      font-weight: 400;
       flex-shrink: 0;
     }
 
     .breadcrumb-title {
       color: #ffffff;
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       font-weight: 600;
-      letter-spacing: 0.3px;
+      letter-spacing: 0.01em;
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
     }
 
-    /* HOME TOPBAR (Imagen 2: .system Default system user - panel de control) */
+    /* HOME TOPBAR */
     .home-topbar-brand {
       display: flex;
       align-items: center;
@@ -294,15 +297,14 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
     .home-avatar-circle {
       width: 34px;
       height: 34px;
-      border-radius: 50%;
-      background: #2dd4bf; /* Teal brillante */
-      color: #042f2e;
+      border-radius: 8px;
+      background: var(--gold);
+      color: #ffffff;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 800;
-      font-size: 0.95rem;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      font-weight: 700;
+      font-size: 0.9rem;
       overflow: hidden;
       flex-shrink: 0;
     }
@@ -321,15 +323,14 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
     }
 
     .user-handle {
-      font-size: 0.95rem;
-      font-weight: 800;
+      font-size: 0.92rem;
+      font-weight: 700;
       color: #ffffff;
-      letter-spacing: 0.2px;
     }
 
     .panel-subtitle {
       font-size: 0.72rem;
-      color: #94a3b8;
+      color: rgba(255, 255, 255, 0.72);
       font-weight: 500;
     }
 
@@ -344,82 +345,68 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
       position: relative;
     }
 
-    .bell-icon {
-      color: #cbd5e1;
+    .inbox-shortcut-icon {
+      color: rgba(255, 255, 255, 0.88);
     }
 
-    .notification-indicator {
-      position: absolute;
-      top: 10px;
-      right: 56px;
-      width: 8px;
-      height: 8px;
-      background: #f59e0b;
-      border-radius: 50%;
-      border: 1.5px solid #0f2027;
-    }
-
-    /* NAVBAR USER OPTIONS MENU (Imagen 1 Prod Antiguo) */
+    /* NAVBAR USER OPTIONS MENU */
     .navbar-user-options-menu {
-      min-width: 210px !important;
-      padding: 4px 0 !important;
-      border-radius: 4px !important;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+      min-width: 210px;
+      padding: 4px 0;
+      border-radius: 8px;
     }
 
     .user-menu-item {
-      height: 42px !important;
-      display: flex !important;
-      align-items: center !important;
-      padding: 0 16px !important;
-      transition: background 0.15s ease !important;
-
+      height: 42px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
       &:hover {
-        background-color: #f1f5f9 !important;
+        background-color: var(--paper-canvas);
       }
     }
 
     .user-menu-icon {
-      font-size: 20px !important;
-      width: 20px !important;
-      height: 20px !important;
-      margin-right: 12px !important;
-      color: #334155 !important;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      margin-right: 12px;
+      color: var(--ink-muted);
     }
 
     .user-menu-text {
-      font-size: 13.5px !important;
-      font-weight: 500 !important;
-      color: #1e293b !important;
-      font-family: 'Plus Jakarta Sans', sans-serif !important;
+      font-size: 0.86rem;
+      font-weight: 500;
+      color: var(--ink);
+      font-family: var(--font-ui);
     }
 
     /* SIDENAV CONTAINER */
     .sidenav-container {
       flex: 1;
       height: calc(100vh - 56px);
-      background: #eef1f4;
+      background: var(--paper-canvas);
     }
 
     .sidenav-container.no-sidenav {
-      background: #f8fafc;
+      background: var(--paper-canvas);
     }
 
-    /* DARK INSTITUTIONAL SIDENAV (Imagen 3) */
+    /* DARK INSTITUTIONAL SIDENAV */
     .dark-institutional-sidenav {
-      width: 270px;
-      background: #0f2027; /* Petróleo oscuro profundo */
-      color: #cbd5e1;
+      width: 266px;
+      background: var(--petrol);
+      color: rgba(255, 255, 255, 0.85);
       border-right: 1px solid rgba(255, 255, 255, 0.08);
       display: flex;
       flex-direction: column;
     }
 
     .sidebar-brand-header {
-      padding: 16px 20px;
+      padding: 15px 20px;
       display: flex;
       align-items: center;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .sidebar-logo-link {
@@ -428,47 +415,45 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
       gap: 10px;
       text-decoration: none;
       color: #ffffff;
-      font-weight: 800;
-      font-size: 1.05rem;
-      letter-spacing: 0.8px;
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 0.04em;
     }
 
     .sidebar-logo-icon {
-      color: #22d3ee; /* Cyan */
-      font-size: 24px;
-      width: 24px;
-      height: 24px;
+      color: var(--gold);
+      font-size: 22px;
+      width: 22px;
+      height: 22px;
     }
 
-    .close-sidebar-btn {
-      color: #94a3b8 !important;
+    .close-sidebar-btn.mat-mdc-icon-button {
+      color: rgba(255, 255, 255, 0.7);
     }
 
-    /* CARD DE USUARIO EN EL SIDEBAR (Imagen 3) */
     .sidebar-user-card {
-      padding: 24px 16px 20px 16px;
+      padding: 20px 16px 16px;
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
-      background: rgba(255, 255, 255, 0.02);
+      background: rgba(0, 0, 0, 0.14);
     }
 
     .sidebar-user-avatar {
-      width: 64px;
-      height: 64px;
-      border-radius: 16px;
-      background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+      width: 56px;
+      height: 56px;
+      border-radius: 10px;
+      background: var(--gold);
       color: #ffffff;
-      font-size: 1.8rem;
-      font-weight: 800;
+      font-size: 1.5rem;
+      font-weight: 700;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 14px rgba(20, 184, 166, 0.3);
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       overflow: hidden;
-      border: 2px solid rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.22);
       position: relative;
       flex-shrink: 0;
     }
@@ -482,20 +467,19 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
 
     .sidebar-user-name {
       margin: 0;
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       font-weight: 700;
       color: #ffffff;
-      letter-spacing: 0.3px;
     }
 
     .sidebar-user-email {
-      margin: 4px 0 0 0;
-      font-size: 0.78rem;
-      color: #94a3b8;
+      margin: 3px 0 0 0;
+      font-size: 0.76rem;
+      color: rgba(255, 255, 255, 0.65);
     }
 
-    .sidebar-divider {
-      border-top-color: rgba(255, 255, 255, 0.08) !important;
+    .sidebar-divider.mat-divider {
+      border-top-color: rgba(255, 255, 255, 0.1);
     }
 
     /* SCROLLABLE MENU ACCORDION */
@@ -507,20 +491,19 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
     }
 
     .menu-category-header {
-      padding: 12px 20px;
+      padding: 11px 18px;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 11px;
       cursor: pointer;
-      color: #e2e8f0;
-      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 0.78rem;
       font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
+      letter-spacing: 0.03em;
       transition: background 0.15s ease, color 0.15s ease;
 
       &:hover {
-        background: rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.06);
         color: #ffffff;
       }
     }
@@ -529,7 +512,7 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
       font-size: 18px;
       width: 18px;
       height: 18px;
-      color: #22d3ee;
+      color: var(--gold);
     }
 
     .category-title {
@@ -540,32 +523,33 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
       font-size: 18px;
       width: 18px;
       height: 18px;
-      color: #64748b;
+      color: rgba(255, 255, 255, 0.5);
     }
 
     .category-subitems {
       display: flex;
       flex-direction: column;
-      background: rgba(0, 0, 0, 0.15);
+      background: rgba(0, 0, 0, 0.16);
       padding: 4px 0;
     }
 
     .subitem-link {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 10px 20px 10px 36px;
-      color: #94a3b8;
+      gap: 11px;
+      padding: 9px 18px 9px 34px;
+      color: rgba(255, 255, 255, 0.72);
       text-decoration: none;
-      font-size: 0.84rem;
+      font-size: 0.83rem;
       font-weight: 500;
-      transition: all 0.15s ease;
+      border-left: 3px solid transparent;
+      transition: background 0.15s ease, color 0.15s ease;
 
       &:hover {
         background: rgba(255, 255, 255, 0.06);
         color: #ffffff;
         .subitem-icon {
-          color: #22d3ee;
+          color: var(--gold);
         }
       }
     }
@@ -574,7 +558,7 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
       font-size: 16px;
       width: 16px;
       height: 16px;
-      color: #64748b;
+      color: rgba(255, 255, 255, 0.52);
       transition: color 0.15s ease;
     }
 
@@ -584,35 +568,35 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
       text-overflow: ellipsis;
     }
 
-    .active-subitem {
-      background: rgba(34, 211, 238, 0.12) !important;
-      color: #22d3ee !important;
+    .active-subitem.subitem-link {
+      background: rgba(214, 168, 79, 0.16);
+      color: #f2e3c0;
       font-weight: 700;
-      border-left: 3px solid #22d3ee;
+      border-left-color: var(--gold);
       .subitem-icon {
-        color: #22d3ee !important;
+        color: #f2e3c0;
       }
     }
 
     .sidebar-footer {
-      padding: 14px 20px;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 12px 18px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
       font-size: 0.72rem;
-      color: #64748b;
+      color: rgba(255, 255, 255, 0.58);
       text-align: center;
     }
 
     /* MAIN CONTENT */
     .main-content {
       padding: 24px;
-      background: #eef1f4;
+      background: var(--paper-canvas);
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
     }
 
     .main-content-home {
       padding: 24px 28px;
-      background: #f4f6f8;
+      background: var(--paper-canvas);
     }
 
     /* RESPONSIVE */
@@ -622,7 +606,7 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
         height: 52px;
         gap: 6px;
       }
-      .topbar-icon-btn {
+      .topbar-icon-btn.mat-mdc-icon-button {
         width: 36px;
         height: 36px;
       }
@@ -635,7 +619,7 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
         max-width: none;
       }
       .breadcrumb-title {
-        font-size: 0.82rem;
+        font-size: 0.84rem;
       }
       .home-topbar-brand {
         flex: 1 1 auto;
@@ -643,30 +627,28 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
         gap: 8px;
       }
       .user-handle {
-        font-size: 0.85rem;
+        font-size: 0.86rem;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
       .action-hide-mobile {
-        display: none !important;
+        display: none;
       }
       .panel-subtitle {
         display: none;
       }
       .main-content {
         padding: 10px 8px;
-        box-sizing: border-box;
       }
       .main-content-home {
         padding: 12px 10px;
-        box-sizing: border-box;
       }
       .sidenav-container {
         height: calc(100vh - 52px);
       }
-      .dark-institutional-sidenav {
-        width: min(84vw, 280px) !important;
+      .dark-institutional-sidenav.mat-drawer {
+        width: min(84vw, 280px);
       }
     }
   `]
@@ -714,7 +696,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   // Título de la sección activa para el breadcrumb de páginas internas
   readonly currentSectionTitle = computed(() => {
     const url = this.currentUrl().split('?')[0].split('#')[0];
-    if (url.startsWith('/profile') || url.startsWith('/cuenta')) return 'Profile';
+    if (url.startsWith('/profile') || url.startsWith('/cuenta')) return 'Mi perfil';
     if (url.startsWith('/documentos')) return 'Documentos';
     if (url.startsWith('/plantillas')) return 'Plantillas';
     if (url.startsWith('/aprobacion')) return 'Pendientes';

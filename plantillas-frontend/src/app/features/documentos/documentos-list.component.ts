@@ -379,7 +379,7 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
     .page-container {
       max-width: 1240px;
       margin: 0 auto;
-      font-family: 'Plus Jakarta Sans', 'Poppins', sans-serif;
+      font-family: var(--font-ui);
     }
 
     .page-header {
@@ -581,7 +581,7 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
       display: block;
       color: #0f2027;
       font-weight: 700;
-      font-family: 'Poppins', sans-serif;
+      font-family: var(--font-ui);
     }
 
     .doc-meta {

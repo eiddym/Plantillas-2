@@ -307,7 +307,7 @@ export interface VerificacionResultado {
       display: block;
       min-height: 100vh;
       background: #0f172a;
-      font-family: 'Poppins', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      font-family: var(--font-ui);
       color: #0f172a;
     }
 

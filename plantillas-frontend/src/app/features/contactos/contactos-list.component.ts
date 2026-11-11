@@ -208,7 +208,7 @@ export interface Contacto {
     .page-container {
       max-width: 1240px;
       margin: 0 auto;
-      font-family: 'Plus Jakarta Sans', 'Poppins', sans-serif;
+      font-family: var(--font-ui);
     }
     .page-header {
       display: flex;

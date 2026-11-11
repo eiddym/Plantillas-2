@@ -25,20 +25,22 @@ import { AuthService } from '../../../core/auth/auth.service';
       <div class="login-card-horizontal">
         <!-- Panel Izquierdo: Identidad Oficial Cooperativa Marabunta R.L. -->
         <div class="panel-izquierdo">
+          <div class="folio-badge">Gestión documental</div>
           <img
             [src]="logoUrl()"
             (error)="onLogoError()"
             alt="Logo Cooperativa Minera Marabunta R.L."
             class="logo-cooperativa"
           />
+          <p class="folio-caption">Cooperativa Minera Marabunta R.L.</p>
         </div>
 
         <!-- Panel Derecho: Formulario DOCS -->
         <div class="panel-derecho">
           <div class="cabecera-sistema">
-            Sistema de documentos digitales de la cooperativa minera Marabunta R.L.
+            Archivo y correspondencia oficial
           </div>
-          <div class="titulo-docs">DOCS</div>
+          <h1 class="titulo-docs">DOCS</h1>
 
           @if (loading()) {
             <mat-progress-bar mode="indeterminate" class="mb-4"></mat-progress-bar>
@@ -92,13 +94,13 @@ import { AuthService } from '../../../core/auth/auth.service';
               <div class="field-error">La contraseña es obligatoria</div>
             }
 
-            <!-- Botón Login Píldora Oscuro -->
+            <!-- Botón Login -->
             <button
               type="submit"
               class="login-btn"
               [disabled]="loginForm.invalid || loading()"
             >
-              {{ loading() ? 'INICIANDO SESIÓN...' : 'INICIAR SESIÓN' }}
+              {{ loading() ? 'Ingresando al sistema...' : 'Ingresar al sistema' }}
             </button>
           </form>
 
@@ -151,85 +153,92 @@ import { AuthService } from '../../../core/auth/auth.service';
       align-items: center;
       justify-content: center;
       padding: 20px;
-      background: linear-gradient(135deg, rgba(15, 32, 39, 0.92) 0%, rgba(15, 61, 62, 0.88) 100%),
+      background: linear-gradient(rgba(15, 27, 25, 0.86), rgba(22, 44, 47, 0.9)),
                   url('/assets/images/bg.jpg') no-repeat center center fixed;
       background-size: cover;
-      font-family: 'Poppins', Roboto, sans-serif;
+      font-family: var(--font-ui);
       box-sizing: border-box;
     }
 
     .login-card-horizontal {
       display: flex;
       width: 100%;
-      max-width: 860px;
+      max-width: 840px;
       min-height: 460px;
-      background-color: #ffffff;
-      border-radius: 20px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+      background-color: var(--surface);
+      border-radius: 12px;
+      border: 1px solid rgba(214, 168, 79, 0.28);
+      box-shadow: 0 22px 48px rgba(12, 20, 14, 0.45);
       overflow: hidden;
-      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(12px) scale(0.99); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
-    /* --- PANEL IZQUIERDO (LOGO OFICIAL Y FONDO PETRÓLEO) --- */
+    /* --- PANEL IZQUIERDO --- */
     .panel-izquierdo {
-      flex: 1;
-      background: linear-gradient(145deg, #0f2027 0%, #15303c 50%, #0f3d3e 100%);
+      flex: 0.95;
+      background: var(--petrol);
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 36px;
+      gap: 18px;
+      padding: 36px 28px;
       position: relative;
-      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      border-right: 3px solid var(--gold);
+    }
+
+    .folio-badge {
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: #ead196;
+      letter-spacing: 0.04em;
+      padding: 4px 12px;
+      border: 1px solid rgba(214, 168, 79, 0.35);
+      border-radius: 6px;
+      background: rgba(214, 168, 79, 0.08);
     }
 
     .logo-cooperativa {
       width: 100%;
-      max-width: 260px;
+      max-width: 220px;
       height: auto;
-      max-height: 220px;
+      max-height: 200px;
       object-fit: contain;
-      filter: drop-shadow(0px 8px 20px rgba(0, 0, 0, 0.35));
-      z-index: 2;
-      transition: transform 0.3s ease;
-      &:hover {
-        transform: scale(1.02);
-      }
     }
 
-    /* --- PANEL DERECHO (FORMULARIO DOCS) --- */
+    .folio-caption {
+      margin: 0;
+      font-family: var(--font-serif);
+      font-size: 0.92rem;
+      color: rgba(255, 255, 255, 0.84);
+      text-align: center;
+    }
+
+    /* --- PANEL DERECHO --- */
     .panel-derecho {
-      flex: 1.15;
-      padding: 38px 46px;
+      flex: 1.2;
+      padding: 38px 44px;
       display: flex;
       flex-direction: column;
       justify-content: center;
-      background-color: #ffffff;
+      background-color: var(--surface);
     }
 
     .cabecera-sistema {
-      text-align: center;
-      font-size: 11.5px;
+      text-align: left;
+      font-size: 0.8rem;
       font-weight: 600;
-      color: #64748b;
-      text-transform: uppercase;
+      color: var(--ink-muted);
       margin-bottom: 4px;
-      letter-spacing: 0.5px;
-      line-height: 1.4;
     }
 
     .titulo-docs {
-      text-align: center;
-      font-size: 34px;
-      font-weight: 900;
-      color: #0f172a;
-      margin-bottom: 22px;
-      letter-spacing: 1.2px;
-      font-family: 'Poppins', sans-serif;
+      text-align: left;
+      font-family: var(--font-serif);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin: 0 0 22px 0;
+      letter-spacing: 0.04em;
     }
 
     .login-form {
@@ -247,42 +256,40 @@ import { AuthService } from '../../../core/auth/auth.service';
 
     .input-blanco {
       width: 100%;
-      height: 46px;
-      background-color: #f8fafc;
-      border: 1.5px solid #cbd5e1;
-      border-radius: 10px;
-      padding: 0 44px;
-      font-size: 14.5px;
-      font-family: 'Poppins', sans-serif;
-      color: #0f172a;
-      box-sizing: border-box;
-      transition: all 0.2s ease;
+      height: 44px;
+      background-color: var(--paper-canvas);
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      padding: 0 42px;
+      font-size: 0.92rem;
+      font-family: var(--font-ui);
+      color: var(--ink);
+      transition: border-color 0.15s ease, background-color 0.15s ease;
 
       &::placeholder {
-        color: #94a3b8;
+        color: var(--ink-muted);
         font-weight: 400;
       }
 
       &:hover {
-        border-color: #94a3b8;
-        background-color: #ffffff;
+        background-color: var(--surface);
       }
 
       &:focus {
         outline: none;
-        background-color: #ffffff;
-        border-color: #0284c7;
-        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+        background-color: var(--surface);
+        border-color: var(--petrol);
+        box-shadow: 0 0 0 3px var(--gold-soft);
       }
     }
 
     .icon-field {
       position: absolute;
-      left: 14px;
-      color: #64748b;
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
+      left: 13px;
+      color: var(--ink-muted);
+      font-size: 19px;
+      width: 19px;
+      height: 19px;
       pointer-events: none;
       display: flex;
       align-items: center;
@@ -294,56 +301,49 @@ import { AuthService } from '../../../core/auth/auth.service';
       right: 12px;
       background: transparent;
       border: none;
-      color: #64748b;
+      color: var(--ink-muted);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 0;
-      transition: color 0.2s ease;
       &:hover {
-        color: #0284c7;
+        color: var(--ink);
       }
       mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
+        font-size: 19px;
+        width: 19px;
+        height: 19px;
       }
     }
 
     .field-error {
-      color: #dc2626;
-      font-size: 11.5px;
+      color: var(--state-err);
+      font-size: 0.76rem;
       margin-top: -8px;
-      margin-left: 4px;
+      margin-left: 2px;
       font-weight: 500;
     }
 
-    /* --- BOTÓN LOGIN PÍLDORA ELEGANTE --- */
     .login-btn {
       width: 100%;
-      height: 46px;
-      margin-top: 6px;
-      background: linear-gradient(135deg, #0f2027 0%, #203a43 100%);
+      height: 44px;
+      margin-top: 4px;
+      background: var(--petrol);
       color: #ffffff;
       border: none;
-      border-radius: 23px;
-      font-family: 'Poppins', sans-serif;
-      font-weight: 700;
-      font-size: 13.5px;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
+      border-radius: 8px;
+      font-family: var(--font-ui);
+      font-weight: 600;
+      font-size: 0.92rem;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.25s ease;
-      box-shadow: 0 4px 14px rgba(15, 32, 39, 0.25);
+      transition: background-color 0.15s ease;
 
       &:hover:not(:disabled) {
-        background: linear-gradient(135deg, #15303c 0%, #2c5364 100%);
-        transform: translateY(-1px);
-        box-shadow: 0 6px 18px rgba(15, 32, 39, 0.35);
+        background: var(--petrol-soft);
       }
 
       &:disabled {
@@ -364,17 +364,15 @@ import { AuthService } from '../../../core/auth/auth.service';
       display: flex;
       align-items: center;
       text-align: center;
-      color: rgba(15, 32, 39, 0.45);
-      font-size: 11px;
+      color: var(--ink-muted);
+      font-size: 0.76rem;
       font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
 
       &::before,
       &::after {
         content: '';
         flex: 1;
-        border-bottom: 1px solid rgba(15, 32, 39, 0.12);
+        border-bottom: 1px solid var(--line);
       }
 
       span {
@@ -387,99 +385,79 @@ import { AuthService } from '../../../core/auth/auth.service';
       align-items: center;
       justify-content: center;
       gap: 8px;
-      height: 44px;
-      border-radius: 22px;
-      background: linear-gradient(135deg, #1b3842 0%, #0f2027 100%);
-      color: #e0f2f1;
+      height: 42px;
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--ink);
       font-weight: 600;
-      font-size: 13px;
+      font-size: 0.88rem;
       text-decoration: none;
-      letter-spacing: 0.3px;
-      box-shadow: 0 2px 8px rgba(15, 32, 39, 0.2);
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--line-strong);
+      transition: border-color 0.15s ease, background-color 0.15s ease;
 
       &:hover {
-        background: linear-gradient(135deg, #244b58 0%, #152c35 100%);
-        color: #ffffff;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(15, 32, 39, 0.3);
+        background: var(--paper-canvas);
+        border-color: var(--gold);
       }
 
       .sso-icon {
         font-size: 18px;
         width: 18px;
         height: 18px;
-        color: #80cbc4;
+        color: var(--gold);
       }
     }
 
-    /* --- ENLACES PÚBLICOS DESTACADOS --- */
+    /* --- ENLACES PÚBLICOS --- */
     .enlaces-publicos {
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      margin-top: 20px;
+      gap: 8px;
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
     }
 
     .acceso-publico-card {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 11px 14px;
-      border-radius: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
       text-decoration: none;
-      color: #0f2027;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 1px 4px rgba(15, 32, 39, 0.04);
+      color: var(--ink);
+      background: var(--paper-canvas);
+      border: 1px solid var(--line);
+      transition: border-color 0.15s ease, background-color 0.15s ease;
 
-      &.card-verificar {
-        background: linear-gradient(135deg, #f0fdf9 0%, #e6f4f1 100%);
-        border: 1px solid #a7f3d0;
-        &:hover {
-          background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-          border-color: #10b981;
-          box-shadow: 0 4px 14px rgba(16, 185, 129, 0.16);
-          transform: translateY(-1px);
-        }
-      }
-
-      &.card-ventanilla {
-        background: linear-gradient(135deg, #f4fbfb 0%, #e8f5f5 100%);
-        border: 1px solid #b2dfdb;
-        &:hover {
-          background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%);
-          border-color: #00796b;
-          box-shadow: 0 4px 14px rgba(0, 121, 107, 0.16);
-          transform: translateY(-1px);
-        }
+      &:hover {
+        background: var(--surface);
+        border-color: var(--gold);
       }
     }
 
     .card-icon-wrap {
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      background: var(--petrol);
 
       mat-icon {
-        color: #ffffff;
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-      }
-
-      &.icon-petroleo {
-        background: linear-gradient(135deg, #0f383e 0%, #0d5c63 100%);
-        box-shadow: 0 2px 6px rgba(15, 56, 62, 0.3);
+        color: #f2e3c0;
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
       }
 
       &.icon-petroleo-secundario {
-        background: linear-gradient(135deg, #005c53 0%, #042940 100%);
-        box-shadow: 0 2px 6px rgba(4, 41, 64, 0.3);
+        background: var(--gold-soft);
+        mat-icon {
+          color: var(--gold-hover);
+        }
       }
     }
 
@@ -491,26 +469,21 @@ import { AuthService } from '../../../core/auth/auth.service';
     }
 
     .card-title {
-      font-size: 13px;
+      font-size: 0.84rem;
       font-weight: 700;
-      color: #0f2027;
+      color: var(--ink);
     }
 
     .card-subtitle {
-      font-size: 11px;
-      color: #475569;
+      font-size: 0.74rem;
+      color: var(--ink-muted);
     }
 
     .card-arrow {
-      color: #0d5c63;
+      color: var(--ink-muted);
       font-size: 18px;
       width: 18px;
       height: 18px;
-      transition: transform 0.2s ease;
-    }
-
-    .acceso-publico-card:hover .card-arrow {
-      transform: translateX(3px);
     }
 
     .error-banner {
@@ -518,9 +491,9 @@ import { AuthService } from '../../../core/auth/auth.service';
       align-items: center;
       gap: 8px;
       padding: 9px 12px;
-      background: #fef2f2;
-      color: #b91c1c;
-      border: 1px solid #fecaca;
+      background: var(--state-err-bg);
+      color: var(--state-err);
+      border: 1px solid rgba(185, 28, 28, 0.25);
       border-radius: 8px;
       margin-bottom: 0.75rem;
       font-size: 0.84rem;
@@ -531,137 +504,54 @@ import { AuthService } from '../../../core/auth/auth.service';
       margin-bottom: 0.75rem;
     }
 
-    /* =========================================================================
-       RESPONSIVE MÓVIL Y TABLET: DISEÑO COMPACTO, ELEGANTE Y SIN ALARGAMIENTOS
-       ========================================================================= */
     @media (max-width: 768px) {
       .login-container {
         padding: 16px 12px;
-        align-items: center;
       }
 
       .login-card-horizontal {
         flex-direction: column;
-        max-width: 390px;
+        max-width: 400px;
         min-height: auto;
-        border-radius: 16px;
-        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
-        margin: auto;
+        border-radius: 12px;
       }
 
       .panel-izquierdo {
-        padding: 16px 16px 14px;
+        padding: 18px 16px 16px;
+        gap: 8px;
         border-right: none;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        background: linear-gradient(135deg, #0f2027 0%, #173842 100%);
+        border-bottom: 2px solid var(--gold);
+      }
+
+      .folio-badge,
+      .folio-caption {
+        display: none;
       }
 
       .logo-cooperativa {
-        max-width: 95px;
-        max-height: 70px;
-        filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.25));
+        max-width: 88px;
+        max-height: 68px;
       }
 
       .panel-derecho {
-        padding: 18px 20px 22px;
+        padding: 20px 20px 22px;
         flex: unset;
       }
 
-      .cabecera-sistema {
-        font-size: 10px;
-        margin-bottom: 2px;
-        letter-spacing: 0.3px;
-        line-height: 1.3;
-      }
-
       .titulo-docs {
-        font-size: 22px;
+        font-size: 1.5rem;
         margin-bottom: 14px;
-        letter-spacing: 0.5px;
-      }
-
-      .login-form {
-        gap: 11px;
       }
 
       .input-blanco {
         height: 42px;
-        font-size: 13.5px;
+        font-size: 0.88rem;
         padding: 0 38px;
-        border-radius: 8px;
       }
 
-      .icon-field {
-        left: 11px;
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-      }
-
-      .toggle-password {
-        right: 10px;
-        mat-icon {
-          font-size: 18px;
-          width: 18px;
-          height: 18px;
-        }
-      }
-
-      .login-btn {
-        height: 42px;
-        font-size: 12.5px;
-        border-radius: 21px;
-        margin-top: 3px;
-      }
-
-      .sso-container {
-        margin-top: 10px;
-        gap: 8px;
-      }
-
+      .login-btn,
       .btn-sso {
-        height: 40px;
-        font-size: 12px;
-        border-radius: 20px;
-      }
-
-      .enlaces-publicos {
-        margin-top: 14px;
-        gap: 8px;
-      }
-
-      .acceso-publico-card {
-        padding: 8px 12px;
-        border-radius: 10px;
-        gap: 10px;
-      }
-
-      .card-icon-wrap {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        mat-icon {
-          font-size: 17px;
-          width: 17px;
-          height: 17px;
-        }
-      }
-
-      .card-title {
-        font-size: 12px;
-      }
-
-      .card-subtitle {
-        font-size: 10.5px;
-      }
-
-      .card-arrow {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
+        height: 42px;
       }
     }
 
@@ -671,17 +561,12 @@ import { AuthService } from '../../../core/auth/auth.service';
       }
 
       .panel-derecho {
-        padding: 14px 14px 18px;
-      }
-
-      .titulo-docs {
-        font-size: 20px;
-        margin-bottom: 10px;
+        padding: 16px 14px 18px;
       }
 
       .logo-cooperativa {
-        max-width: 80px;
-        max-height: 60px;
+        max-width: 76px;
+        max-height: 58px;
       }
     }
   `]
