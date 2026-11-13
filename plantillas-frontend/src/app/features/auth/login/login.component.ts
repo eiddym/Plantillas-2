@@ -128,6 +128,11 @@ import { AuthService } from '../../../core/auth/auth.service';
           </div>
         </div>
       </div>
+
+      <!-- Footer institucional con fecha dinámica -->
+      <footer class="login-footer">
+        <span>Desarrollado por <strong>Armotech</strong> &copy; {{ anioActual }}</span>
+      </footer>
     </div>
   `,
   styles: [`
@@ -191,16 +196,16 @@ import { AuthService } from '../../../core/auth/auth.service';
     .logo-cooperativa {
       position: relative;
       width: 100%;
-      max-width: 190px;
+      max-width: 235px;
       height: auto;
-      max-height: 170px;
+      max-height: 210px;
       object-fit: contain;
-      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.35));
+      filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.4));
       transition: transform 0.42s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.42s ease;
 
       &:hover {
         transform: scale(1.10);
-        filter: drop-shadow(0 16px 30px rgba(16, 185, 129, 0.45));
+        filter: drop-shadow(0 18px 34px rgba(16, 185, 129, 0.5));
       }
     }
 
@@ -355,6 +360,28 @@ import { AuthService } from '../../../core/auth/auth.service';
       }
     }
 
+    /* --- FOOTER DESARROLLADO POR ARMOTECH --- */
+    .login-footer {
+      position: absolute;
+      bottom: 16px;
+      right: 9vw;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.74rem;
+      color: rgba(255, 255, 255, 0.70);
+      letter-spacing: 0.03em;
+      z-index: 3;
+      user-select: none;
+
+      strong {
+        color: #6ee7b7;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+    }
+
     .error-banner {
       display: flex;
       align-items: center;
@@ -378,11 +405,19 @@ import { AuthService } from '../../../core/auth/auth.service';
         justify-content: center;
         padding: 30px 20px;
       }
+
+      .login-footer {
+        right: auto;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 12px;
+        white-space: nowrap;
+      }
     }
 
     @media (max-width: 680px) {
       .login-container {
-        padding: 24px 16px;
+        padding: 24px 16px 20px;
         justify-content: center;
         background-position: center center;
         background-image:
@@ -400,19 +435,19 @@ import { AuthService } from '../../../core/auth/auth.service';
       }
 
       .panel-izquierdo {
-        padding: 20px 18px 14px;
+        padding: 22px 18px 14px;
         gap: 8px;
         border-right: none;
         border-bottom: 1px solid rgba(52, 211, 153, 0.22);
       }
 
       .logo-cooperativa {
-        max-width: 76px;
-        max-height: 58px;
+        max-width: 98px;
+        max-height: 76px;
       }
 
       .folio-caption {
-        font-size: 0.76rem;
+        font-size: 0.78rem;
       }
 
       .panel-derecho {
@@ -448,10 +483,23 @@ import { AuthService } from '../../../core/auth/auth.service';
         padding: 9px 12px;
         font-size: 0.76rem;
       }
+
+      .login-footer {
+        position: relative;
+        left: auto;
+        bottom: auto;
+        transform: none;
+        margin-top: 18px;
+        text-align: center;
+        justify-content: center;
+        font-size: 0.72rem;
+        color: rgba(255, 255, 255, 0.65);
+      }
     }
   `]
 })
 export class LoginComponent implements OnInit {
+  readonly anioActual = new Date().getFullYear();
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
