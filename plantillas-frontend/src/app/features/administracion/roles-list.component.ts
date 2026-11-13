@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormGroup, FormControl, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -10,6 +10,11 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { Rol, MenuAdmin, SeguridadService } from '../../core/services/seguridad.service';
+
+export interface MenuNodo {
+  padre: MenuAdmin;
+  hijos: MenuAdmin[];
+}
 
 @Component({
   selector: 'app-roles-list',
@@ -139,36 +144,108 @@ import { Rol, MenuAdmin, SeguridadService } from '../../core/services/seguridad.
         </div>
       }
 
-      <!-- MODAL ASIGNAR MENÚS A ROL -->
+      <!-- MODAL ASIGNAR MENÚS A ROL (JERÁRQUICO) -->
       @if (modalPermisosVisible()) {
         <div class="modal-overlay fade-in">
-          <div class="modal-card modal-large">
+          <div class="modal-card modal-large modal-permisos-card">
             <div class="modal-header">
-              <h3>Permisos de Menú para el Rol: {{ rolSeleccionado()?.nombre }}</h3>
+              <div class="header-title-permisos">
+                <mat-icon class="perm-title-icon">security</mat-icon>
+                <div>
+                  <h3 style="margin: 0;">Permisos de Menú: <span class="rol-badge">{{ rolSeleccionado()?.nombre }}</span></h3>
+                  <p class="hint-text" style="margin: 2px 0 0;">Configure los accesos a módulos y submódulos jerarquizados</p>
+                </div>
+              </div>
               <button mat-icon-button (click)="cerrarModalPermisos()"><mat-icon>close</mat-icon></button>
             </div>
+
+            <!-- BARRA DE ESTADO Y ACCIONES RÁPIDAS -->
+            <div class="permisos-toolbar">
+              <div class="perm-stats">
+                <span class="stat-pill">
+                  <strong>{{ menusAsignadosIds().size }}</strong> de {{ menusDisponibles().length }} módulos activos
+                </span>
+              </div>
+              <div class="perm-quick-actions">
+                <button mat-stroked-button color="primary" type="button" class="btn-quick-act" (click)="marcarTodos()">
+                  <mat-icon>done_all</mat-icon> Marcar Todos
+                </button>
+                <button mat-stroked-button color="warn" type="button" class="btn-quick-act" (click)="desmarcarTodos()">
+                  <mat-icon>remove_done</mat-icon> Desmarcar Todos
+                </button>
+              </div>
+            </div>
+
             <div class="modal-body-menus">
-              <p class="hint-text">Seleccione los módulos del sistema visibles para este rol:</p>
               @if (cargandoPermisos()) {
-                <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+                <div style="padding: 30px; text-align: center;">
+                  <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+                  <p style="margin-top: 10px; color: #64748b; font-size: 13px;">Cargando catálogo jerárquico de permisos...</p>
+                </div>
               } @else {
-                <div class="menus-grid">
-                  @for (m of menusDisponibles(); track m.id_menu) {
-                    <div class="menu-check-item">
-                      <mat-checkbox 
-                        [checked]="tieneMenuAsignado(m.id_menu)"
-                        (change)="toggleMenuRol(m.id_menu, $event.checked)"
-                        color="primary">
-                        <strong>{{ m.nombre }}</strong>
-                        <small class="menu-sub-hint" *ngIf="m.ruta">({{ m.ruta }})</small>
-                      </mat-checkbox>
+                <div class="menu-groups-container">
+                  @for (nodo of menusJerarquicos(); track nodo.padre.id_menu) {
+                    <div class="menu-group-card" [class.group-active]="isPadreChecked(nodo)">
+                      <!-- ENCABEZADO DEL GRUPO PADRE -->
+                      <div class="group-header">
+                        <div class="group-header-left">
+                          <mat-checkbox
+                            [checked]="isPadreChecked(nodo)"
+                            [indeterminate]="isPadreIndeterminate(nodo)"
+                            (change)="togglePadre(nodo, $event.checked)"
+                            color="primary"
+                            class="parent-checkbox">
+                            <span class="group-title-label">
+                              <mat-icon class="group-icon">{{ getIconoPadre(nodo.padre.nombre) }}</mat-icon>
+                              <strong>{{ nodo.padre.nombre }}</strong>
+                            </span>
+                          </mat-checkbox>
+                          @if (nodo.padre.ruta) {
+                            <span class="route-chip">/{{ nodo.padre.ruta }}</span>
+                          }
+                        </div>
+                        <div class="group-header-right">
+                          <span class="group-count-badge" [class.badge-all]="cantHijosActivos(nodo) === nodo.hijos.length && nodo.hijos.length > 0">
+                            {{ cantHijosActivos(nodo) }}/{{ nodo.hijos.length }} activos
+                          </span>
+                          @if (nodo.hijos.length > 0) {
+                            <button type="button" class="btn-micro-toggle" (click)="marcarTodosGrupo(nodo)" matTooltip="Marcar todos los submódulos">
+                              Todos
+                            </button>
+                            <span class="divider-micro">|</span>
+                            <button type="button" class="btn-micro-toggle" (click)="desmarcarTodosGrupo(nodo)" matTooltip="Desmarcar todos los submódulos">
+                              Ninguno
+                            </button>
+                          }
+                        </div>
+                      </div>
+
+                      <!-- SUBMÓDULOS HIJOS -->
+                      @if (nodo.hijos.length > 0) {
+                        <div class="group-children-grid">
+                          @for (h of nodo.hijos; track h.id_menu) {
+                            <div class="child-check-item" [class.item-active]="tieneMenuAsignado(h.id_menu)">
+                              <mat-checkbox
+                                [checked]="tieneMenuAsignado(h.id_menu)"
+                                (change)="toggleHijo(nodo.padre, h, $event.checked, nodo)"
+                                color="primary">
+                                <span class="child-name">{{ h.nombre }}</span>
+                                @if (h.ruta) {
+                                  <span class="child-route-tag">/{{ h.ruta }}</span>
+                                }
+                              </mat-checkbox>
+                            </div>
+                          }
+                        </div>
+                      }
                     </div>
                   }
                 </div>
               }
             </div>
+
             <div class="modal-actions">
-              <button mat-button type="button" (click)="cerrarModalPermisos()">Cerrar</button>
+              <button mat-button type="button" (click)="cerrarModalPermisos()">Cancelar</button>
               <button mat-raised-button color="primary" type="button" (click)="guardarPermisosRol()" [disabled]="guardandoPermisos()">
                 {{ guardandoPermisos() ? 'Guardando...' : 'Guardar Permisos' }}
               </button>
@@ -273,11 +350,170 @@ import { Rol, MenuAdmin, SeguridadService } from '../../core/services/seguridad.
     .modal-actions {
       display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;
     }
-    .menus-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-      max-height: 300px; overflow-y: auto; padding: 10px 0;
+    .modal-permisos-card {
+      max-width: 840px;
+      width: 95%;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
     }
-    .menu-sub-hint { margin-left: 6px; color: #64748b; font-size: 11px; }
+    .header-title-permisos {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      .perm-title-icon {
+        color: #0d9488;
+        font-size: 28px;
+        width: 28px;
+        height: 28px;
+      }
+      .rol-badge {
+        background: #e6f4ea;
+        color: #137333;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 1rem;
+        letter-spacing: 0.5px;
+      }
+    }
+    .permisos-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 10px 14px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      margin: 10px 0 14px;
+      .stat-pill {
+        font-size: 13px;
+        color: #334155;
+        strong { color: #0f766e; }
+      }
+      .perm-quick-actions {
+        display: flex;
+        gap: 8px;
+      }
+      .btn-quick-act {
+        font-size: 11.5px;
+        line-height: 28px;
+        padding: 0 10px;
+        height: 30px;
+        mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; }
+      }
+    }
+    .modal-body-menus {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 520px;
+      padding-right: 6px;
+    }
+    .menu-groups-container {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .menu-group-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      overflow: hidden;
+      transition: all 0.2s ease;
+      &.group-active {
+        border-color: #94a3b8;
+        box-shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.05);
+      }
+    }
+    .group-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: #f1f5f9;
+      border-bottom: 1px solid #e2e8f0;
+      .group-header-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .group-title-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13.5px;
+        color: #0f172a;
+        letter-spacing: 0.3px;
+      }
+      .group-icon {
+        font-size: 19px;
+        width: 19px;
+        height: 19px;
+        color: #0f766e;
+      }
+      .route-chip {
+        font-size: 11px;
+        color: #64748b;
+        background: #e2e8f0;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: monospace;
+      }
+      .group-header-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .group-count-badge {
+        font-size: 11px;
+        padding: 2px 8px;
+        background: #e2e8f0;
+        color: #475569;
+        border-radius: 12px;
+        font-weight: 600;
+        &.badge-all {
+          background: #dcfce7;
+          color: #15803d;
+        }
+      }
+      .btn-micro-toggle {
+        background: none;
+        border: none;
+        color: #0284c7;
+        font-size: 11.5px;
+        cursor: pointer;
+        padding: 2px 4px;
+        &:hover { text-decoration: underline; color: #0369a1; }
+      }
+      .divider-micro { color: #cbd5e1; font-size: 11px; }
+    }
+    .group-children-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 8px 12px;
+      padding: 12px 16px;
+      background: #ffffff;
+    }
+    .child-check-item {
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: background 0.15s;
+      &:hover { background: #f8fafc; }
+      &.item-active { background: #f0fdf4; }
+      .child-name {
+        font-size: 12.5px;
+        color: #1e293b;
+        font-weight: 500;
+      }
+      .child-route-tag {
+        margin-left: 6px;
+        font-size: 10.5px;
+        color: #64748b;
+        font-family: monospace;
+      }
+    }
     .hint-text { margin: 0 0 10px; font-size: 12.5px; color: #64748b; }
     .confirm-text { margin: 10px 0 20px; font-size: 14px; color: #334155; }
     .fade-in { animation: fadeIn 0.15s ease-out; }
@@ -468,6 +704,131 @@ export class RolesListComponent implements OnInit {
   cerrarModalPermisos(): void {
     this.modalPermisosVisible.set(false);
     this.rolSeleccionado.set(null);
+  }
+
+  readonly menusJerarquicos = computed<MenuNodo[]>(() => {
+    const todos = this.menusDisponibles() || [];
+    if (todos.length === 0) return [];
+
+    // Padres (fid_menu_padre es nulo o vacío)
+    const padres = todos
+      .filter(m => !m.fid_menu_padre)
+      .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+
+    const resultado: MenuNodo[] = padres.map(padre => {
+      const hijos = todos
+        .filter(m => m.fid_menu_padre === padre.id_menu)
+        .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+      return { padre, hijos };
+    });
+
+    // Menús huérfanos o sin padre identificado
+    const idsPadres = new Set(padres.map(p => p.id_menu));
+    const idsHijos = new Set(resultado.flatMap(r => r.hijos.map(h => h.id_menu)));
+    const huerfanos = todos.filter(m => !idsPadres.has(m.id_menu) && !idsHijos.has(m.id_menu));
+    if (huerfanos.length > 0) {
+      resultado.push({
+        padre: { id_menu: -1, nombre: 'OTROS MÓDULOS', orden: 99, ruta: '', estado: 'ACTIVO' },
+        hijos: huerfanos
+      });
+    }
+
+    return resultado;
+  });
+
+  isPadreChecked(nodo: MenuNodo): boolean {
+    if (nodo.padre.id_menu && nodo.padre.id_menu > 0) {
+      if (this.menusAsignadosIds().has(nodo.padre.id_menu)) return true;
+    }
+    if (nodo.hijos.length > 0) {
+      return nodo.hijos.every(h => h.id_menu && this.menusAsignadosIds().has(h.id_menu));
+    }
+    return false;
+  }
+
+  isPadreIndeterminate(nodo: MenuNodo): boolean {
+    if (nodo.hijos.length === 0) return false;
+    const activos = this.cantHijosActivos(nodo);
+    return activos > 0 && activos < nodo.hijos.length;
+  }
+
+  cantHijosActivos(nodo: MenuNodo): number {
+    return nodo.hijos.filter(h => h.id_menu && this.menusAsignadosIds().has(h.id_menu)).length;
+  }
+
+  togglePadre(nodo: MenuNodo, checked: boolean): void {
+    this.menusAsignadosIds.update(set => {
+      const nuevo = new Set(set);
+      if (checked) {
+        if (nodo.padre.id_menu && nodo.padre.id_menu > 0) {
+          nuevo.add(nodo.padre.id_menu);
+        }
+        nodo.hijos.forEach(h => {
+          if (h.id_menu) nuevo.add(h.id_menu);
+        });
+      } else {
+        if (nodo.padre.id_menu && nodo.padre.id_menu > 0) {
+          nuevo.delete(nodo.padre.id_menu);
+        }
+        nodo.hijos.forEach(h => {
+          if (h.id_menu) nuevo.delete(h.id_menu);
+        });
+      }
+      return nuevo;
+    });
+  }
+
+  toggleHijo(padre: MenuAdmin, hijo: MenuAdmin, checked: boolean, grupo: MenuNodo): void {
+    if (!hijo.id_menu) return;
+    this.menusAsignadosIds.update(set => {
+      const nuevo = new Set(set);
+      if (checked) {
+        nuevo.add(hijo.id_menu!);
+        if (padre.id_menu && padre.id_menu > 0) {
+          nuevo.add(padre.id_menu);
+        }
+      } else {
+        nuevo.delete(hijo.id_menu!);
+        const algunHijoSigueActivo = grupo.hijos.some(h => h.id_menu !== hijo.id_menu && nuevo.has(h.id_menu!));
+        if (!algunHijoSigueActivo && (!padre.ruta || padre.ruta.trim() === '')) {
+          if (padre.id_menu && padre.id_menu > 0) {
+            nuevo.delete(padre.id_menu);
+          }
+        }
+      }
+      return nuevo;
+    });
+  }
+
+  marcarTodosGrupo(nodo: MenuNodo): void {
+    this.togglePadre(nodo, true);
+  }
+
+  desmarcarTodosGrupo(nodo: MenuNodo): void {
+    this.togglePadre(nodo, false);
+  }
+
+  marcarTodos(): void {
+    const ids = new Set<number>();
+    this.menusDisponibles().forEach(m => {
+      if (m.id_menu && m.id_menu > 0) ids.add(m.id_menu);
+    });
+    this.menusAsignadosIds.set(ids);
+  }
+
+  desmarcarTodos(): void {
+    this.menusAsignadosIds.set(new Set());
+  }
+
+  getIconoPadre(nombre: string): string {
+    const n = (nombre || '').toUpperCase();
+    if (n.includes('ADMIN')) return 'admin_panel_settings';
+    if (n.includes('CONFIG')) return 'tune';
+    if (n.includes('DOC')) return 'description';
+    if (n.includes('CATALOG')) return 'menu_book';
+    if (n.includes('ARCHIV')) return 'inventory_2';
+    if (n.includes('VENTANILLA')) return 'mark_email_unread';
+    return 'folder';
   }
 
   tieneMenuAsignado(idMenu?: number): boolean {
