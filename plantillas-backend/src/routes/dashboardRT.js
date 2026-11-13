@@ -147,4 +147,35 @@ module.exports = app => {
     req.params.id = id;
     app._router.handle(req, res);
   });
+
+  /**
+   * GET /api/v1/dashboard/plantillas-frecuentes
+   * Plantillas más usadas por el usuario en sesión (con respaldo alfabético si aún no usó ninguna).
+   */
+  app.get('/api/v1/dashboard/plantillas-frecuentes', async (req, res) => {
+    try {
+      const auditUser = (req.body && req.body.audit_usuario) ? req.body.audit_usuario : null;
+      const idUsuario = Number(auditUser ? auditUser.id_usuario : (req.user ? req.user.id_usuario : 0)) || 0;
+      const limite = Math.min(Number(req.query.limit) || 5, 10);
+      const filas = await app.src.db.sequelize.query(
+        `SELECT p.id_plantilla_formly, p.nombre, p.abreviacion, p.plantilla,
+                COALESCE(u.usos, 0)::int AS usos
+           FROM plantilla_formly p
+           LEFT JOIN (
+             SELECT abreviacion, COUNT(*) AS usos
+               FROM documento
+              WHERE _usuario_creacion = :id AND estado <> 'ELIMINADO'
+              GROUP BY abreviacion
+           ) u ON u.abreviacion = p.abreviacion
+          WHERE p.estado = 'ACTIVO'
+          ORDER BY COALESCE(u.usos, 0) DESC, p.nombre ASC
+          LIMIT :limite`,
+        { replacements: { id: idUsuario, limite }, type: Sequelize.QueryTypes.SELECT }
+      );
+      res.status(200).send(util.formatearMensaje('EXITO', 'Plantillas frecuentes', filas));
+    } catch (error) {
+      console.error('[DASHBOARD PLANTILLAS ERROR]', error);
+      res.status(500).send(util.formatearMensaje('ERROR', 'No se pudieron obtener las plantillas frecuentes'));
+    }
+  });
 };

@@ -95,6 +95,7 @@ module.exports = app => {
       uid: uid,
       cargo: payload.title || payload.cargo || 'Sin cargo',
       numero_documento: payload.cedula || payload.numero_documento || '11111111',
+      celular: payload.mobile || payload.telephoneNumber || payload.celular || payload.phone || null,
       unidad: payload.unidad || null,
       memberOf: payload.memberOf || [],
     });
@@ -204,6 +205,7 @@ function xautenticacion(req, res, usar_ldap=1){
         cargo: usuario.cargo,
         doc: usuario.numero_documento,
         email: usuario.email,
+        celular: usuario.celular || null,
         foto: usuario.foto,
         date_joined: usuario._fecha_creacion,
         ldap:req.ldap,
@@ -502,6 +504,7 @@ app.get('/api/v1/refrescar', (req,res) => {
                   cargo: pUsuario.cargo,
                   doc: pUsuario.numero_documento,
                   email: pUsuario.email,
+                  celular: pUsuario.celular || null,
                   foto: pUsuario.foto,
                   date_joined: pUsuario._fecha_creacion,
                   ldap: pUsuario.tipo_autenticacion === 'AUTHENTIK',
@@ -628,6 +631,7 @@ app.post('/api/v1/cerrar_sesion', (req, res) => {
       cargo: usuarioInstancia.cargo,
       doc: usuarioInstancia.numero_documento,
       email: usuarioInstancia.email,
+      celular: usuarioInstancia.celular || null,
       foto: usuarioInstancia.foto,
       date_joined: usuarioInstancia._fecha_creacion,
       ldap: esLdap,
@@ -808,10 +812,13 @@ app.post('/api/v1/cerrar_sesion', (req, res) => {
         }
       }
 
+      const celular = info.phone_number || info.mobile || (info.attributes && (info.attributes.celular || info.attributes.phone || info.attributes.telefono || info.attributes.mobile)) || null;
+
       const userData = {
         uid: cleanUsername,
         username: cleanUsername,
         email: email,
+        celular: celular,
         nombre: nameObj.nombres,
         apellido: nameObj.apellidos,
         cargo: cargo,
@@ -820,13 +827,18 @@ app.post('/api/v1/cerrar_sesion', (req, res) => {
       };
 
       const userInstance = await bl.procesaUsuario(userData, UsuariosRoles, Unidad, AuthUser, usuarios);
-      await ConfNotificacion.findOrCreate({
+      const confDefaults = {
+        fid_usuario: userInstance.id_usuario,
+        _usuario_creacion: userInstance.id_usuario,
+      };
+      if (celular) confDefaults.celular = celular;
+      const [confInst, confCreated] = await ConfNotificacion.findOrCreate({
         where: { fid_usuario: userInstance.id_usuario },
-        defaults: {
-          fid_usuario: userInstance.id_usuario,
-          _usuario_creacion: userInstance.id_usuario,
-        }
+        defaults: confDefaults
       });
+      if (!confCreated && celular && (!confInst.celular || confInst.celular.trim() === '')) {
+        await confInst.update({ celular: celular });
+      }
 
       const { token } = await generarSesionYToken(userInstance, true);
       return res.redirect(302, `/auth/login?sso_token=${encodeURIComponent(token)}`);

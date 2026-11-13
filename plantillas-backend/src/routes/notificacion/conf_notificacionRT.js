@@ -196,9 +196,15 @@ module.exports = app => {
           where: { id_conf_notificacion: req.params.id },
         })
       )
-      .then(() =>
-        res.send(util.formatearMensaje("EXITO", "Modificación exitosa"))
-      )
+      .then(() => {
+        if (data.celular !== undefined && req.body.audit_usuario && req.body.audit_usuario.id_usuario) {
+          app.src.db.models.usuario.update(
+            { celular: data.celular },
+            { where: { id_usuario: req.body.audit_usuario.id_usuario } }
+          ).catch(() => {});
+        }
+        res.send(util.formatearMensaje("EXITO", "Modificación exitosa"));
+      })
       .catch((error) =>
         res.status(412).send(util.formatearMensaje("ERROR", error))
       );

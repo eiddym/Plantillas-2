@@ -32,6 +32,7 @@ module.exports={
         const apellidos = pDatos.apellido || pDatos.apellidos || pDatos.sn || 'Apellidos';
         const cargo = pDatos.cargo || (pExistente && pExistente.cargo) || 'Sin cargo';
         const numero_documento = pDatos.numero_documento || pDatos.cedula || (pExistente && pExistente.numero_documento) || '11111111';
+        const celular = pDatos.celular || pDatos.mobile || pDatos.telephoneNumber || pDatos.phone || (pExistente && pExistente.celular) || null;
 
         const asegurarRolUsuario = (usuarioInstancia) => {
           return pModeloUsuarioRol.findAll({
@@ -54,7 +55,7 @@ module.exports={
         };
 
         if (pExistente) {
-          return pExistente.update({
+          const updateData = {
             usuario: pExistente.usuario || username,
             nombres: pExistente.nombres || nombres,
             apellidos: pExistente.apellidos || apellidos,
@@ -62,7 +63,11 @@ module.exports={
             numero_documento: pExistente.numero_documento || numero_documento,
             email: pExistente.email || email,
             estado: 'ACTIVO'
-          })
+          };
+          if (celular) {
+            updateData.celular = celular;
+          }
+          return pExistente.update(updateData)
           .then(pUpdate => asegurarRolUsuario(pUpdate))
           .then(pFinal => resolve(pFinal))
           .catch(pErrUpdate => reject(pErrUpdate));
@@ -76,6 +81,7 @@ module.exports={
           apellidos: apellidos,
           cargo: cargo,
           email: email,
+          celular: celular,
           estado: 'ACTIVO',
           _usuario_creacion:1,
         };

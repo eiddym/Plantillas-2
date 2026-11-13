@@ -797,6 +797,7 @@ module.exports = app => {
         .then(usuario => {
           return ConfNotificacion.create({
             fid_usuario: usuarioDevolver.id_usuario,
+            celular: usuarioCrear.celular || null,
             _usuario_creacion: usuarioDevolver._usuario_creacion,
           }, {
             transaction: t,
@@ -1025,6 +1026,20 @@ module.exports = app => {
 
     })
       .then(() => {
+        if (usuario.celular !== undefined) {
+          return ConfNotificacion.findOrCreate({
+            where: { fid_usuario: req.params.id },
+            defaults: {
+              fid_usuario: req.params.id,
+              celular: usuario.celular,
+              _usuario_creacion: idAudit
+            },
+            transaction: t
+          }).then(([conf]) => conf.update({ celular: usuario.celular, _usuario_modificacion: idAudit }, { transaction: t }));
+        }
+        return true;
+      })
+      .then(() => {
         // registro, actualizacion de usuarios virtuales.
         const idVirtualesActivar = _.map(usuario.virtuales, 'id_usuario');
         return Modelos.virtual.findAll({
@@ -1126,7 +1141,13 @@ module.exports = app => {
       })
       // Realiza el commit de la transacción.
       .then(() => t.commit())
-      .then(() => res.status(200).send(util.formatearMensaje("EXITO","Actualización de datos exitosa.",usuarioRespuesta)))
+      .then(() => {
+        if (usuarioDevolver && usuarioDevolver.tipo_autenticacion === 'AUTHENTIK') {
+          const authentikService = require('../../lib/authentikService');
+          authentikService.sincronizarUsuarioAuthentik(usuarioDevolver);
+        }
+        res.status(200).send(util.formatearMensaje("EXITO","Actualización de datos exitosa.",usuarioRespuesta));
+      })
       .catch(error  =>  {
         logger.error('Error en la actualizacion de datos del usuario', error);
         t.rollback();

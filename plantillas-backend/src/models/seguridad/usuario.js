@@ -60,6 +60,11 @@ module.exports = (sequelize, DataType) => {
             },
             xlabel: 'Correo electrónico',
         },
+        celular: {
+            type: DataType.STRING(30),
+            allowNull: true,
+            xlabel: 'Número de celular',
+        },
         virtual: {
             type: DataType.BOOLEAN,
             xlabel: 'virtual',

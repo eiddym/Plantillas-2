@@ -14,6 +14,7 @@ async function sincronizarUsuarioAuthentik(datosUsuario, passwordPlain) {
   const name = `${nombres} ${apellidos}`.trim() || username;
   const cedula = (datosUsuario.numero_documento || '').trim();
   const cargo = (datosUsuario.cargo || '').trim();
+  const celular = (datosUsuario.celular || '').trim();
   const defaultPassword = String(passwordPlain || cedula || '').trim();
 
   if (!username || !email) {
@@ -33,6 +34,7 @@ email = "${email}"
 name = "${name.replace(/"/g, '\\"')}"
 cedula = "${cedula}"
 cargo = "${cargo.replace(/"/g, '\\"')}"
+celular = "${celular}"
 default_pwd = "${defaultPassword.replace(/"/g, '\\"')}"
 
 user, created = User.objects.get_or_create(username=username)
@@ -42,6 +44,11 @@ user.is_active = True
 user.attributes = user.attributes or {}
 user.attributes['cedula'] = cedula
 user.attributes['cargo'] = cargo
+if celular:
+    user.attributes['celular'] = celular
+    user.attributes['phone'] = celular
+    user.attributes['telefono'] = celular
+    user.attributes['mobile'] = celular
 if default_pwd:
     user.set_password(default_pwd)
 user.save()
