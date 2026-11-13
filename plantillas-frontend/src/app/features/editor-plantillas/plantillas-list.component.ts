@@ -36,26 +36,26 @@ import { AuthService } from '../../core/auth/auth.service';
   ],
   template: `
     <div class="page-container">
-      <div class="page-header">
+      <header class="emerald24-section-header">
         <div>
-          <h1>Gestor de Plantillas Formly</h1>
-          <p class="subtitle">Administración y diseño de formularios institucionales</p>
+          <h1 class="section-page-title">Gestor de Plantillas Formly</h1>
+          <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.88rem;">Administración y diseño de formularios institucionales</p>
         </div>
-        <button mat-raised-button color="primary" routerLink="/plantillas/nuevo">
-          <mat-icon>add</mat-icon>
-          <span>Nueva Plantilla</span>
-        </button>
-      </div>
+
+        <div class="header-controls-group">
+          <div class="emerald24-pill-search">
+            <mat-icon class="search-icon">search</mat-icon>
+            <input type="text" (input)="onFilterChange($event)" placeholder="Buscar plantilla (Ej. Informe, Memorando)..." class="pill-search-input">
+          </div>
+
+          <button type="button" class="emerald24-primary-pill" routerLink="/plantillas/nuevo">
+            <mat-icon>add</mat-icon>
+            <span>Nueva Plantilla</span>
+          </button>
+        </div>
+      </header>
 
       <mat-card class="table-card">
-        <div class="toolbar-filter">
-          <mat-form-field appearance="outline" class="search-field">
-            <mat-label>Buscar plantilla...</mat-label>
-            <input matInput (input)="onFilterChange($event)" placeholder="Ej. Informe, Memorando...">
-            <mat-icon matPrefix>search</mat-icon>
-          </mat-form-field>
-        </div>
-
         <mat-progress-bar *ngIf="loading()" mode="indeterminate"></mat-progress-bar>
 
         <div class="table-responsive">

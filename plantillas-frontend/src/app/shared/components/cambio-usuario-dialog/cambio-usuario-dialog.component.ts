@@ -38,29 +38,29 @@ interface UsuarioVirtualItem {
   ],
   template: `
     <div class="virtual-dialog-container">
+      <button type="button" (click)="cerrar()" class="close-circle-btn" title="Cerrar">
+        <mat-icon>close</mat-icon>
+      </button>
+
       <div class="dialog-header">
-        <div class="header-icon-wrapper">
-          <mat-icon>sync_alt</mat-icon>
-        </div>
-        <div>
-          <h2 class="dialog-title">Cambio de Usuario</h2>
-          <p class="dialog-subtitle">Alternar entre perfiles virtuales asignados y usuario titular</p>
-        </div>
-        <button mat-icon-button (click)="cerrar()" class="close-btn">
-          <mat-icon>close</mat-icon>
-        </button>
+        <h2 class="dialog-title">Cuentas Disponibles</h2>
+        <p class="dialog-subtitle">
+          Encontramos perfiles vinculados a tu cuenta institucional. Puedes continuar con uno de ellos o mantener tu sesión actual.
+        </p>
       </div>
 
       <div class="dialog-content">
         @if (cargando()) {
           <div class="loading-state">
-            <mat-spinner diameter="40"></mat-spinner>
-            <p>Consultando perfiles virtuales asignados...</p>
+            <mat-spinner diameter="38"></mat-spinner>
+            <p>Consultando perfiles asignados...</p>
           </div>
         } @else if (errorMsg()) {
           <div class="empty-state">
-            <mat-icon class="empty-icon">person_off</mat-icon>
-            <h3>Sin perfiles disponibles</h3>
+            <div class="empty-icon-circle">
+              <mat-icon>person_off</mat-icon>
+            </div>
+            <h3>Sin perfiles adicionales</h3>
             <p>{{ errorMsg() }}</p>
           </div>
         } @else {
@@ -72,33 +72,26 @@ interface UsuarioVirtualItem {
                 (click)="seleccionarUsuario(u)"
               >
                 <div class="user-avatar" [class.avatar-virtual]="u.virtual">
-                  <mat-icon>{{ u.virtual ? 'smart_toy' : 'person' }}</mat-icon>
+                  @if (!u.virtual) {
+                    <span class="avatar-initials">{{ getIniciales(u) }}</span>
+                  } @else {
+                    <mat-icon>person_outline</mat-icon>
+                  }
                 </div>
                 <div class="user-info">
                   <div class="name-row">
                     <span class="user-name">{{ u.nombres }} {{ u.apellidos || '' }}</span>
                     @if (esUsuarioActual(u)) {
-                      <span class="current-badge">Sesión Actual</span>
+                      <span class="current-badge">Sesión actual</span>
                     }
                   </div>
-                  <span class="user-cargo">{{ u.cargo || 'Usuario Institucional' }}</span>
-                  <div class="meta-row">
-                    <span class="type-tag" [class.tag-virtual]="u.virtual">
-                      {{ u.virtual ? 'Usuario Virtual' : 'Titular Físico' }}
-                    </span>
-                    @if (u.titular) {
-                      <span class="titular-tag">Titular: {{ u.titular.nombres }}</span>
-                    }
-                  </div>
+                  <span class="user-cargo">{{ u.cargo || (u.virtual ? 'Perfil Virtual Institucional' : 'Titular Físico') }}</span>
                 </div>
                 <div class="action-slot">
                   @if (cambiandoId() === u.id_usuario) {
-                    <mat-spinner diameter="24"></mat-spinner>
-                  } @else if (!esUsuarioActual(u)) {
-                    <button mat-stroked-button class="btn-switch">
-                      <span>Cambiar</span>
-                      <mat-icon>arrow_forward</mat-icon>
-                    </button>
+                    <mat-spinner diameter="22"></mat-spinner>
+                  } @else {
+                    <mat-icon class="card-chevron">chevron_right</mat-icon>
                   }
                 </div>
               </div>
@@ -107,74 +100,82 @@ interface UsuarioVirtualItem {
         }
       </div>
 
+      <div class="or-divider">
+        <span>O</span>
+      </div>
+
       <div class="dialog-actions">
-        <button mat-button (click)="cerrar()" class="btn-cancel">Cerrar</button>
+        <button type="button" (click)="cerrar()" class="btn-pill-dark">
+          Mantener cuenta actual
+        </button>
       </div>
     </div>
   `,
   styles: [`
     .virtual-dialog-container {
-      background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
-      color: #fff;
-      border-radius: 16px;
-      padding: 24px;
-      max-width: 580px;
-      min-width: 480px;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      position: relative;
+      background: #ffffff;
+      color: #0f172a;
+      border-radius: 24px;
+      padding: 32px 28px 26px;
+      max-width: 520px;
+      width: 100%;
+      box-sizing: border-box;
+      font-family: var(--font-ui, system-ui, -apple-system, sans-serif);
+    }
+
+    .close-circle-btn {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: none;
+      background: #f1f5f9;
+      color: #475569;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      &:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+      }
     }
 
     .dialog-header {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      position: relative;
-    }
-
-    .header-icon-wrapper {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 8px 16px rgba(0, 180, 219, 0.3);
-    }
-
-    .header-icon-wrapper mat-icon {
-      color: #fff;
-      font-size: 26px;
-      width: 26px;
-      height: 26px;
+      text-align: center;
+      padding: 4px 12px 18px;
     }
 
     .dialog-title {
       margin: 0;
-      font-size: 20px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
-      color: #fff;
+      font-size: 1.45rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      color: #0f172a;
     }
 
     .dialog-subtitle {
-      margin: 4px 0 0;
-      font-size: 13px;
-      color: rgba(255, 255, 255, 0.65);
-    }
-
-    .close-btn {
-      position: absolute;
-      top: 0;
-      right: 0;
-      color: rgba(255, 255, 255, 0.6);
-      &:hover { color: #fff; }
+      margin: 8px auto 0;
+      max-width: 380px;
+      font-size: 0.88rem;
+      line-height: 1.45;
+      color: #64748b;
     }
 
     .dialog-content {
-      padding: 20px 0;
-      max-height: 420px;
+      padding: 6px 0;
+      max-height: 360px;
       overflow-y: auto;
     }
 
@@ -183,17 +184,39 @@ interface UsuarioVirtualItem {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 40px 20px;
+      padding: 28px 16px;
       text-align: center;
-      gap: 12px;
-      color: rgba(255, 255, 255, 0.7);
+      gap: 10px;
+      color: #64748b;
+
+      h3 {
+        margin: 4px 0 0;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #0f172a;
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.85rem;
+      }
     }
 
-    .empty-icon {
-      font-size: 48px;
-      width: 48px;
-      height: 48px;
-      color: rgba(255, 255, 255, 0.3);
+    .empty-icon-circle {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: #ecfdf5;
+      color: #059669;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      mat-icon {
+        font-size: 28px;
+        width: 28px;
+        height: 28px;
+      }
     }
 
     .users-list {
@@ -205,45 +228,53 @@ interface UsuarioVirtualItem {
     .user-card {
       display: flex;
       align-items: center;
-      gap: 16px;
-      padding: 14px 18px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      gap: 14px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
       cursor: pointer;
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 
       &:hover:not(.active-user) {
-        background: rgba(255, 255, 255, 0.12);
-        border-color: rgba(0, 180, 219, 0.4);
-        transform: translateY(-2px);
+        border-color: #10b981;
+        box-shadow: 0 6px 18px rgba(16, 185, 129, 0.08);
+        transform: translateY(-1px);
       }
 
       &.active-user {
-        border-color: #00b4db;
-        background: rgba(0, 180, 219, 0.15);
+        border-color: #a7f3d0;
+        background: #f8fafc;
         cursor: default;
       }
     }
 
     .user-avatar {
-      width: 44px;
-      height: 44px;
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.1);
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: #064e3b;
+      color: #ffffff;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: rgba(255, 255, 255, 0.85);
+      flex-shrink: 0;
+
+      .avatar-initials {
+        font-size: 0.98rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
 
       &.avatar-virtual {
-        background: linear-gradient(135deg, #11998e, #38ef7d);
-        color: #fff;
+        background: #059669;
+        color: #ffffff;
       }
     }
 
     .user-info {
       flex: 1;
+      min-width: 0;
       display: flex;
       flex-direction: column;
       gap: 3px;
@@ -253,82 +284,89 @@ interface UsuarioVirtualItem {
       display: flex;
       align-items: center;
       gap: 8px;
+      flex-wrap: wrap;
     }
 
     .user-name {
-      font-weight: 600;
-      font-size: 14.5px;
-      color: #fff;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #0f172a;
     }
 
     .current-badge {
-      font-size: 11px;
+      font-size: 0.70rem;
       padding: 2px 8px;
-      border-radius: 10px;
-      background: #00b4db;
-      color: #fff;
+      border-radius: 9999px;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      color: #065f46;
       font-weight: 700;
-      letter-spacing: 0.3px;
     }
 
     .user-cargo {
-      font-size: 12.5px;
-      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.82rem;
+      color: #64748b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .meta-row {
-      display: flex;
-      gap: 6px;
-      margin-top: 2px;
+    .card-chevron {
+      color: #94a3b8;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
     }
 
-    .type-tag {
-      font-size: 10.5px;
-      padding: 2px 6px;
-      border-radius: 4px;
-      background: rgba(255, 255, 255, 0.1);
-      color: rgba(255, 255, 255, 0.75);
+    .or-divider {
+      position: relative;
+      text-align: center;
+      margin: 18px 0 16px;
 
-      &.tag-virtual {
-        background: rgba(56, 239, 125, 0.2);
-        color: #38ef7d;
-        font-weight: 600;
+      &::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: #f1f5f9;
       }
-    }
 
-    .titular-tag {
-      font-size: 10.5px;
-      padding: 2px 6px;
-      border-radius: 4px;
-      background: rgba(255, 255, 255, 0.06);
-      color: rgba(255, 255, 255, 0.6);
-    }
-
-    .btn-switch {
-      color: #00b4db !important;
-      border-color: rgba(0, 180, 219, 0.4) !important;
-      font-size: 12px !important;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      height: 32px;
-      padding: 0 12px !important;
-
-      &:hover {
-        background: rgba(0, 180, 219, 0.15) !important;
+      span {
+        position: relative;
+        background: #ffffff;
+        padding: 0 12px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #94a3b8;
+        letter-spacing: 0.06em;
       }
     }
 
     .dialog-actions {
       display: flex;
-      justify-content: flex-end;
-      padding-top: 16px;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      flex-direction: column;
+      gap: 10px;
     }
 
-    .btn-cancel {
-      color: rgba(255, 255, 255, 0.7) !important;
-      &:hover { color: #fff !important; }
+    .btn-pill-dark {
+      width: 100%;
+      height: 46px;
+      border-radius: 9999px;
+      border: none;
+      background: #111827;
+      color: #ffffff;
+      font-size: 0.90rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.15s ease;
+
+      &:hover {
+        background: #1f2937;
+        transform: translateY(-1px);
+      }
     }
   `]
 })
@@ -395,6 +433,14 @@ export class CambioUsuarioDialogComponent implements OnInit {
         this.errorMsg.set('Error al consultar el listado de usuarios virtuales.');
       }
     });
+  }
+
+  getIniciales(u: UsuarioVirtualItem): string {
+    const n = (u.nombres || '').trim();
+    const a = (u.apellidos || '').trim();
+    const i1 = n ? n[0].toUpperCase() : '';
+    const i2 = a ? a[0].toUpperCase() : (n.length > 1 ? n[1].toUpperCase() : '');
+    return (i1 + i2) || 'US';
   }
 
   esUsuarioActual(u: UsuarioVirtualItem): boolean {

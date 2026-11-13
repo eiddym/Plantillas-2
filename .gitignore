@@ -8,3 +8,4 @@ respaldos/
 *.pdf
 *.png
 !**/assets/**
+plantillas-backend/runtime-config/

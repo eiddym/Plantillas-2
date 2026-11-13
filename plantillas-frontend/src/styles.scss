@@ -3,26 +3,26 @@
 @include mat.core();
 
 /* ==========================================================================
-   SISTEMA DE DISEÑO MODERNO — COOPERATIVA MINERA MARABUNTA R.L.
-   Estética contemporánea limpia y luminosa alineada al ecosistema Marabunta:
-     1. Slate claro     (#f1f5f9)  — Canvas nítido con contraste limpio
-     2. Superficie      (#ffffff)  — Tarjetas y paneles elevados
-     3. Tinta pizarra   (#0f172a)  — Tipografía nítida de alto contraste
-     4. Petról oceánico (#0f2e34)  — Estructura y gradiente institucional
-     5. Teal & Oro      (#0e7490 / #d6a84f) — Acentos vivos y estado activo
+   SISTEMA DE DISEÑO EMERALD 24 — DEEP FOREST & EMERALD MINT
+   Estética contemporánea premium inspirada en arquitectura Emerald:
+     1. Esmeralda Bosque  (#043324 / #022c22) — Estructura exterior y sidebar
+     2. Esmeralda Vivo    (#059669 / #10b981) — Acentos interactivos, activos y estados
+     3. Lienzo In-Set     (#ffffff)           — Superficie flotante de alto contraste
+     4. Tinta Pizarra     (#0f172a / #475569) — Tipografía nítida
+     5. Ámbar Cálido      (#f59e0b)           — Badges, alertas y notificaciones
    ========================================================================== */
 
 $marabunta-petrol-palette: (
-  50: #ecfeff,
-  100: #cffafe,
-  200: #a5f3fc,
-  300: #67e8f9,
-  400: #22d3ee,
-  500: #0e7490,
-  600: #155e75,
-  700: #164e63,
-  800: #0f2e34,
-  900: #081e22,
+  50: #ecfdf5,
+  100: #d1fae5,
+  200: #a7f3d0,
+  300: #6ee7b7,
+  400: #34d399,
+  500: #059669,
+  600: #047857,
+  700: #065f46,
+  800: #064e3b,
+  900: #043324,
   contrast: (
     50: #0f172a,
     100: #0f172a,
@@ -38,24 +38,24 @@ $marabunta-petrol-palette: (
 );
 
 $marabunta-gold-palette: (
-  50: #faf4e6,
-  100: #f2e3c0,
-  200: #ead196,
-  300: #e1bf6c,
-  400: #dab14d,
-  500: #d6a84f,
-  600: #c69635,
-  700: #b38222,
-  800: #936814,
-  900: #6e4c0b,
+  50: #fffbeb,
+  100: #fef3c7,
+  200: #fde68a,
+  300: #fcd34d,
+  400: #fbbf24,
+  500: #f59e0b,
+  600: #d97706,
+  700: #b45309,
+  800: #92400e,
+  900: #78350f,
   contrast: (
-    50: #141b12,
-    100: #141b12,
-    200: #141b12,
-    300: #141b12,
-    400: #141b12,
-    500: #141b12,
-    600: #141b12,
+    50: #0f172a,
+    100: #0f172a,
+    200: #0f172a,
+    300: #0f172a,
+    400: #0f172a,
+    500: #0f172a,
+    600: #ffffff,
     700: #ffffff,
     800: #ffffff,
     900: #ffffff,
@@ -88,7 +88,7 @@ $marabunta-warn-palette: (
 );
 
 $marabunta-primary: mat.define-palette($marabunta-petrol-palette, 500, 300, 800);
-$marabunta-accent: mat.define-palette($marabunta-gold-palette, 600, 500, 800);
+$marabunta-accent: mat.define-palette($marabunta-gold-palette, 500, 300, 700);
 $marabunta-warn: mat.define-palette($marabunta-warn-palette, 600, 500, 800);
 
 $marabunta-typography: mat.define-typography-config(
@@ -108,38 +108,49 @@ $marabunta-theme: mat.define-light-theme((
 @include mat.all-component-themes($marabunta-theme);
 
 :root {
-  /* Paleta Central Moderna */
-  --paper-canvas: #f1f5f9;
+  /* Paleta Central Emerald 24 */
+  --paper-canvas: #f8fafc;
   --surface: #ffffff;
   --surface-tinted: #f8fafc;
   --ink: #0f172a;
   --ink-muted: #475569;
-  --petrol: #0f2e34;
-  --petrol-soft: #154d57;
-  --petrol-bright: #0e7490;
-  --petrol-gradient: linear-gradient(135deg, #0b242a 0%, #13444e 55%, #0e6b78 100%);
-  --gold: #d6a84f;
-  --gold-hover: #b38222;
-  --gold-soft: rgba(214, 168, 79, 0.16);
+
+  /* Gama Verde Esmeralda Profundo & Menta */
+  --emerald-deep: #043324;
+  --emerald-surface: #08402f;
+  --emerald-vivid: #059669;
+  --emerald-light: #10b981;
+  --emerald-mint: #34d399;
+  --emerald-mint-bg: #ecfdf5;
+  --emerald-gradient: linear-gradient(135deg, #022017 0%, #043324 55%, #064e3b 100%);
+
+  /* Mapeo de tokens existentes para compatibilidad total */
+  --petrol: #043324;
+  --petrol-soft: #08402f;
+  --petrol-bright: #059669;
+  --petrol-gradient: linear-gradient(135deg, #022017 0%, #043324 55%, #064e3b 100%);
+  --gold: #10b981;
+  --gold-hover: #059669;
+  --gold-soft: rgba(16, 185, 129, 0.16);
   --line: #e2e8f0;
   --line-strong: #cbd5e1;
 
   /* Estados Semánticos Vivos */
   --state-ok: #059669;
-  --state-ok-bg: #d1fae5;
-  --state-warn: #d97706;
-  --state-warn-bg: #fef3c7;
+  --state-ok-bg: #ecfdf5;
+  --state-warn: #f59e0b;
+  --state-warn-bg: #fffbeb;
   --state-err: #dc2626;
   --state-err-bg: #fee2e2;
   --state-info: #0284c7;
   --state-info-bg: #e0f2fe;
 
-  /* Fuentes reales cargadas (UI siempre Plus Jakarta Sans; Literata reservada a papel físico) */
+  /* Fuentes reales cargadas */
   --font-ui: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-serif: 'Literata', Georgia, serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  /* Compatibilidad con variables legadas en vistas existentes */
+  /* Compatibilidad con variables legadas */
   --color-canvas: var(--paper-canvas);
   --color-surface: var(--surface);
   --color-document: var(--surface);
@@ -285,9 +296,9 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 10px;
-  border-radius: 6px;
-  font-size: 0.72rem;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.73rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   line-height: 1.4;
@@ -535,5 +546,200 @@ mat-icon,
   pre, code {
     white-space: pre-wrap;
     word-break: break-word;
+  }
+}
+
+/* ==========================================================================
+   REFINAMIENTO VISUAL EMERALD 24 (TARJETAS, BOTONES Y CONTROLES)
+   ========================================================================== */
+
+.mat-mdc-card,
+.table-card.mat-mdc-card {
+  border-radius: 16px !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: 0 2px 10px rgba(4, 51, 36, 0.04) !important;
+  background: var(--surface) !important;
+}
+
+.mat-mdc-raised-button.mat-primary,
+.mat-mdc-unelevated-button.mat-primary {
+  border-radius: 9999px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+  padding: 0 20px !important;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25) !important;
+  transition: all 0.15s ease !important;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35) !important;
+  }
+}
+
+.mat-mdc-dialog-container .mdc-dialog__surface {
+  border-radius: 20px !important;
+  box-shadow: 0 20px 50px rgba(4, 51, 36, 0.25) !important;
+}
+
+.custom-dialog-container .mdc-dialog__surface {
+  border-radius: 20px !important;
+}
+
+/* Cabeceras de vistas internas estilo Emerald 24 (Captura 5) */
+.emerald24-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+
+  .header-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-page-title {
+    margin: 0;
+    font-size: 1.65rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.025em;
+    font-family: var(--font-ui);
+  }
+
+  .section-count-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 11px;
+    border-radius: 9999px;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+
+  .header-controls-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+}
+
+.emerald24-pill-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  padding: 0 16px;
+  height: 40px;
+  min-width: 240px;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:focus-within {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+  }
+
+  .search-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #64748b;
+  }
+
+  .pill-search-input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 0.85rem;
+    color: #0f172a;
+    width: 100%;
+    font-family: var(--font-ui);
+
+    &::placeholder {
+      color: #94a3b8;
+    }
+  }
+}
+
+.emerald24-primary-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 9999px;
+  border: none;
+  background: #111827;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(17, 24, 39, 0.18);
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #ffffff;
+  }
+
+  &:hover {
+    background: #1f2937;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(17, 24, 39, 0.25);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+.emerald24-secondary-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 9999px;
+  border: none;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-size: 0.84rem;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: #e2e8f0;
+  }
+}
+
+.btn-refresh-circle.mat-mdc-icon-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: #e2e8f0;
+    color: #0f172a;
   }
 }

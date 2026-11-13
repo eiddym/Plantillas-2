@@ -101,6 +101,8 @@ export class FormlyFieldEditorTextoComponent extends FieldType<FieldTypeConfig> 
     branding: false,
     base_url: '/tinymce',
     suffix: '.min',
+    language: 'es',
+    language_url: '/tinymce/langs/es.js',
     min_height: 350,
     height: 400,
     menubar: 'edit insert view format table tools',

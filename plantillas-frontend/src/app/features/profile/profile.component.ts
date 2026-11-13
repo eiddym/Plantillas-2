@@ -40,246 +40,351 @@ interface AlertasConfig {
   ],
   template: `
     <div class="profile-container">
-      <!-- Banner / Portada con Imagen y Avatar Central (Imagen 3) -->
-      <div class="profile-user-bg">
-        <div class="profile-photo-wrapper">
-          <div class="profile-user-photo">
-            <img 
-              *ngIf="user()?.foto" 
-              [src]="user()?.foto" 
-              alt="Foto de perfil" 
-              class="photo-img"
-            >
-            <span *ngIf="!user()?.foto" class="photo-initial">
-              {{ userInitial() }}
-            </span>
-
-            <!-- Botoncito redondo de cámara para cambiar foto -->
-            <button 
-              type="button" 
-              class="btn-camera-overlay" 
-              (click)="fileInput.click()" 
-              title="Cambiar foto de perfil"
-            >
-              <mat-icon>photo_camera</mat-icon>
-            </button>
-            <input 
-              #fileInput 
-              type="file" 
-              accept="image/*" 
-              (change)="onFotoSeleccionada($event)" 
-              style="display: none;"
-            >
-          </div>
-        </div>
-
-        <!-- Franja de datos de usuario sobre el banner -->
-        <div class="profile-data-overlay">
-          <h2 class="profile-user-name">
-            {{ userFullName() }}
-          </h2>
-          <h3 class="profile-user-email">
-            {{ user()?.email || 'docs@marabuntarl.com' }}
-          </h3>
-        </div>
+      <!-- Portada Esmeralda Contemporánea (Sin consumo de assets externos) -->
+      <div class="profile-cover-banner">
+        <div class="cover-pattern-overlay"></div>
       </div>
 
-      <!-- Sección de Datos del Usuario y Alertas (Imagen 3) -->
-      <div class="profile-body-card">
-        <!-- VISTA DE DETALLE NORMAL -->
-        <div class="profile-info-section" *ngIf="!editandoAlertas()">
-          <div class="actions-header">
-            <button mat-raised-button class="btn-editar-alertas" (click)="abrirEditarAlertas()">
-              <mat-icon>edit</mat-icon>
-              <span>EDITAR ALERTAS</span>
-            </button>
+      <!-- Tarjeta Principal de Identidad del Perfil -->
+      <div class="profile-main-card">
+        <div class="profile-header-strip">
+          <div class="profile-avatar-wrapper">
+            <div class="profile-avatar-circle">
+              <img 
+                *ngIf="user()?.foto" 
+                [src]="user()?.foto" 
+                alt="Foto de perfil" 
+                class="photo-img"
+              >
+              <span *ngIf="!user()?.foto" class="photo-initial">
+                {{ userInitial() }}
+              </span>
+
+              <!-- Botón cambiar foto -->
+              <button 
+                type="button" 
+                class="btn-camera-pill" 
+                (click)="fileInput.click()" 
+                title="Actualizar foto de perfil"
+              >
+                <mat-icon>photo_camera</mat-icon>
+              </button>
+              <input 
+                #fileInput 
+                type="file" 
+                accept="image/*" 
+                (change)="onFotoSeleccionada($event)" 
+                style="display: none;"
+              >
+            </div>
+            <span class="avatar-online-indicator" title="Sesión activa"></span>
           </div>
 
-          <div class="profile-details-list">
-            <p><strong>Nombre de usuario: </strong><span>{{ user()?.username || '-' }}</span></p>
-            <p><strong>Número de documento: </strong><span>{{ user()?.doc || '-' }}</span></p>
-            <p><strong>Nombre(s): </strong><span>{{ user()?.first_name || '-' }}</span></p>
-            <p><strong>Apellido(s): </strong><span>{{ user()?.last_name || '-' }}</span></p>
-            <p><strong>Correo electrónico: </strong><span>{{ user()?.email || '-' }}</span></p>
-            <p><strong>Activo desde: </strong><span>{{ fechaFormateada() }}</span></p>
+          <div class="profile-identity-details">
+            <div class="name-badge-row">
+              <h1 class="user-display-name">{{ userFullName() }}</h1>
+              <span class="user-cargo-pill">{{ user()?.cargo || 'Personal institucional' }}</span>
+            </div>
+            <p class="user-email-text">{{ user()?.email || 'docs@marabuntarl.com' }}</p>
+          </div>
+
+          <div class="profile-header-actions">
+            <button *ngIf="!editandoAlertas()" type="button" class="emerald24-primary-pill" (click)="abrirEditarAlertas()">
+              <mat-icon>notifications_active</mat-icon>
+              <span>Editar Alertas</span>
+            </button>
           </div>
         </div>
 
-        <!-- VISTA DE EDICIÓN DE ALERTAS -->
-        <div class="profile-edit-section" *ngIf="editandoAlertas()">
-          <h3 class="edit-title">Configuración de Alertas y Notificaciones</h3>
-
-          <div class="channel-row">
-            <mat-checkbox [(ngModel)]="alertas.canal_habilitado" color="primary">
-              HABILITAR NOTIFICACIONES
-            </mat-checkbox>
-          </div>
-
-          <p class="edit-subtitle">Recibir notificaciones vía:</p>
-          <mat-radio-group [(ngModel)]="alertas.canal" [disabled]="!alertas.canal_habilitado" color="primary" class="canal-radio-group">
-            <mat-radio-button value="CORREO">Solo Correo Electrónico</mat-radio-button>
-            <mat-radio-button value="WHATSAPP">Solo WhatsApp</mat-radio-button>
-            <mat-radio-button value="CORREO_WHATSAPP">Ambos (Correo y WhatsApp)</mat-radio-button>
-          </mat-radio-group>
-
-          <div class="email-field-box" *ngIf="alertas.canal === 'CORREO' || alertas.canal === 'CORREO_WHATSAPP'">
-            <mat-form-field appearance="outline" class="w-full">
-              <mat-label>Correo electrónico</mat-label>
-              <input matInput [value]="user()?.email || 'docs@marabuntarl.com'" disabled>
-            </mat-form-field>
-          </div>
-
-          <div class="email-field-box" *ngIf="alertas.canal === 'WHATSAPP' || alertas.canal === 'CORREO_WHATSAPP'">
-            <mat-form-field appearance="outline" class="w-full">
-              <mat-label>Número de WhatsApp (Ej: 77777777 o 59177777777)</mat-label>
-              <input matInput [(ngModel)]="alertas.celular" [disabled]="!alertas.canal_habilitado" placeholder="Ej: 77777777">
-            </mat-form-field>
-          </div>
-
-          <p class="edit-subtitle">De documentos que:</p>
-          <div class="checkboxes-list">
-            <mat-checkbox [(ngModel)]="alertas.enviado" [disabled]="!alertas.canal_habilitado" color="primary">
-              Me envíen
-            </mat-checkbox>
-            <mat-checkbox [(ngModel)]="alertas.observado" [disabled]="!alertas.canal_habilitado" color="primary">
-              Me observen
-            </mat-checkbox>
-            <mat-checkbox [(ngModel)]="alertas.derivado" [disabled]="!alertas.canal_habilitado" color="primary">
-              Me deriven
-            </mat-checkbox>
-            <mat-checkbox [(ngModel)]="alertas.aprobar_ciudadania" [disabled]="!alertas.canal_habilitado" color="primary">
-              Deba aprobar con CD
-            </mat-checkbox>
-            <mat-checkbox [(ngModel)]="alertas.aprobados_ciudadania" [disabled]="!alertas.canal_habilitado" color="primary">
-              Han sido aprobados con CD
-            </mat-checkbox>
-          </div>
-
-          <div class="edit-actions-row">
-            <button mat-raised-button color="primary" class="btn-guardar" (click)="guardarAlertas()">
-              <mat-icon>check</mat-icon>
-              <span>Guardar</span>
-            </button>
-            <button mat-raised-button class="btn-cancelar" (click)="cancelarEditarAlertas()">
-              <mat-icon>cancel</mat-icon>
-              <span>Cancelar</span>
-            </button>
-          </div>
-
-          <!-- PANEL DE VINCULACIÓN Y GRUPO INSTITUCIONAL DE WHATSAPP (EVOLUTION API) -->
-          <div class="wa-admin-panel" *ngIf="esAdminOMae()" style="margin-top: 22px; padding: 16px; border: 1px solid #cbd5e1; border-radius: 10px; background: #f8fafc;">
-            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
-              <div>
-                <h4 style="margin:0; font-size:0.98rem; color:#0f172a;">📱 Instancia Corporativa WhatsApp ({{ waInstancia() }})</h4>
-                <small style="color:#475569;">Difusión de Convocatorias, Circulares y Documentos Globales al Grupo Institucional</small>
+        <!-- CUERPO DEL PERFIL: VISTA DE DETALLE NORMAL -->
+        <div class="profile-content-area" *ngIf="!editandoAlertas()">
+          <div class="profile-sections-grid">
+            
+            <!-- TARJETA 1: INFORMACIÓN INSTITUCIONAL -->
+            <div class="profile-info-card">
+              <div class="card-header-line">
+                <mat-icon class="section-icon">badge</mat-icon>
+                <h3 class="section-title">Información Institucional</h3>
               </div>
-              <span [style.background]="waEstado() === 'open' ? '#dcfce7' : '#fef3c7'"
-                    [style.color]="waEstado() === 'open' ? '#166534' : '#92400e'"
-                    style="padding:4px 10px; border-radius:999px; font-size:0.78rem; font-weight:700;">
-                {{ waEstado() === 'open' ? '● Conectado' : '⏳ Pendiente de vincular QR' }}
-              </span>
+
+              <div class="data-tiles-grid">
+                <div class="data-tile">
+                  <span class="tile-label">Nombre de usuario</span>
+                  <strong class="tile-value">{{ user()?.username || '-' }}</strong>
+                </div>
+
+                <div class="data-tile">
+                  <span class="tile-label">Nro. documento de identidad</span>
+                  <strong class="tile-value">{{ user()?.doc || '-' }}</strong>
+                </div>
+
+                <div class="data-tile">
+                  <span class="tile-label">Nombre(s)</span>
+                  <strong class="tile-value">{{ user()?.first_name || '-' }}</strong>
+                </div>
+
+                <div class="data-tile">
+                  <span class="tile-label">Apellido(s)</span>
+                  <strong class="tile-value">{{ user()?.last_name || '-' }}</strong>
+                </div>
+
+                <div class="data-tile full-width">
+                  <span class="tile-label">Correo electrónico</span>
+                  <strong class="tile-value">{{ user()?.email || '-' }}</strong>
+                </div>
+
+                <div class="data-tile full-width">
+                  <span class="tile-label">Activo en el sistema desde</span>
+                  <strong class="tile-value">{{ fechaFormateada() }}</strong>
+                </div>
+              </div>
             </div>
 
-            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-              <button type="button" mat-stroked-button color="primary" (click)="obtenerQrWhatsApp()" [disabled]="cargandoWa()">
-                <mat-icon>qr_code_2</mat-icon>
-                <span>{{ waQrBase64() ? 'Actualizar Código QR' : 'Ver QR para Vincular Dispositivo' }}</span>
-              </button>
-              <button type="button" mat-stroked-button (click)="cargarGruposWhatsApp()" [disabled]="cargandoWa()">
-                <mat-icon>groups</mat-icon>
-                <span>Cargar Grupos del WhatsApp</span>
-              </button>
-              <button type="button" mat-stroked-button (click)="probarEnvioWhatsApp()" [disabled]="cargandoWa()">
-                <mat-icon>send</mat-icon>
-                <span>Enviar Prueba</span>
-              </button>
-            </div>
+            <!-- TARJETA 2: ESTADO DE NOTIFICACIONES Y ALERTAS -->
+            <div class="profile-info-card">
+              <div class="card-header-line">
+                <mat-icon class="section-icon">mark_email_read</mat-icon>
+                <h3 class="section-title">Preferencias de Notificación</h3>
+              </div>
 
-            <!-- Imagen QR si está generada -->
-            <div *ngIf="waQrBase64()" style="text-align:center; padding:12px; background:#ffffff; border:1px dashed #94a3b8; border-radius:8px; margin-bottom:12px;">
-              <p style="margin:0 0 8px; font-size:0.82rem; color:#334155; font-weight:600;">
-                Escanee desde su celular: WhatsApp &gt; Dispositivos vinculados &gt; Vincular un dispositivo
-              </p>
-              <img [src]="waQrBase64()" alt="QR WhatsApp" style="width:220px; height:220px; object-fit:contain; border-radius:6px;">
-            </div>
+              <div class="notification-summary-box">
+                <div class="notif-status-badge" [class.is-active]="alertas.canal_habilitado">
+                  <mat-icon>{{ alertas.canal_habilitado ? 'check_circle' : 'notifications_off' }}</mat-icon>
+                  <span>{{ alertas.canal_habilitado ? 'Notificaciones Habilitadas' : 'Notificaciones Inactivas' }}</span>
+                </div>
 
-            <!-- Selector de Grupo Institucional (@g.us) -->
-            <div style="display:flex; flex-direction:column; gap:8px;">
-              <mat-form-field appearance="outline" class="w-full" *ngIf="waGrupos().length > 0">
-                <mat-label>Seleccionar Grupo Institucional de WhatsApp</mat-label>
-                <mat-select [(ngModel)]="waGrupoSeleccionadoId" (selectionChange)="onSeleccionarGrupoWa($event.value)">
-                  <mat-option *ngFor="let g of waGrupos()" [value]="g.id">
-                    {{ g.subject || g.name || g.id }} ({{ g.id }})
-                  </mat-option>
-                </mat-select>
-              </mat-form-field>
+                <div class="notif-detail-row">
+                  <span class="detail-label">Canal configurado:</span>
+                  <strong class="detail-val">
+                    {{ alertas.canal === 'CORREO_WHATSAPP' ? 'Correo Electrónico y WhatsApp' : (alertas.canal === 'WHATSAPP' ? 'Solo WhatsApp' : 'Correo Electrónico') }}
+                  </strong>
+                </div>
 
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>ID del Grupo Institucional (&#64;g.us) para Difusión Global</mat-label>
-                <input matInput [(ngModel)]="waGrupoSeleccionadoId" placeholder="Ej: 120363284910293847&#64;g.us">
-                <mat-hint>Cuando PARA = A TODO EL PERSONAL, el aviso de WhatsApp se enviará únicamente a este grupo</mat-hint>
-              </mat-form-field>
+                <div class="notif-detail-row" *ngIf="alertas.celular">
+                  <span class="detail-label">Celular WhatsApp:</span>
+                  <strong class="detail-val">{{ alertas.celular }}</strong>
+                </div>
 
-              <div>
-                <button type="button" mat-flat-button color="primary" (click)="guardarGrupoWhatsApp()" [disabled]="cargandoWa()">
-                  <mat-icon>save</mat-icon>
-                  <span>Guardar Grupo Institucional</span>
+                <div class="notif-tags-list">
+                  <span class="notif-pill" *ngIf="alertas.enviado">Me envíen</span>
+                  <span class="notif-pill" *ngIf="alertas.observado">Me observen</span>
+                  <span class="notif-pill" *ngIf="alertas.derivado">Me deriven</span>
+                  <span class="notif-pill" *ngIf="alertas.aprobar_ciudadania">Aprobar con CD</span>
+                  <span class="notif-pill" *ngIf="alertas.aprobados_ciudadania">Aprobados con CD</span>
+                </div>
+
+                <button type="button" class="btn-config-alerts-link" (click)="abrirEditarAlertas()">
+                  <span>Modificar configuración de alertas</span>
+                  <mat-icon>arrow_forward</mat-icon>
                 </button>
               </div>
             </div>
+
           </div>
         </div>
 
-        <!-- Footer discreto institucional (Imagen 3) -->
-        <div class="profile-armotech-footer">
-          <span>desarrollado por ARMOTECH 2026. armotech.org</span>
+        <!-- CUERPO DEL PERFIL: VISTA DE EDICIÓN DE ALERTAS -->
+        <div class="profile-edit-wrapper" *ngIf="editandoAlertas()">
+          <div class="edit-card-box">
+            <div class="edit-header-bar">
+              <div>
+                <h2 class="edit-box-title">Configuración de Alertas y Notificaciones</h2>
+                <p class="edit-box-sub">Selecciona los canales y eventos para recibir avisos de tus trámites</p>
+              </div>
+            </div>
+
+            <div class="channel-toggle-row">
+              <mat-checkbox [(ngModel)]="alertas.canal_habilitado" color="primary">
+                Habilitar notificaciones activas
+              </mat-checkbox>
+            </div>
+
+            <div class="form-section-block">
+              <label class="block-label">Recibir notificaciones vía:</label>
+              <mat-radio-group [(ngModel)]="alertas.canal" [disabled]="!alertas.canal_habilitado" color="primary" class="canal-radio-group">
+                <mat-radio-button value="CORREO">Solo Correo Electrónico</mat-radio-button>
+                <mat-radio-button value="WHATSAPP">Solo WhatsApp</mat-radio-button>
+                <mat-radio-button value="CORREO_WHATSAPP">Ambos (Correo y WhatsApp)</mat-radio-button>
+              </mat-radio-group>
+            </div>
+
+            <div class="email-field-box" *ngIf="alertas.canal === 'CORREO' || alertas.canal === 'CORREO_WHATSAPP'">
+              <mat-form-field appearance="outline" class="w-full">
+                <mat-label>Correo electrónico</mat-label>
+                <input matInput [value]="user()?.email || 'docs@marabuntarl.com'" disabled>
+              </mat-form-field>
+            </div>
+
+            <div class="email-field-box" *ngIf="alertas.canal === 'WHATSAPP' || alertas.canal === 'CORREO_WHATSAPP'">
+              <mat-form-field appearance="outline" class="w-full">
+                <mat-label>Número de WhatsApp (Ej: 77777777 o 59177777777)</mat-label>
+                <input matInput [(ngModel)]="alertas.celular" [disabled]="!alertas.canal_habilitado" placeholder="Ej: 77777777">
+              </mat-form-field>
+            </div>
+
+            <div class="form-section-block">
+              <label class="block-label">Eventos de documentos que activan alertas:</label>
+              <div class="checkboxes-grid">
+                <mat-checkbox [(ngModel)]="alertas.enviado" [disabled]="!alertas.canal_habilitado" color="primary">
+                  Me envíen
+                </mat-checkbox>
+                <mat-checkbox [(ngModel)]="alertas.observado" [disabled]="!alertas.canal_habilitado" color="primary">
+                  Me observen
+                </mat-checkbox>
+                <mat-checkbox [(ngModel)]="alertas.derivado" [disabled]="!alertas.canal_habilitado" color="primary">
+                  Me deriven
+                </mat-checkbox>
+                <mat-checkbox [(ngModel)]="alertas.aprobar_ciudadania" [disabled]="!alertas.canal_habilitado" color="primary">
+                  Deba aprobar con CD
+                </mat-checkbox>
+                <mat-checkbox [(ngModel)]="alertas.aprobados_ciudadania" [disabled]="!alertas.canal_habilitado" color="primary">
+                  Han sido aprobados con CD
+                </mat-checkbox>
+              </div>
+            </div>
+
+            <div class="edit-bottom-buttons">
+              <button type="button" class="emerald24-primary-pill" (click)="guardarAlertas()">
+                <mat-icon>check</mat-icon>
+                <span>Guardar cambios</span>
+              </button>
+              <button type="button" class="emerald24-secondary-pill" (click)="cancelarEditarAlertas()">
+                <mat-icon>close</mat-icon>
+                <span>Cancelar</span>
+              </button>
+            </div>
+
+            <!-- PANEL DE VINCULACIÓN Y GRUPO INSTITUCIONAL DE WHATSAPP (EVOLUTION API) -->
+            <div class="wa-admin-panel" *ngIf="esAdminOMae()">
+              <div class="wa-panel-header">
+                <div>
+                  <h4 class="wa-panel-title">📱 Instancia Corporativa WhatsApp ({{ waInstancia() }})</h4>
+                  <p class="wa-panel-desc">Difusión de Convocatorias, Circulares y Documentos Globales al Grupo Institucional</p>
+                </div>
+                <span class="wa-status-pill" [class.wa-open]="waEstado() === 'open'">
+                  {{ waEstado() === 'open' ? '● Conectado' : '⏳ Pendiente de vincular QR' }}
+                </span>
+              </div>
+
+              <div class="wa-action-buttons">
+                <button type="button" class="emerald24-secondary-pill" (click)="obtenerQrWhatsApp()" [disabled]="cargandoWa()">
+                  <mat-icon>qr_code_2</mat-icon>
+                  <span>{{ waQrBase64() ? 'Actualizar QR' : 'Ver QR de Vinculación' }}</span>
+                </button>
+                <button type="button" class="emerald24-secondary-pill" (click)="cargarGruposWhatsApp()" [disabled]="cargandoWa()">
+                  <mat-icon>groups</mat-icon>
+                  <span>Cargar Grupos</span>
+                </button>
+                <button type="button" class="emerald24-secondary-pill" (click)="probarEnvioWhatsApp()" [disabled]="cargandoWa()">
+                  <mat-icon>send</mat-icon>
+                  <span>Enviar Prueba</span>
+                </button>
+              </div>
+
+              <!-- Imagen QR si está generada -->
+              <div *ngIf="waQrBase64()" class="wa-qr-box">
+                <p class="wa-qr-instructions">
+                  Escanee desde su celular: WhatsApp > Dispositivos vinculados > Vincular un dispositivo
+                </p>
+                <img [src]="waQrBase64()" alt="QR WhatsApp" class="wa-qr-image">
+              </div>
+
+              <!-- Selector de Grupo Institucional (@g.us) -->
+              <div class="wa-group-select-section">
+                <mat-form-field appearance="outline" class="w-full" *ngIf="waGrupos().length > 0">
+                  <mat-label>Seleccionar Grupo Institucional de WhatsApp</mat-label>
+                  <mat-select [(ngModel)]="waGrupoSeleccionadoId" (selectionChange)="onSeleccionarGrupoWa($event.value)">
+                    <mat-option *ngFor="let g of waGrupos()" [value]="g.id">
+                      {{ g.subject || g.name || g.id }} ({{ g.id }})
+                    </mat-option>
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="w-full">
+                  <mat-label>ID del Grupo Institucional (&#64;g.us) para Difusión Global</mat-label>
+                  <input matInput [(ngModel)]="waGrupoSeleccionadoId" placeholder="Ej: 120363284910293847&#64;g.us">
+                  <mat-hint>Cuando PARA = A TODO EL PERSONAL, el aviso de WhatsApp se enviará únicamente a este grupo</mat-hint>
+                </mat-form-field>
+
+                <div>
+                  <button type="button" class="emerald24-primary-pill" (click)="guardarGrupoWhatsApp()" [disabled]="cargandoWa()">
+                    <mat-icon>save</mat-icon>
+                    <span>Guardar Grupo Institucional</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
+
       </div>
     </div>
   `,
   styles: [`
     .profile-container {
       width: 100%;
-      min-height: calc(100vh - 110px);
-      background: #ffffff;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-      border-radius: 4px;
-      overflow: hidden;
-      font-family: var(--font-ui);
+      min-height: calc(100vh - 100px);
+      background: transparent;
+      font-family: var(--font-ui, system-ui, -apple-system, sans-serif);
     }
 
-    /* BANNER / PORTADA (Imagen 3) */
-    .profile-user-bg {
-      background-image: url('/assets/images/bg.jpg'), linear-gradient(135deg, #0a192f 0%, #172a45 50%, #301b3f 100%);
-      background-repeat: no-repeat;
-      background-size: cover;
-      background-position: center;
-      height: 330px;
-      position: relative;
+    /* PORTADA ESMERALDA MODERNA (SIN ASSETS) */
+    .profile-cover-banner {
+      height: 160px;
       width: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-end;
-      align-items: center;
-    }
-
-    .profile-photo-wrapper {
+      background: linear-gradient(135deg, #022c1e 0%, #064e3b 45%, #059669 80%, #10b981 100%);
+      border-radius: 24px 24px 0 0;
       position: relative;
-      margin-bottom: 14px;
+      overflow: hidden;
     }
 
-    .profile-user-photo {
-      width: 120px;
-      height: 120px;
-      border: 5px solid #ffffff;
+    .cover-pattern-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at 85% 20%, rgba(52, 211, 153, 0.35) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    /* TARJETA PRINCIPAL BLANCA */
+    .profile-main-card {
+      background: #ffffff;
+      border-radius: 0 0 24px 24px;
+      padding: 0 32px 36px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.03);
+    }
+
+    .profile-header-strip {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid #f1f5f9;
+      flex-wrap: wrap;
+    }
+
+    .profile-avatar-wrapper {
+      position: relative;
+      margin-top: -48px;
+    }
+
+    .profile-avatar-circle {
+      width: 96px;
+      height: 96px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #38b2ac 0%, #0d9488 100%);
-      color: #ffffff;
+      background: #043324;
+      border: 4px solid #ffffff;
+      box-shadow: 0 8px 24px rgba(4, 51, 36, 0.22);
+      color: #34d399;
       position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      overflow: hidden;
     }
 
     .photo-img {
@@ -290,227 +395,437 @@ interface AlertasConfig {
     }
 
     .photo-initial {
-      font-size: 4.8rem;
-      font-weight: 700;
+      font-size: 2.4rem;
+      font-weight: 800;
       line-height: 1;
+      color: #34d399;
     }
 
-    /* Botón de overlay de cámara (Imagen 3) */
-    .btn-camera-overlay {
+    .btn-camera-pill {
       position: absolute;
       bottom: 2px;
       right: 2px;
-      width: 36px;
-      height: 36px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
-      background: #00e5ff;
+      background: #111827;
       border: 2px solid #ffffff;
-      color: #0f2027;
+      color: #ffffff;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
       transition: transform 0.15s ease, background 0.15s ease;
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
 
       &:hover {
         transform: scale(1.08);
-        background: #38bdf8;
-      }
-
-      mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
+        background: #059669;
       }
     }
 
-    /* Franja oscura translúcida debajo del avatar (Imagen 3) */
-    .profile-data-overlay {
-      background-color: rgba(0, 0, 0, 0.55);
-      backdrop-filter: blur(4px);
-      width: 100%;
-      max-width: 820px;
-      padding: 16px 20px 14px 20px;
-      text-align: center;
-      border-top-left-radius: 8px;
-      border-top-right-radius: 8px;
+    .avatar-online-indicator {
+      position: absolute;
+      bottom: 4px;
+      left: 74px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #10b981;
+      border: 2px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
     }
 
-    .profile-user-name {
+    .profile-identity-details {
+      flex: 1;
+      min-width: 240px;
+      margin-top: 10px;
+    }
+
+    .name-badge-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .user-display-name {
       margin: 0;
-      color: #ffffff;
-      font-size: 1.35rem;
-      font-weight: 600;
-      letter-spacing: 0.3px;
+      font-size: 1.55rem;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.025em;
     }
 
-    .profile-user-email {
-      margin: 6px 0 0 0;
-      color: #22d3ee; /* Cyan exacto de la Imagen 3 */
-      font-size: 0.95rem;
-      font-weight: 500;
+    .user-cargo-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 12px;
+      border-radius: 9999px;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      color: #065f46;
+      font-size: 0.78rem;
+      font-weight: 700;
     }
 
-    /* CUERPO DEL PERFIL */
-    .profile-body-card {
+    .user-email-text {
+      margin: 4px 0 0;
+      color: #64748b;
+      font-size: 0.88rem;
+    }
+
+    .profile-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* SECCIONES DE DETALLES */
+    .profile-content-area {
+      padding-top: 28px;
+    }
+
+    .profile-sections-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 960px) {
+      .profile-sections-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .profile-info-card {
       background: #ffffff;
-      padding: 24px 30px;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+    }
+
+    .card-header-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #f1f5f9;
+
+      .section-icon {
+        color: #059669;
+        font-size: 22px;
+        width: 22px;
+        height: 22px;
+      }
+
+      .section-title {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #0f172a;
+      }
+    }
+
+    .data-tiles-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .data-tile {
+      background: #f8fafc;
+      border: 1px solid #f1f5f9;
+      border-radius: 14px;
+      padding: 12px 16px;
       display: flex;
       flex-direction: column;
-      min-height: 280px;
-    }
+      gap: 3px;
 
-    .actions-header {
-      margin-bottom: 20px;
-    }
-
-    .btn-editar-alertas {
-      background: #ffffff !important;
-      color: #1e293b !important;
-      border: 1px solid #cbd5e1 !important;
-      border-radius: 4px !important;
-      font-weight: 700 !important;
-      font-size: 0.8rem !important;
-      letter-spacing: 0.5px !important;
-      height: 38px !important;
-      padding: 0 16px !important;
-      display: inline-flex !important;
-      align-items: center !important;
-      gap: 6px !important;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
-
-      &:hover {
-        background: #f8fafc !important;
-        border-color: #94a3b8 !important;
+      &.full-width {
+        grid-column: 1 / -1;
       }
+
+      .tile-label {
+        font-size: 0.74rem;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .tile-value {
+        font-size: 0.92rem;
+        font-weight: 700;
+        color: #0f172a;
+        word-break: break-word;
+      }
+    }
+
+    /* RESUMEN DE NOTIFICACIONES */
+    .notification-summary-box {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .notif-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 12px;
+      background: #f1f5f9;
+      color: #64748b;
+      font-size: 0.85rem;
+      font-weight: 700;
+      width: fit-content;
 
       mat-icon {
         font-size: 18px;
         width: 18px;
         height: 18px;
-        color: #475569;
+      }
+
+      &.is-active {
+        background: #ecfdf5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+        mat-icon {
+          color: #059669;
+        }
       }
     }
 
-    .profile-details-list {
+    .notif-detail-row {
       display: flex;
-      flex-direction: column;
-      gap: 12px;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.88rem;
+      padding: 8px 0;
+      border-bottom: 1px solid #f1f5f9;
 
-      p {
-        margin: 0;
-        font-size: 0.92rem;
-        color: #1e293b;
-        line-height: 1.5;
+      .detail-label {
+        color: #64748b;
+      }
+      .detail-val {
+        color: #0f172a;
+        font-weight: 700;
+      }
+    }
 
-        strong {
-          color: #0f172a;
-          font-weight: 700;
-          min-width: 190px;
-          display: inline-block;
-        }
+    .notif-tags-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 6px 0;
+    }
 
-        span {
-          color: #334155;
+    .notif-pill {
+      font-size: 0.74rem;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      background: #f1f5f9;
+      color: #475569;
+      font-weight: 600;
+    }
+
+    .btn-config-alerts-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: transparent;
+      border: none;
+      color: #059669;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 4px 0;
+      font-family: inherit;
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        transition: transform 0.15s ease;
+      }
+
+      &:hover {
+        color: #047857;
+        text-decoration: underline;
+        mat-icon {
+          transform: translateX(3px);
         }
       }
     }
 
     /* EDICIÓN DE ALERTAS */
-    .profile-edit-section {
-      max-width: 600px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
+    .profile-edit-wrapper {
+      padding-top: 28px;
     }
 
-    .edit-title {
-      margin: 0 0 6px 0;
-      font-size: 1.1rem;
-      font-weight: 700;
+    .edit-card-box {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 28px;
+      max-width: 800px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
+    }
+
+    .edit-header-bar {
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .edit-box-title {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 800;
       color: #0f172a;
     }
 
-    .edit-subtitle {
-      margin: 0;
-      font-size: 0.88rem;
-      font-weight: 600;
-      color: #475569;
+    .edit-box-sub {
+      margin: 4px 0 0;
+      color: #64748b;
+      font-size: 0.85rem;
     }
 
-    .channel-row {
-      margin: 4px 0 4px 0;
+    .channel-toggle-row {
+      margin-bottom: 18px;
+    }
+
+    .form-section-block {
+      margin-bottom: 18px;
+    }
+
+    .block-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 10px;
     }
 
     .canal-radio-group {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      margin: 4px 0 8px 0;
+      gap: 10px;
     }
 
     .email-field-box {
-      max-width: 400px;
+      max-width: 440px;
+      margin-bottom: 14px;
     }
 
-    .checkboxes-list {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-bottom: 12px;
+    .checkboxes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 8px;
     }
 
-    .edit-actions-row {
+    .edit-bottom-buttons {
       display: flex;
       align-items: center;
       gap: 12px;
-      margin-top: 10px;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid #f1f5f9;
     }
 
-    .btn-guardar {
-      background: #0284c7 !important;
-      color: #ffffff !important;
-      font-weight: 600 !important;
+    /* WHATSAPP CORPORATIVO */
+    .wa-admin-panel {
+      margin-top: 28px;
+      padding: 22px;
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      background: #f8fafc;
     }
 
-    .btn-cancelar {
-      background: #f1f5f9 !important;
-      color: #475569 !important;
-      font-weight: 600 !important;
+    .wa-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .wa-panel-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .wa-panel-desc {
+      margin: 2px 0 0;
+      font-size: 0.80rem;
+      color: #64748b;
+    }
+
+    .wa-status-pill {
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: #fef3c7;
+      color: #92400e;
+
+      &.wa-open {
+        background: #ecfdf5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+      }
+    }
+
+    .wa-action-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .wa-qr-box {
+      text-align: center;
+      padding: 16px;
+      background: #ffffff;
+      border: 1px dashed #cbd5e1;
+      border-radius: 14px;
+      margin-bottom: 16px;
+    }
+
+    .wa-qr-instructions {
+      margin: 0 0 10px;
+      font-size: 0.84rem;
+      color: #334155;
+      font-weight: 600;
+    }
+
+    .wa-qr-image {
+      width: 220px;
+      height: 220px;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+
+    .wa-group-select-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
     .w-full {
       width: 100%;
-    }
-
-    /* PIE DE PÁGINA (Imagen 3) */
-    .profile-armotech-footer {
-      margin-top: auto;
-      padding-top: 36px;
-      text-align: right;
-
-      span {
-        font-size: 0.74rem;
-        color: #94a3b8;
-        font-family: monospace;
-      }
-    }
-
-    @media (max-width: 768px) {
-      .profile-user-bg {
-        height: 260px;
-      }
-      .profile-user-photo {
-        width: 90px;
-        height: 90px;
-      }
-      .photo-initial {
-        font-size: 3.5rem;
-      }
-      .profile-details-list p strong {
-        min-width: 140px;
-      }
     }
   `]
 })

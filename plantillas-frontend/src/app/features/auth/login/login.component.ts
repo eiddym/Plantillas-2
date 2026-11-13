@@ -154,10 +154,9 @@ import { AuthService } from '../../../core/auth/auth.service';
       justify-content: center;
       padding: 20px;
       background:
-        radial-gradient(circle at 20% 25%, rgba(14, 116, 144, 0.34), transparent 52%),
-        radial-gradient(circle at 82% 78%, rgba(214, 168, 79, 0.22), transparent 48%),
-        linear-gradient(145deg, rgba(10, 26, 30, 0.88), rgba(14, 48, 56, 0.9)),
-        url('/assets/images/bg.jpg') no-repeat center center fixed;
+        radial-gradient(circle at 8% 92%, rgba(52, 211, 153, 0.48) 0%, rgba(16, 185, 129, 0.22) 28%, transparent 62%),
+        radial-gradient(circle at 88% 14%, rgba(52, 211, 153, 0.25) 0%, transparent 48%),
+        linear-gradient(125deg, #011d14 0%, #033323 42%, #054430 68%, #022117 100%);
       background-size: cover;
       font-family: var(--font-ui);
       box-sizing: border-box;
@@ -166,19 +165,21 @@ import { AuthService } from '../../../core/auth/auth.service';
     .login-card-horizontal {
       display: flex;
       width: 100%;
-      max-width: 850px;
-      min-height: 470px;
-      background-color: var(--surface);
-      border-radius: 18px;
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      box-shadow: 0 28px 60px rgba(8, 22, 26, 0.5);
+      max-width: 860px;
+      min-height: 480px;
+      background-color: #ffffff;
+      border-radius: 26px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 32px 64px rgba(1, 20, 14, 0.55);
       overflow: hidden;
     }
 
     /* --- PANEL IZQUIERDO --- */
     .panel-izquierdo {
-      flex: 0.95;
-      background: linear-gradient(155deg, #0b242a 0%, #13444e 55%, #0e6b78 100%);
+      flex: 0.92;
+      background:
+        radial-gradient(circle at 18% 88%, rgba(52, 211, 153, 0.35) 0%, transparent 58%),
+        linear-gradient(160deg, #011c13 0%, #032f20 55%, #064e3b 100%);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -186,7 +187,7 @@ import { AuthService } from '../../../core/auth/auth.service';
       gap: 18px;
       padding: 36px 28px;
       position: relative;
-      border-right: 3px solid var(--gold);
+      border-right: 1px solid rgba(52, 211, 153, 0.18);
 
       &::before {
         content: '';
@@ -194,7 +195,7 @@ import { AuthService } from '../../../core/auth/auth.service';
         width: 240px;
         height: 240px;
         border-radius: 50%;
-        background: radial-gradient(circle, rgba(214, 168, 79, 0.2) 0%, transparent 70%);
+        background: radial-gradient(circle, rgba(16, 185, 129, 0.22) 0%, transparent 70%);
         pointer-events: none;
       }
     }
@@ -203,13 +204,13 @@ import { AuthService } from '../../../core/auth/auth.service';
       position: relative;
       font-size: 0.75rem;
       font-weight: 700;
-      color: #f5dfaa;
+      color: #a7f3d0;
       letter-spacing: 0.06em;
       text-transform: uppercase;
       padding: 5px 14px;
-      border: 1px solid rgba(214, 168, 79, 0.45);
+      border: 1px solid rgba(52, 211, 153, 0.38);
       border-radius: 999px;
-      background: rgba(214, 168, 79, 0.14);
+      background: rgba(16, 185, 129, 0.14);
       backdrop-filter: blur(8px);
     }
 
@@ -240,27 +241,27 @@ import { AuthService } from '../../../core/auth/auth.service';
       display: flex;
       flex-direction: column;
       justify-content: center;
-      background-color: var(--surface);
+      background-color: #ffffff;
     }
 
     .cabecera-sistema {
       text-align: left;
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      color: var(--petrol-bright);
+      color: #059669;
       margin-bottom: 4px;
     }
 
     .titulo-docs {
       text-align: left;
       font-family: var(--font-ui);
-      font-size: 2.1rem;
+      font-size: 2.05rem;
       font-weight: 800;
-      color: var(--ink);
+      color: #0f172a;
       margin: 0 0 22px 0;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.025em;
     }
 
     .login-form {
@@ -278,15 +279,15 @@ import { AuthService } from '../../../core/auth/auth.service';
 
     .input-blanco {
       width: 100%;
-      height: 45px;
-      background-color: var(--surface-tinted);
-      border: 1.5px solid var(--line-strong);
-      border-radius: 11px;
+      height: 46px;
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
       padding: 0 42px;
       font-size: 0.92rem;
       font-family: var(--font-ui);
-      color: var(--ink);
-      transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
+      color: #0f172a;
+      transition: border-color 0.16s ease, box-shadow 0.16s ease;
 
       &::placeholder {
         color: #94a3b8;
@@ -294,22 +295,21 @@ import { AuthService } from '../../../core/auth/auth.service';
       }
 
       &:hover {
-        border-color: #94a3b8;
-        background-color: var(--surface);
+        border-color: #cbd5e1;
       }
 
       &:focus {
         outline: none;
-        background-color: var(--surface);
-        border-color: var(--petrol-bright);
-        box-shadow: 0 0 0 3px rgba(14, 116, 144, 0.16);
+        background-color: #ffffff;
+        border-color: #059669;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.14);
       }
     }
 
     .icon-field {
       position: absolute;
       left: 13px;
-      color: var(--ink-muted);
+      color: #64748b;
       font-size: 19px;
       width: 19px;
       height: 19px;
@@ -324,14 +324,14 @@ import { AuthService } from '../../../core/auth/auth.service';
       right: 12px;
       background: transparent;
       border: none;
-      color: var(--ink-muted);
+      color: #64748b;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 0;
       &:hover {
-        color: var(--ink);
+        color: #0f172a;
       }
       mat-icon {
         font-size: 19px;
@@ -348,14 +348,15 @@ import { AuthService } from '../../../core/auth/auth.service';
       font-weight: 500;
     }
 
+    /* Botón Login Píldora Carbón (Captura 3) */
     .login-btn {
       width: 100%;
       height: 46px;
       margin-top: 4px;
-      background: linear-gradient(135deg, #0f3a42 0%, #0e7490 100%);
+      background: #111827;
       color: #ffffff;
       border: none;
-      border-radius: 12px;
+      border-radius: 9999px;
       font-family: var(--font-ui);
       font-weight: 700;
       font-size: 0.92rem;
@@ -363,13 +364,13 @@ import { AuthService } from '../../../core/auth/auth.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 6px 18px rgba(14, 116, 144, 0.28);
-      transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+      box-shadow: 0 6px 18px rgba(17, 24, 39, 0.22);
+      transition: transform 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
 
       &:hover:not(:disabled) {
+        background: #1f2937;
         transform: translateY(-1px);
-        box-shadow: 0 10px 24px rgba(14, 116, 144, 0.36);
-        filter: brightness(1.06);
+        box-shadow: 0 10px 24px rgba(17, 24, 39, 0.30);
       }
 
       &:disabled {
@@ -378,7 +379,7 @@ import { AuthService } from '../../../core/auth/auth.service';
       }
     }
 
-    /* --- BOTÓN SSO MARABUNTA ID --- */
+    /* --- BOTÓN SSO MARABUNTA ID (Caja limpia estilo Captura 3) --- */
     .sso-container {
       margin-top: 14px;
       display: flex;
@@ -390,15 +391,17 @@ import { AuthService } from '../../../core/auth/auth.service';
       display: flex;
       align-items: center;
       text-align: center;
-      color: var(--ink-muted);
-      font-size: 0.74rem;
-      font-weight: 600;
+      color: #94a3b8;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
 
       &::before,
       &::after {
         content: '';
         flex: 1;
-        border-bottom: 1px solid var(--line);
+        border-bottom: 1px solid #f1f5f9;
       }
 
       span {
@@ -410,29 +413,29 @@ import { AuthService } from '../../../core/auth/auth.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 9px;
-      height: 44px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      color: #f8fafc;
+      gap: 10px;
+      height: 46px;
+      border-radius: 14px;
+      background: #ffffff;
+      color: #0f172a;
       font-weight: 700;
       font-size: 0.88rem;
       text-decoration: none;
-      border: 1px solid rgba(214, 168, 79, 0.45);
-      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.14);
-      transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+      transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
 
       &:hover {
         transform: translateY(-1px);
-        border-color: var(--gold);
-        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.22);
+        border-color: #10b981;
+        background: #f8fafc;
       }
 
       .sso-icon {
         font-size: 19px;
         width: 19px;
         height: 19px;
-        color: var(--gold);
+        color: #059669;
       }
     }
 

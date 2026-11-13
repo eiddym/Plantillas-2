@@ -82,6 +82,23 @@ El sistema fue modernizado integralmente para erradicar dependencias obsoletas (
 * **Resiliencia y Modo Fallback**: Si Redis no estuviera disponible temporalmente, el backend conmuta automáticamente a ejecución directa sin interrumpir el servicio ni generar errores al usuario.
 * **Supervisión de Salud y Métricas**: Endpoints `/api/v1/health/queue` y `/api/v1/health/mosparo` para supervisar el rendimiento y estado de tareas en tiempo real.
 
+### 6. Interfaz Emerald 24 y Home Operativo
+* **Sistema visual Emerald 24**: sidebar con degradado vertical esmeralda (oscuro arriba, menta-salvia abajo), cabeceras con buscador en píldora, botones CTA carbón y diálogos/login unificados. La vista **Mi perfil** usa portada CSS pura (sin imágenes en `assets`).
+* **Sidebar contextual**: permanece oculto en Inicio y se habilita al entrar a un módulo; los grupos de menú inician cerrados salvo el que se está navegando.
+* **Home sin ruido**: saludo con avatar, botón *Redactar documento* y tres contadores (activos, pendientes, aprobados), más:
+  * **Banner "Requiere tu atención"** (o "Estás al día") con filtros directos a la bandeja.
+  * **Continúa donde lo dejaste**: los 5 documentos propios más recientes.
+  * **Plantillas frecuentes**: top 5 por uso del usuario con botón *Usar* que crea el borrador al instante (`GET /api/v1/dashboard/plantillas-frecuentes`).
+  * **Bandeja con pestañas** (Todos / Por atender / Observados) y acción *Atender* o *Subsanar*.
+  * **Módulos habilitados** por categoría.
+
+### 7. Celular y Notificaciones WhatsApp
+* **Campo `celular`** en el usuario (migración `20261112233000-agregar-columna-celular-usuario.js`), editable por el administrador en *Administración → Usuarios* y visible en la tabla.
+* **Sincronización con Authentik**: se absorbe en el login (OIDC/LDAP) desde los atributos `celular`, `phone`, `mobile` o `telephoneNumber`, y al guardar un usuario Authentik se replica hacia sus atributos.
+* **Perfil como vía secundaria**: *Mi perfil → Editar alertas* mantiene el celular de `conf_notificacion` sincronizado con el usuario.
+* **Envío**: Evolution API (instancia `marabunta`), con normalización de números bolivianos (`591` + 8 dígitos).
+* Tras actualizar, aplicar la migración (`npm run migrar`) o dejar que `sequelize.sync()` cree la columna.
+
 ---
 
 ## 🚀 Pila Tecnológica

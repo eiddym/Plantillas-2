@@ -37,6 +37,11 @@
                 "output": "tinymce"
               },
               {
+                "glob": "**/*",
+                "input": "src/assets/tinymce-langs",
+                "output": "tinymce/langs"
+              },
+              {
                 "glob": "pdf.worker.min.js",
                 "input": "node_modules/pdfjs-dist/build",
                 "output": "assets/pdfjs"

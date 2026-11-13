@@ -99,61 +99,69 @@ export interface NuevoDocumentoDialogData {
     }
 
     .dialog-header {
-      padding: 1.25rem 1.5rem;
+      padding: 1.4rem 1.5rem 1.15rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid #e2e8f0;
-      background: #0a192f;
-      color: #ffffff;
+      border-bottom: 1px solid #f1f5f9;
+      background: #ffffff;
+      color: #0f172a;
     }
 
     .header-info {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
     }
 
     .icon-wrap {
       width: 44px;
       height: 44px;
-      border-radius: 8px;
-      background: rgba(2, 132, 199, 0.2);
-      color: #38bdf8;
+      border-radius: 12px;
+      background: #064e3b;
+      color: #ffffff;
       display: flex;
       align-items: center;
       justify-content: center;
 
       mat-icon {
-        font-size: 26px;
-        width: 26px;
-        height: 26px;
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
       }
     }
 
     .dialog-title {
       margin: 0;
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: #ffffff;
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #0f172a;
     }
 
     .dialog-sub {
       margin: 2px 0 0;
-      font-size: 0.8rem;
-      color: #94a3b8;
+      font-size: 0.82rem;
+      color: #64748b;
     }
 
     .close-btn {
-      color: #94a3b8;
-      &:hover { color: #ffffff; }
+      background: #f1f5f9 !important;
+      color: #475569 !important;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      &:hover {
+        background: #e2e8f0 !important;
+        color: #0f172a !important;
+      }
     }
 
     .dialog-content {
       padding: 1.25rem 1.5rem;
       max-height: 65vh;
       overflow-y: auto;
-      background: #f8fafc;
+      background: #ffffff;
     }
 
     .search-box {
@@ -178,19 +186,19 @@ export interface NuevoDocumentoDialogData {
     .template-card {
       background: #ffffff;
       border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      padding: 1rem;
+      border-radius: 16px;
+      padding: 1.05rem;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       gap: 10px;
       cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+      transition: all 0.18s ease;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
 
       &:hover:not(.disabled) {
-        border-color: #0284c7;
-        box-shadow: 0 6px 16px rgba(2, 132, 199, 0.12);
+        border-color: #10b981;
+        box-shadow: 0 8px 20px rgba(16, 185, 129, 0.10);
         transform: translateY(-2px);
       }
 
@@ -209,20 +217,20 @@ export interface NuevoDocumentoDialogData {
     .abrev-pill {
       font-size: 0.72rem;
       font-weight: 700;
-      background: #eff6ff;
-      color: #0284c7;
-      border: 1px solid #bfdbfe;
-      padding: 2px 8px;
-      border-radius: 4px;
-      letter-spacing: 0.5px;
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+      padding: 2px 9px;
+      border-radius: 9999px;
+      letter-spacing: 0.4px;
     }
 
     .format-pill {
       font-size: 0.7rem;
       color: #64748b;
       background: #f1f5f9;
-      padding: 2px 6px;
-      border-radius: 4px;
+      padding: 2px 8px;
+      border-radius: 9999px;
     }
 
     .template-name {
@@ -248,19 +256,23 @@ export interface NuevoDocumentoDialogData {
       font-weight: 600;
     }
 
-    .btn-use {
+    .btn-use.mat-mdc-unelevated-button {
       height: 32px;
-      padding: 0 12px;
-      font-size: 0.8rem;
+      padding: 0 14px !important;
+      font-size: 0.78rem;
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      border-radius: 6px;
+      border-radius: 9999px !important;
+      background: #111827 !important;
+      color: #ffffff !important;
+      box-shadow: none !important;
 
       mat-icon {
         font-size: 16px;
         width: 16px;
         height: 16px;
+        color: #ffffff !important;
       }
     }
 

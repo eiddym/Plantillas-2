@@ -43,22 +43,34 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
   ],
   template: `
     <div class="page-container">
-      <div class="page-header">
+      <header class="emerald24-section-header">
         <div>
-          <h1>{{ headerTitle() }}</h1>
-          <p class="subtitle">{{ headerSubtitle() }}</p>
+          <h1 class="section-page-title">{{ headerTitle() }}</h1>
+          <p class="subtitle" style="margin: 4px 0 0 0; color: #64748b; font-size: 0.88rem;">{{ headerSubtitle() }}</p>
         </div>
 
-        <button 
-          *ngIf="modoVista() === 'documentos'" 
-          mat-raised-button 
-          class="btn-nuevo" 
-          (click)="abrirNuevoDocumento()"
-        >
-          <mat-icon>post_add</mat-icon>
-          <span>Nuevo Documento</span>
-        </button>
-      </div>
+        <div class="header-controls-group">
+          <div class="emerald24-pill-search">
+            <mat-icon class="search-icon">search</mat-icon>
+            <input 
+              type="text" 
+              (keyup)="onFilterChange($event)" 
+              [placeholder]="modoVista() === 'firmar' ? 'Buscar CITE para firmar...' : 'Buscar por CITE, asunto o remitente...'"
+              class="pill-search-input"
+            >
+          </div>
+
+          <button 
+            *ngIf="modoVista() === 'documentos'" 
+            type="button" 
+            class="emerald24-primary-pill" 
+            (click)="abrirNuevoDocumento()"
+          >
+            <mat-icon>post_add</mat-icon>
+            <span>Nuevo Documento</span>
+          </button>
+        </div>
+      </header>
 
       <mat-card class="table-card">
         <!-- Tabs de filtro por estado (Ocultos en bandeja de firmar) -->
@@ -95,17 +107,8 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
           </ng-container>
         </mat-tab-group>
 
-        <!-- Filtros y Búsqueda -->
-        <div class="toolbar-filter">
-          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search-field">
-            <mat-icon matPrefix>search</mat-icon>
-            <input 
-              matInput 
-              (keyup)="onFilterChange($event)" 
-              [placeholder]="modoVista() === 'firmar' ? 'Buscar CITE de documento para firmar...' : 'Buscar por CITE, asunto, remitente o destinatario...'"
-            >
-          </mat-form-field>
-
+        <!-- Avisos contextuales de bandeja -->
+        <div class="toolbar-filter" *ngIf="modoVista() === 'firmar' || modoVista() === 'impresion'">
           <span class="toolbar-spacer"></span>
 
           <!-- Mensaje informativo para la bandeja de firmar -->
