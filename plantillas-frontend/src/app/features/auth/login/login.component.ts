@@ -541,12 +541,7 @@ export class LoginComponent implements OnInit {
           this.loading.set(false);
           if (res.tipoMensaje === 'EXITO') {
             this.authService.iniciarMonitoreoActividad();
-            const roles = this.authService.currentRoles();
-            if (roles && roles.length > 1) {
-              this.router.navigate(['/elegir']);
-            } else {
-              this.router.navigate(['/dashboard']);
-            }
+            this.router.navigate(['/dashboard']);
           } else {
             this.errorMessage.set(res.mensaje || 'Error al validar sesión SSO');
           }
@@ -579,12 +574,7 @@ export class LoginComponent implements OnInit {
       next: (res) => {
         this.loading.set(false);
         if (res.tipoMensaje === 'EXITO') {
-          const roles = res.datos?.roles;
-          if (roles && roles.length > 1) {
-            this.router.navigate(['/elegir']);
-          } else {
-            this.router.navigate(['/dashboard']);
-          }
+          this.router.navigate(['/dashboard']);
         } else {
           this.errorMessage.set(res.mensaje || 'Error al iniciar sesión');
         }

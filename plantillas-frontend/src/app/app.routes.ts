@@ -20,9 +20,8 @@ export const routes: Routes = [
   },
   {
     path: 'elegir',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/auth/elegir/elegir.component').then((m) => m.ElegirComponent)
+    redirectTo: 'dashboard',
+    pathMatch: 'full'
   },
   {
     path: 'ventanilla-virtual',

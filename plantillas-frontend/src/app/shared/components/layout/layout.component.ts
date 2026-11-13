@@ -176,8 +176,8 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
                     <span class="user-menu-text">Mi cuenta / Perfil</span>
                   </button>
                   <button mat-menu-item (click)="cambiarUsuario()" class="user-menu-item">
-                    <mat-icon class="user-menu-icon">sync</mat-icon>
-                    <span class="user-menu-text">Cambio de usuario</span>
+                    <mat-icon class="user-menu-icon">switch_account</mat-icon>
+                    <span class="user-menu-text">Cambiar usuario / Perfil</span>
                   </button>
                   <button mat-menu-item (click)="logout()" class="user-menu-item">
                     <mat-icon class="user-menu-icon">power_settings_new</mat-icon>
