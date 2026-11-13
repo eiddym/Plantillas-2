@@ -22,132 +22,6 @@ import { AuthService } from '../../../core/auth/auth.service';
   ],
   template: `
     <div class="login-container">
-      <!-- Fondo Escultural de Láminas de Óxido de Cobre / Malaquita 3D -->
-      <div class="copper-sculpture-bg" aria-hidden="true">
-        <svg class="sculpture-svg" viewBox="0 0 760 1000" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMid slice">
-          <defs>
-            <!-- Filtros de sombra y profundidad 3D para estratos de cobre -->
-            <filter id="copper-shadow" x="-30%" y="-30%" width="170%" height="170%">
-              <feDropShadow dx="-10" dy="18" stdDeviation="16" flood-color="#000d07" flood-opacity="0.85"/>
-            </filter>
-            <filter id="deep-shadow" x="-40%" y="-40%" width="180%" height="180%">
-              <feDropShadow dx="-14" dy="24" stdDeviation="22" flood-color="#000704" flood-opacity="0.92"/>
-            </filter>
-
-            <!-- Gradientes de Óxido de Cobre, Pátina y Malaquita -->
-            <linearGradient id="blade-rim" x1="0%" y1="0%" x2="100%" y2="80%">
-              <stop offset="0%" stop-color="#a7f3d0" stop-opacity="0.9"/>
-              <stop offset="45%" stop-color="#34d399" stop-opacity="0.75"/>
-              <stop offset="100%" stop-color="#059669" stop-opacity="0.15"/>
-            </linearGradient>
-
-            <linearGradient id="blade-1" x1="0%" y1="10%" x2="95%" y2="85%">
-              <stop offset="0%" stop-color="#011e15"/>
-              <stop offset="30%" stop-color="#043b2b"/>
-              <stop offset="70%" stop-color="#096547"/>
-              <stop offset="100%" stop-color="#15805c"/>
-            </linearGradient>
-
-            <linearGradient id="blade-2" x1="5%" y1="15%" x2="90%" y2="85%">
-              <stop offset="0%" stop-color="#011b13"/>
-              <stop offset="25%" stop-color="#054432"/>
-              <stop offset="65%" stop-color="#0d7955"/>
-              <stop offset="100%" stop-color="#22a879"/>
-            </linearGradient>
-
-            <linearGradient id="blade-3" x1="10%" y1="20%" x2="90%" y2="85%">
-              <stop offset="0%" stop-color="#011811"/>
-              <stop offset="30%" stop-color="#06513b"/>
-              <stop offset="70%" stop-color="#10956a"/>
-              <stop offset="100%" stop-color="#34d399"/>
-            </linearGradient>
-
-            <linearGradient id="blade-4" x1="15%" y1="25%" x2="85%" y2="85%">
-              <stop offset="0%" stop-color="#022317"/>
-              <stop offset="35%" stop-color="#076147"/>
-              <stop offset="75%" stop-color="#129e71"/>
-              <stop offset="100%" stop-color="#4ade80"/>
-            </linearGradient>
-
-            <linearGradient id="blade-5" x1="10%" y1="30%" x2="80%" y2="90%">
-              <stop offset="0%" stop-color="#011a12"/>
-              <stop offset="30%" stop-color="#06533c"/>
-              <stop offset="70%" stop-color="#0f8d64"/>
-              <stop offset="100%" stop-color="#2fc592"/>
-            </linearGradient>
-
-            <linearGradient id="blade-6" x1="5%" y1="35%" x2="85%" y2="90%">
-              <stop offset="0%" stop-color="#01140e"/>
-              <stop offset="35%" stop-color="#044230"/>
-              <stop offset="75%" stop-color="#0a6e4e"/>
-              <stop offset="100%" stop-color="#1aa577"/>
-            </linearGradient>
-
-            <linearGradient id="blade-7" x1="0%" y1="40%" x2="90%" y2="95%">
-              <stop offset="0%" stop-color="#00110a"/>
-              <stop offset="40%" stop-color="#033324"/>
-              <stop offset="80%" stop-color="#07573d"/>
-              <stop offset="100%" stop-color="#0f835b"/>
-            </linearGradient>
-
-            <linearGradient id="blade-8" x1="0%" y1="50%" x2="95%" y2="100%">
-              <stop offset="0%" stop-color="#000e08"/>
-              <stop offset="45%" stop-color="#02281c"/>
-              <stop offset="85%" stop-color="#054a34"/>
-              <stop offset="100%" stop-color="#0c6948"/>
-            </linearGradient>
-
-            <linearGradient id="blade-9" x1="0%" y1="55%" x2="95%" y2="100%">
-              <stop offset="0%" stop-color="#000b06"/>
-              <stop offset="50%" stop-color="#021f16"/>
-              <stop offset="85%" stop-color="#043a28"/>
-              <stop offset="100%" stop-color="#09553b"/>
-            </linearGradient>
-          </defs>
-
-          <!-- Resplandores ambientales de malaquita profunda -->
-          <circle cx="60" cy="500" r="380" fill="#059669" opacity="0.22"/>
-          <circle cx="220" cy="360" r="240" fill="#10b981" opacity="0.16"/>
-
-          <!-- Láminas esculturales curvadas en abanico 3D de óxido de cobre -->
-          <!-- Lámina 1 -->
-          <path d="M -30 420 C 60 280 140 160 220 80 C 245 55 275 75 260 110 C 220 200 160 360 -30 480 Z" fill="url(#blade-1)" filter="url(#copper-shadow)"/>
-          <path d="M 220 80 C 245 55 275 75 260 110 C 220 200 160 360 -30 480" fill="none" stroke="url(#blade-rim)" stroke-width="2.5" opacity="0.85"/>
-
-          <!-- Lámina 2 -->
-          <path d="M -20 440 C 90 320 200 220 310 140 C 338 120 365 145 348 180 C 295 285 200 440 -20 540 Z" fill="url(#blade-2)" filter="url(#copper-shadow)"/>
-          <path d="M 310 140 C 338 120 365 145 348 180 C 295 285 200 440 -20 540" fill="none" stroke="url(#blade-rim)" stroke-width="2.5" opacity="0.88"/>
-
-          <!-- Lámina 3 -->
-          <path d="M -20 460 C 130 360 270 290 395 225 C 425 208 450 235 430 272 C 365 385 240 510 -20 600 Z" fill="url(#blade-3)" filter="url(#copper-shadow)"/>
-          <path d="M 395 225 C 425 208 450 235 430 272 C 365 385 240 510 -20 600" fill="none" stroke="url(#blade-rim)" stroke-width="2.6" opacity="0.9"/>
-
-          <!-- Lámina 4 -->
-          <path d="M -10 480 C 160 410 320 360 465 320 C 498 310 518 340 495 380 C 420 500 270 600 -10 660 Z" fill="url(#blade-4)" filter="url(#copper-shadow)"/>
-          <path d="M 465 320 C 498 310 518 340 495 380 C 420 500 270 600 -10 660" fill="none" stroke="url(#blade-rim)" stroke-width="2.8" opacity="0.95"/>
-
-          <!-- Lámina 5 (Cresta central) -->
-          <path d="M -10 500 C 180 470 350 435 500 435 C 532 435 540 470 512 505 C 430 600 280 670 -10 720 Z" fill="url(#blade-5)" filter="url(#deep-shadow)"/>
-          <path d="M 500 435 C 532 435 540 470 512 505 C 430 600 280 670 -10 720" fill="none" stroke="url(#blade-rim)" stroke-width="3" opacity="0.95"/>
-
-          <!-- Lámina 6 -->
-          <path d="M -10 530 C 180 535 340 535 480 560 C 510 568 515 605 485 635 C 395 710 260 750 -10 780 Z" fill="url(#blade-6)" filter="url(#copper-shadow)"/>
-          <path d="M 480 560 C 510 568 515 605 485 635 C 395 710 260 750 -10 780" fill="none" stroke="url(#blade-rim)" stroke-width="2.8" opacity="0.92"/>
-
-          <!-- Lámina 7 -->
-          <path d="M -10 560 C 160 600 310 640 430 685 C 458 698 455 735 425 760 C 340 820 220 830 -10 840 Z" fill="url(#blade-7)" filter="url(#copper-shadow)"/>
-          <path d="M 430 685 C 458 698 455 735 425 760 C 340 820 220 830 -10 840" fill="none" stroke="url(#blade-rim)" stroke-width="2.6" opacity="0.9"/>
-
-          <!-- Lámina 8 -->
-          <path d="M -20 590 C 140 680 260 735 355 795 C 380 812 372 848 340 868 C 265 910 160 905 -20 900 Z" fill="url(#blade-8)" filter="url(#copper-shadow)"/>
-          <path d="M 355 795 C 380 812 372 848 340 868 C 265 910 160 905 -20 900" fill="none" stroke="url(#blade-rim)" stroke-width="2.4" opacity="0.85"/>
-
-          <!-- Lámina 9 -->
-          <path d="M -20 620 C 110 750 200 830 270 895 C 290 915 278 948 245 962 C 175 990 90 970 -20 955 Z" fill="url(#blade-9)" filter="url(#copper-shadow)"/>
-          <path d="M 270 895 C 290 915 278 948 245 962 C 175 990 90 970 -20 955" fill="none" stroke="url(#blade-rim)" stroke-width="2" opacity="0.8"/>
-        </svg>
-      </div>
-
       <div class="login-card-horizontal">
         <!-- Panel Izquierdo: Identidad Oficial Cooperativa Marabunta R.L. -->
         <div class="panel-izquierdo">
@@ -282,38 +156,15 @@ import { AuthService } from '../../../core/auth/auth.service';
       align-items: center;
       justify-content: flex-end;
       padding: 32px 7vw 32px 32px;
-      background:
-        radial-gradient(circle at 12% 50%, rgba(16, 185, 129, 0.16) 0%, transparent 60%),
-        radial-gradient(circle at 86% 18%, rgba(5, 150, 105, 0.12) 0%, transparent 50%),
-        linear-gradient(135deg, #01140d 0%, #022316 45%, #033221 75%, #01180f 100%);
+      background-color: #022016;
+      background-image: url('/assets/images/login-bg.jpg');
+      background-repeat: no-repeat;
+      background-position: center left;
       background-size: cover;
       font-family: var(--font-ui);
       box-sizing: border-box;
       position: relative;
       overflow: hidden;
-    }
-
-    /* Fondo Escultural Láminas 3D Óxido de Cobre / Malaquita a la izquierda */
-    .copper-sculpture-bg {
-      position: absolute;
-      top: 0;
-      left: 0;
-      bottom: 0;
-      width: 58vw;
-      max-width: 880px;
-      height: 100%;
-      pointer-events: none;
-      z-index: 1;
-      display: flex;
-      align-items: center;
-      opacity: 0.95;
-    }
-
-    .sculpture-svg {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.7));
     }
 
     .login-card-horizontal {
@@ -726,12 +577,7 @@ import { AuthService } from '../../../core/auth/auth.service';
       .login-container {
         justify-content: center;
         padding: 24px;
-      }
-
-      .copper-sculpture-bg {
-        width: 100vw;
-        max-width: none;
-        opacity: 0.28;
+        background-position: center center;
       }
     }
 
@@ -739,10 +585,6 @@ import { AuthService } from '../../../core/auth/auth.service';
       .login-container {
         padding: 16px 12px;
         justify-content: center;
-      }
-
-      .copper-sculpture-bg {
-        opacity: 0.18;
       }
 
       .login-card-horizontal {
