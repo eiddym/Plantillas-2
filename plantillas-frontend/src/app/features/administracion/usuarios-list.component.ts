@@ -36,50 +36,32 @@ import { AuthService } from '../../core/auth/auth.service';
   ],
   template: `
     <div class="user-admin-page">
-      <!-- Breadcrumb Bar -->
-      <div class="top-breadcrumb">
-        <mat-icon class="bc-home">home</mat-icon>
-        <span class="bc-sep">/</span>
-        <span class="bc-current">Gestión de Usuarios</span>
-      </div>
+      <!-- Cabecera estilo Emerald 24 (Captura 5) -->
+      <header class="emerald24-section-header">
+        <div class="header-title-group">
+          <h1 class="section-page-title">Usuarios</h1>
+          <span class="section-count-pill">{{ usuariosFiltrados().length }} registros</span>
+        </div>
+
+        <div class="header-controls-group">
+          <div class="emerald24-pill-search">
+            <mat-icon class="search-icon">search</mat-icon>
+            <input type="text" [formControl]="filtroCtrl" placeholder="Buscar usuario, nombre, CI o correo..." class="pill-search-input">
+          </div>
+
+          <button mat-icon-button (click)="cargarUsuarios()" matTooltip="Refrescar" class="btn-refresh-circle">
+            <mat-icon>refresh</mat-icon>
+          </button>
+
+          <button type="button" class="emerald24-primary-pill" (click)="abrirModalNuevo()">
+            <mat-icon>add</mat-icon>
+            <span>Nuevo usuario</span>
+          </button>
+        </div>
+      </header>
 
       <!-- Main Container Card -->
       <div class="admin-table-container">
-        <!-- Table Top Header -->
-        <div class="table-top-bar">
-          <div class="left-box">
-            <mat-icon class="grid-icon">grid_view</mat-icon>
-            <h2>Usuarios</h2>
-          </div>
-          <div class="right-actions">
-            <button mat-icon-button (click)="toggleFiltro()" matTooltip="Filtrar">
-              <mat-icon>filter_list</mat-icon>
-            </button>
-            <button mat-icon-button (click)="cargarUsuarios()" matTooltip="Refrescar">
-              <mat-icon>refresh</mat-icon>
-            </button>
-            <button mat-icon-button matTooltip="Colapsar panel">
-              <mat-icon>keyboard_arrow_up</mat-icon>
-            </button>
-          </div>
-        </div>
-
-        <!-- Add Button Action Bar -->
-        <div class="action-btn-bar">
-          <button mat-fab color="primary" class="btn-add-user" (click)="abrirModalNuevo()" matTooltip="Crear Nuevo Usuario">
-            <mat-icon>add</mat-icon>
-          </button>
-          @if (mostrarFiltro()) {
-            <div class="filter-input-wrap fade-in">
-              <mat-form-field appearance="outline" class="density-compact">
-                <mat-label>Buscar por usuario, nombre, CI o correo...</mat-label>
-                <input matInput [formControl]="filtroCtrl" placeholder="Escriba para filtrar">
-                <mat-icon matSuffix>search</mat-icon>
-              </mat-form-field>
-            </div>
-          }
-        </div>
-
         <!-- Progress Bar -->
         @if (loading()) {
           <mat-progress-bar mode="indeterminate"></mat-progress-bar>
@@ -134,8 +116,18 @@ import { AuthService } from '../../core/auth/auth.service';
 
             <!-- Correo electrónico Column -->
             <ng-container matColumnDef="email">
-              <th mat-header-cell *matHeaderCellDef>Correo electrónico</th>
-              <td mat-cell *matCellDef="let u">{{ u.email }}</td>
+              <th mat-header-cell *matHeaderCellDef>Correo y Celular</th>
+              <td mat-cell *matCellDef="let u">
+                <div class="user-contact-cell">
+                  <div class="contact-email">{{ u.email }}</div>
+                  @if (u.celular) {
+                    <div class="contact-phone" title="WhatsApp para notificaciones">
+                      <mat-icon class="phone-micro-icon">smartphone</mat-icon>
+                      <span>{{ u.celular }}</span>
+                    </div>
+                  }
+                </div>
+              </td>
             </ng-container>
 
             <!-- Roles Column -->
@@ -243,6 +235,11 @@ import { AuthService } from '../../core/auth/auth.service';
                   <div class="form-field-group">
                     <label class="field-label-custom">Correo electrónico *</label>
                     <input type="email" formControlName="email" class="custom-input" placeholder="Ej: docs@marabuntarl.com">
+                  </div>
+
+                  <div class="form-field-group">
+                    <label class="field-label-custom">Número de celular (WhatsApp)</label>
+                    <input type="tel" formControlName="celular" class="custom-input" placeholder="Ej: 75710493">
                   </div>
 
                   <!-- Subtítulo Usuarios Virtuales -->
@@ -436,75 +433,16 @@ import { AuthService } from '../../core/auth/auth.service';
     .user-admin-page {
       max-width: 1400px;
       margin: 0 auto;
-      padding: 16px 20px 40px;
-      font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    }
-
-    .top-breadcrumb {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: #94a3b8;
-      font-size: 13.5px;
-      margin-bottom: 20px;
-      .bc-home { font-size: 19px; width: 19px; height: 19px; color: #64748b; }
-      .bc-sep { color: #cbd5e1; }
-      .bc-current { color: #334155; font-weight: 600; }
+      padding: 4px 10px 40px;
+      font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
     }
 
     .admin-table-container {
       background: #ffffff;
-      border-radius: 8px;
+      border-radius: 20px;
       border: 1px solid #e2e8f0;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
       overflow: hidden;
-    }
-
-    .table-top-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 20px;
-      background: #f8fafc;
-      border-bottom: 1px solid #e2e8f0;
-
-      .left-box {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        .grid-icon { color: #475569; font-size: 22px; width: 22px; height: 22px; }
-        h2 { margin: 0; font-size: 16px; font-weight: 700; color: #1e293b; }
-      }
-
-      .right-actions {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        button { color: #64748b; }
-      }
-    }
-
-    .action-btn-bar {
-      padding: 16px 20px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      background: #ffffff;
-      border-bottom: 1px solid #f1f5f9;
-    }
-
-    .btn-add-user {
-      background: #0284c7 !important;
-      color: #ffffff !important;
-      width: 44px;
-      height: 44px;
-      box-shadow: 0 4px 10px rgba(2, 132, 199, 0.35);
-    }
-
-    .filter-input-wrap {
-      flex: 1;
-      max-width: 420px;
-      mat-form-field { width: 100%; }
     }
 
     .table-responsive {
@@ -538,6 +476,34 @@ import { AuthService } from '../../core/auth/auth.service';
       tr.mat-row:hover {
         background: #f8fafc;
       }
+    }
+
+    .user-contact-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .contact-email {
+      color: #374151;
+      font-size: 0.85rem;
+    }
+
+    .contact-phone {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      color: #047857;
+      font-weight: 600;
+    }
+
+    .phone-micro-icon {
+      font-size: 13px !important;
+      width: 13px !important;
+      height: 13px !important;
+      line-height: 13px !important;
+      color: #10b981;
     }
 
     .th-acciones, .td-acciones {
@@ -629,37 +595,46 @@ import { AuthService } from '../../core/auth/auth.service';
 
     .user-modal-card {
       background: #ffffff;
-      border-radius: 12px;
+      border-radius: 24px;
       width: 100%;
       max-width: 900px;
       max-height: 92vh;
       overflow-y: auto;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-      border: 1px solid #cbd5e1;
+      box-shadow: 0 28px 60px rgba(4, 51, 36, 0.25);
+      border: 1px solid #e2e8f0;
     }
 
     .modal-header-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 20px;
-      background: #0f172a;
-      color: #ffffff;
-      border-top-left-radius: 11px;
-      border-top-right-radius: 11px;
+      padding: 18px 24px;
+      background: #ffffff;
+      color: #0f172a;
+      border-bottom: 1px solid #f1f5f9;
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
 
       .header-left {
         display: flex;
         align-items: center;
         gap: 10px;
-        font-size: 15px;
-        font-weight: 600;
-        mat-icon { font-size: 20px; width: 20px; height: 20px; color: #38bdf8; }
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: #0f172a;
+        mat-icon { font-size: 22px; width: 22px; height: 22px; color: #059669; }
       }
 
       .btn-close-modal {
-        color: #94a3b8;
-        &:hover { color: #ffffff; }
+        background: #f1f5f9 !important;
+        color: #475569 !important;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        &:hover {
+          background: #e2e8f0 !important;
+          color: #0f172a !important;
+        }
       }
     }
 
@@ -857,43 +832,56 @@ import { AuthService } from '../../core/auth/auth.service';
     }
 
     .btn-modal-guardar {
-      background: #0284c7 !important;
+      background: #111827 !important;
       color: #ffffff !important;
       padding: 0 24px !important;
+      height: 42px;
       font-weight: 700 !important;
-      border-radius: 6px !important;
+      border-radius: 9999px !important;
       display: flex;
       align-items: center;
       gap: 6px;
     }
 
     .btn-modal-cancelar {
-      color: #475569 !important;
-      border-color: #cbd5e1 !important;
-      padding: 0 20px !important;
+      background: #f1f5f9 !important;
+      color: #0f172a !important;
+      border-color: transparent !important;
+      padding: 0 22px !important;
+      height: 42px;
       font-weight: 600 !important;
-      border-radius: 6px !important;
+      border-radius: 9999px !important;
       display: flex;
       align-items: center;
       gap: 6px;
     }
 
-    /* Modal Confirm Delete */
+    /* Modal Confirm Delete (Estilo Captura 4) */
     .confirm-delete-card {
       background: #ffffff;
-      border-radius: 12px;
-      padding: 24px;
+      border-radius: 24px;
+      padding: 28px;
       width: 100%;
-      max-width: 480px;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      max-width: 460px;
+      box-shadow: 0 28px 60px rgba(4, 51, 36, 0.25);
+      text-align: center;
 
       .confirm-header {
         display: flex;
+        flex-direction: column;
         align-items: center;
         gap: 10px;
         margin-bottom: 12px;
-        .warn-icon { color: #ef4444; font-size: 28px; width: 28px; height: 28px; }
-        h3 { margin: 0; font-size: 17px; font-weight: 700; color: #0f172a; }
+        .warn-icon {
+          color: #dc2626;
+          background: #fee2e2;
+          padding: 12px;
+          border-radius: 50%;
+          font-size: 28px;
+          width: 52px;
+          height: 52px;
+        }
+        h3 { margin: 0; font-size: 1.25rem; font-weight: 800; color: #0f172a; }
       }
 
       .confirm-msg {
@@ -906,13 +894,20 @@ import { AuthService } from '../../core/auth/auth.service';
       .confirm-sub {
         font-size: 12.5px;
         color: #64748b;
-        margin: 0 0 20px;
+        margin: 0 0 22px;
       }
 
       .confirm-footer {
         display: flex;
-        justify-content: flex-end;
+        justify-content: center;
         gap: 10px;
+
+        button {
+          border-radius: 9999px !important;
+          height: 42px;
+          padding: 0 22px !important;
+          font-weight: 600;
+        }
       }
     }
 
@@ -972,6 +967,7 @@ export class UsuariosListComponent implements OnInit {
     apellidos: new FormControl('', [Validators.required]),
     cargo: new FormControl('', [Validators.required]),
     email: new FormControl('', [Validators.required, Validators.email]),
+    celular: new FormControl(''),
     usuario: new FormControl('', [Validators.required]),
     tipo_autenticacion: new FormControl<'AUTHENTIK' | 'LOCAL' | 'CIUDADANIA_DIGITAL'>('AUTHENTIK', [Validators.required]),
     estado: new FormControl<'ACTIVO' | 'INACTIVO'>('ACTIVO', [Validators.required]),
@@ -1084,6 +1080,7 @@ export class UsuariosListComponent implements OnInit {
       apellidos: '',
       cargo: '',
       email: '',
+      celular: '',
       usuario: '',
       tipo_autenticacion: 'AUTHENTIK',
       estado: 'ACTIVO',
@@ -1132,6 +1129,7 @@ export class UsuariosListComponent implements OnInit {
       apellidos: u.apellidos || '',
       cargo: u.cargo || '',
       email: u.email || '',
+      celular: u.celular || '',
       usuario: u.usuario || '',
       tipo_autenticacion: tipoAuth,
       estado: (u.estado === 'INACTIVO' ? 'INACTIVO' : 'ACTIVO'),
@@ -1197,6 +1195,7 @@ export class UsuariosListComponent implements OnInit {
       apellidos: v.apellidos,
       cargo: v.cargo,
       email: v.email,
+      celular: v.celular || null,
       usuario: v.usuario,
       tipo_autenticacion: tipoAuth,
       estado: v.estado,

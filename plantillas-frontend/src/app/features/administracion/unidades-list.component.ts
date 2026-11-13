@@ -29,22 +29,22 @@ import { SeguridadService, Unidad } from '../../core/services/seguridad.service'
   ],
   template: `
     <div class="page-container">
-      <div class="page-header">
-        <div class="header-left">
-          <h1>Unidades Organizacionales</h1>
-          <p class="subtitle">Estructura jerárquica de unidades y departamentos institucionales</p>
+      <header class="emerald24-section-header">
+        <div>
+          <h1 class="section-page-title">Unidades Organizacionales</h1>
+          <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.88rem;">Estructura jerárquica de unidades y departamentos institucionales</p>
         </div>
-        <div class="header-actions">
-          <button mat-stroked-button color="accent" class="btn-merge-unit" (click)="abrirModalFusion()">
-            <mat-icon>merge_type</mat-icon>
+        <div class="header-controls-group">
+          <button type="button" class="emerald24-secondary-pill" (click)="abrirModalFusion()">
+            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">merge_type</mat-icon>
             <span>Fusionar Unidades</span>
           </button>
-          <button mat-raised-button color="primary" class="btn-add-unit" (click)="abrirModalNuevo()">
+          <button type="button" class="emerald24-primary-pill" (click)="abrirModalNuevo()">
             <mat-icon>add</mat-icon>
             <span>Crear Unidad</span>
           </button>
         </div>
-      </div>
+      </header>
 
       <mat-card class="table-card">
         <mat-progress-bar *ngIf="loading()" mode="indeterminate"></mat-progress-bar>

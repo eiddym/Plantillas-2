@@ -37,28 +37,29 @@ import { MenuAdmin, Rol, SeguridadService } from '../../core/services/seguridad.
   ],
   template: `
     <div class="page-container">
-      <div class="page-header">
-        <div class="header-titles">
-          <h1>Administración de Menús</h1>
-          <p class="subtitle">Estructura jerárquica de módulos, accesos y rutas del sistema</p>
+      <header class="emerald24-section-header">
+        <div class="header-title-group">
+          <div>
+            <h1 class="section-page-title">Administración de Menús</h1>
+            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.88rem;">Estructura jerárquica de módulos, accesos y rutas del sistema</p>
+          </div>
+          <span class="section-count-pill">{{ menus().length }} menús</span>
         </div>
-        <div class="header-actions">
-          <span class="stat-badge">Total Menús: <strong>{{ menus().length }}</strong></span>
-          <button mat-flat-button color="primary" class="btn-crear" (click)="abrirModalCrear()">
+        <div class="header-controls-group">
+          <div class="emerald24-pill-search">
+            <mat-icon class="search-icon">search</mat-icon>
+            <input type="text" [(ngModel)]="searchQuery" placeholder="Filtrar por nombre, ruta o descripción..." class="pill-search-input">
+          </div>
+          <button type="button" class="emerald24-primary-pill" (click)="abrirModalCrear()">
             <mat-icon>add</mat-icon>
-            Nuevo Menú
+            <span>Nuevo Menú</span>
           </button>
         </div>
-      </div>
+      </header>
 
       <mat-card class="table-card">
-        <!-- Barra de búsqueda y filtros -->
+        <!-- Barra de filtros de categoría -->
         <div class="card-toolbar">
-          <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
-            <mat-icon matPrefix>search</mat-icon>
-            <input matInput [(ngModel)]="searchQuery" placeholder="Filtrar por nombre, ruta o descripción...">
-          </mat-form-field>
-
           <span class="toolbar-spacer"></span>
 
           <div class="filter-toggles">

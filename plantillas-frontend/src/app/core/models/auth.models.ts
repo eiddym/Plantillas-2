@@ -6,6 +6,7 @@ export interface User {
   cargo: string;
   doc: string;
   email: string;
+  celular?: string | null;
   foto?: string | null;
   date_joined?: string;
   ldap?: boolean;

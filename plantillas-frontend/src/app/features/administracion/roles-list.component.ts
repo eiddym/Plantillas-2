@@ -29,18 +29,18 @@ import { Rol, MenuAdmin, SeguridadService } from '../../core/services/seguridad.
   ],
   template: `
     <div class="page-container">
-      <div class="page-header">
-        <div class="header-left">
-          <h1>Roles del Sistema</h1>
-          <p class="subtitle">Roles institucionales y niveles de privilegio asignables</p>
+      <header class="emerald24-section-header">
+        <div>
+          <h1 class="section-page-title">Roles del Sistema</h1>
+          <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.88rem;">Roles institucionales y niveles de privilegio asignables</p>
         </div>
-        <div class="header-actions">
-          <button mat-raised-button color="primary" class="btn-add-role" (click)="abrirModalNuevo()">
+        <div class="header-controls-group">
+          <button type="button" class="emerald24-primary-pill" (click)="abrirModalNuevo()">
             <mat-icon>add</mat-icon>
             <span>Añadir Rol</span>
           </button>
         </div>
-      </div>
+      </header>
 
       <mat-card class="table-card">
         <mat-progress-bar *ngIf="loading()" mode="indeterminate"></mat-progress-bar>

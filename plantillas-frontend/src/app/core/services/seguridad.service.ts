@@ -29,6 +29,7 @@ export interface UsuarioAdmin {
   apellidos: string;
   cargo: string;
   email: string;
+  celular?: string;
   numero_documento: string;
   estado: string;
   tipo_autenticacion?: string;
