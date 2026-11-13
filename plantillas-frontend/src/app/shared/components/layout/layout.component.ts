@@ -35,95 +35,10 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
   ],
   template: `
     <div class="layout-container" [class.is-home-view]="isHomePage()">
-      <!-- Topbar Institucional -->
-      <mat-toolbar class="main-topbar">
-        <!-- VISTA INTERNA (!isHomePage): Menú Hamburguesa + Home + Breadcrumb -->
-        <ng-container *ngIf="!isHomePage()">
-          <button 
-            mat-icon-button 
-            (click)="toggleSidenav()" 
-            matTooltip="Menú lateral" 
-            class="topbar-icon-btn menu-toggle-btn"
-          >
-            <mat-icon>menu</mat-icon>
-          </button>
-
-          <a routerLink="/dashboard" class="topbar-home-btn" matTooltip="Ir al inicio / Dashboard">
-            <mat-icon>home</mat-icon>
-          </a>
-
-          <div class="breadcrumb-container">
-            <span class="breadcrumb-separator">/</span>
-            <span class="breadcrumb-title">{{ currentSectionTitle() }}</span>
-          </div>
-        </ng-container>
-
-        <!-- VISTA HOME (isHomePage): Perfil & Título Panel de Control -->
-        <ng-container *ngIf="isHomePage()">
-          <div class="home-topbar-brand" (click)="irAPerfil()" title="Mi Perfil" style="cursor: pointer;">
-            <div class="home-avatar-circle">
-              <img *ngIf="user()?.foto" [src]="user()?.foto" alt="Avatar" class="avatar-circle-img">
-              <span *ngIf="!user()?.foto">{{ userInitial() }}</span>
-            </div>
-            <div class="home-brand-text">
-              <span class="user-handle">{{ user()?.username || 'usuario' }}</span>
-              <span class="panel-subtitle">{{ user()?.cargo || 'Gestión documental' }}</span>
-            </div>
-          </div>
-        </ng-container>
-
-        <span class="flex-spacer"></span>
-
-        <!-- Acciones a la derecha (Bandeja pendiente, Pantalla Completa, Menú Opciones) -->
-        <div class="topbar-right-actions">
-          <button 
-            mat-icon-button 
-            (click)="toggleFullScreen()" 
-            matTooltip="Pantalla completa"
-            class="topbar-icon-btn action-hide-mobile"
-          >
-            <mat-icon>{{ isFullScreen() ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
-          </button>
-
-          <a
-            mat-icon-button
-            routerLink="/aprobacion"
-            matTooltip="Bandeja de pendientes"
-            class="topbar-icon-btn"
-          >
-            <mat-icon class="inbox-shortcut-icon">inbox</mat-icon>
-          </a>
-
-          <!-- Menú de opciones de usuario -->
-          <button 
-            mat-icon-button 
-            [matMenuTriggerFor]="optionsMenu" 
-            matTooltip="Opciones de usuario" 
-            class="topbar-icon-btn"
-          >
-            <mat-icon>more_vert</mat-icon>
-          </button>
-
-          <mat-menu #optionsMenu="matMenu" xPosition="before" class="navbar-user-options-menu">
-            <button mat-menu-item routerLink="/profile" class="user-menu-item">
-              <mat-icon class="user-menu-icon">account_circle</mat-icon>
-              <span class="user-menu-text">Mi cuenta / Perfil</span>
-            </button>
-            <button mat-menu-item (click)="cambiarUsuario()" class="user-menu-item">
-              <mat-icon class="user-menu-icon">sync</mat-icon>
-              <span class="user-menu-text">Cambio de usuario</span>
-            </button>
-            <button mat-menu-item (click)="logout()" class="user-menu-item">
-              <mat-icon class="user-menu-icon">power_settings_new</mat-icon>
-              <span class="user-menu-text">Salir</span>
-            </button>
-          </mat-menu>
-        </div>
-      </mat-toolbar>
-
-      <!-- Sidenav Container -->
+      <!-- Sidenav Container de Altura Completa con Fondo Esmeralda Profundo y Gradiente -->
       <mat-sidenav-container class="sidenav-container" [class.no-sidenav]="isHomePage()">
-        <!-- Sidenav izquierda (Activo solo en páginas internas) -->
+        
+        <!-- Sidenav izquierda (Oculto en Inicio/Home, activo solo al navegar a una opción del menú) -->
         <mat-sidenav 
           *ngIf="!isHomePage()"
           [opened]="sidenavOpen()" 
@@ -131,11 +46,13 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
           (closed)="sidenavOpen.set(false)"
           class="dark-institutional-sidenav"
         >
-          <!-- Cabecera del Sidebar: Logo PLANTILLAS (Imagen 3) -->
+          <!-- Cabecera del Sidebar: Logo estilo Emerald 24 -->
           <div class="sidebar-brand-header">
             <a routerLink="/dashboard" class="sidebar-logo-link">
-              <mat-icon class="sidebar-logo-icon">home</mat-icon>
-              <span class="sidebar-logo-text">PLANTILLAS</span>
+              <div class="sidebar-brand-mark">
+                <mat-icon class="sidebar-logo-icon">description</mat-icon>
+              </div>
+              <span class="sidebar-logo-text">plantillas</span>
             </a>
             <span class="flex-spacer"></span>
             <button *ngIf="isMobile()" mat-icon-button (click)="sidenavOpen.set(false)" class="close-sidebar-btn">
@@ -143,8 +60,8 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
             </button>
           </div>
 
-          <!-- Card de Usuario en el Sidebar (Imagen 3) -->
-          <div class="sidebar-user-card" (click)="irAPerfil()" title="Mi Perfil" style="cursor: pointer;">
+          <!-- Selector de Usuario en cápsula (Pill como Virellan & Co. en Emerald 24) -->
+          <div class="sidebar-user-card" (click)="irAPerfil()" title="Mi Perfil">
             <div class="sidebar-user-avatar">
               <img *ngIf="user()?.foto" [src]="user()?.foto" alt="Avatar" class="sidebar-avatar-img">
               <span *ngIf="!user()?.foto">{{ userInitial() }}</span>
@@ -153,15 +70,25 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
               <h4 class="sidebar-user-name">
                 {{ user()?.first_name ? (user()?.first_name + ' ' + (user()?.last_name || '')) : (user()?.username || 'Usuario institucional') }}
               </h4>
-              <p class="sidebar-user-email">{{ user()?.email || 'Sin correo institucional' }}</p>
+              <p class="sidebar-user-email">{{ user()?.cargo || 'Acceso institucional' }}</p>
             </div>
+            <mat-icon class="sidebar-user-chevron">unfold_more</mat-icon>
           </div>
 
-          <mat-divider class="sidebar-divider"></mat-divider>
-
-          <!-- Menú Dinámico Agrupado en Acordeón (Imagen 3) -->
+          <!-- Menú Dinámico Agrupado en Acordeón -->
           <div class="sidebar-nav-scroll">
             <div class="sidebar-menu-accordion">
+              <!-- Enlace directo Inicio estilo Home de Emerald 24 -->
+              <a 
+                routerLink="/dashboard" 
+                routerLinkActive="active-subitem" 
+                class="subitem-link sidebar-home-pill"
+                (click)="onNavItemClick()"
+              >
+                <mat-icon class="subitem-icon">dashboard</mat-icon>
+                <span class="subitem-text">Inicio</span>
+              </a>
+
               <ng-container *ngFor="let group of menuGroups()">
                 <!-- Encabezado de Categoría / Sección -->
                 <div class="menu-category-header" (click)="toggleGroup(group.label)">
@@ -196,219 +123,114 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
           </div>
         </mat-sidenav>
 
-        <!-- Contenido Principal -->
-        <mat-sidenav-content class="main-content" [class.main-content-home]="isHomePage()">
-          <router-outlet></router-outlet>
+        <!-- Viewport Principal: Gran Lienzo Blanco Flotante (In-Set Canvas) -->
+        <mat-sidenav-content class="main-viewport">
+          <div class="canvas-floating-card" [class.canvas-home-card]="isHomePage()">
+            
+            <!-- Barra superior integrada dentro del lienzo -->
+            <header class="integrated-topbar">
+              <button 
+                *ngIf="!isHomePage() && (isMobile() || !sidenavOpen())" 
+                mat-icon-button 
+                (click)="toggleSidenav()" 
+                matTooltip="Menú lateral" 
+                class="topbar-icon-btn menu-toggle-btn"
+              >
+                <mat-icon>menu</mat-icon>
+              </button>
+
+              <div class="breadcrumb-container">
+                <a routerLink="/dashboard" class="breadcrumb-home-link" matTooltip="Ir al inicio / Dashboard">
+                  <mat-icon>home</mat-icon>
+                </a>
+                <span class="breadcrumb-separator">/</span>
+                <span class="breadcrumb-title">{{ currentSectionTitle() }}</span>
+              </div>
+
+              <span class="flex-spacer"></span>
+
+              <!-- Acciones a la derecha (Pantalla Completa, Menú Opciones) -->
+              <div class="topbar-right-actions">
+                <button 
+                  mat-icon-button 
+                  (click)="toggleFullScreen()" 
+                  matTooltip="Pantalla completa"
+                  class="topbar-icon-btn action-hide-mobile"
+                >
+                  <mat-icon>{{ isFullScreen() ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+                </button>
+
+                <!-- Menú de opciones de usuario -->
+                <button 
+                  mat-icon-button 
+                  [matMenuTriggerFor]="optionsMenu" 
+                  matTooltip="Opciones de usuario" 
+                  class="topbar-icon-btn"
+                >
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+
+                <mat-menu #optionsMenu="matMenu" xPosition="before" class="navbar-user-options-menu">
+                  <button mat-menu-item routerLink="/profile" class="user-menu-item">
+                    <mat-icon class="user-menu-icon">account_circle</mat-icon>
+                    <span class="user-menu-text">Mi cuenta / Perfil</span>
+                  </button>
+                  <button mat-menu-item (click)="cambiarUsuario()" class="user-menu-item">
+                    <mat-icon class="user-menu-icon">sync</mat-icon>
+                    <span class="user-menu-text">Cambio de usuario</span>
+                  </button>
+                  <button mat-menu-item (click)="logout()" class="user-menu-item">
+                    <mat-icon class="user-menu-icon">power_settings_new</mat-icon>
+                    <span class="user-menu-text">Salir</span>
+                  </button>
+                </mat-menu>
+              </div>
+            </header>
+
+            <!-- Área de scroll del contenido de la página -->
+            <main class="canvas-scroll-body">
+              <router-outlet></router-outlet>
+            </main>
+
+          </div>
         </mat-sidenav-content>
       </mat-sidenav-container>
     </div>
   `,
   styles: [`
+    /* CONTENEDOR CON GRADIENTE ESMERALDA VERTICAL (FOTO 2 — MÁS CLARO HACIA ABAJO) */
     .layout-container {
       height: 100vh;
+      width: 100vw;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      background: var(--paper-canvas);
+      background: linear-gradient(180deg, #022419 0%, #053b29 32%, #0b563e 56%, #1c7054 74%, #3a886d 86%, #62a389 93%, #8bbda6 97%, #add2bf 100%);
       font-family: var(--font-ui);
     }
 
-    /* TOPBAR MODERNO */
-    .main-topbar {
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      background: var(--petrol-gradient);
-      color: #ffffff;
-      height: 56px;
-      padding: 0 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      border-bottom: 2px solid var(--gold);
-      box-shadow: 0 4px 16px rgba(11, 36, 42, 0.18);
-    }
-
-    .topbar-icon-btn.mat-mdc-icon-button {
-      color: #ffffff;
-      width: 40px;
-      height: 40px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      mat-icon {
-        font-size: 21px;
-        width: 21px;
-        height: 21px;
-      }
-    }
-
-    .topbar-home-btn {
-      color: #ffffff;
-      display: flex;
-      align-items: center;
-      text-decoration: none;
-      padding: 6px;
-      border-radius: 6px;
-      transition: background 0.15s ease;
-      &:hover {
-        background: rgba(255, 255, 255, 0.1);
-      }
-      mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-      }
-    }
-
-    .breadcrumb-container {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      max-width: calc(100vw - 160px);
-    }
-
-    .breadcrumb-separator {
-      color: rgba(255, 255, 255, 0.45);
-      font-size: 1rem;
-      font-weight: 400;
-      flex-shrink: 0;
-    }
-
-    .breadcrumb-title {
-      color: #ffffff;
-      font-size: 0.92rem;
-      font-weight: 600;
-      letter-spacing: 0.01em;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-    }
-
-    /* HOME TOPBAR */
-    .home-topbar-brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .home-avatar-circle {
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, #d6a84f 0%, #b38222 100%);
-      color: #ffffff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 0.9rem;
-      overflow: hidden;
-      flex-shrink: 0;
-      box-shadow: 0 2px 8px rgba(214, 168, 79, 0.3);
-    }
-
-    .avatar-circle-img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    .home-brand-text {
-      display: flex;
-      flex-direction: column;
-      line-height: 1.2;
-    }
-
-    .user-handle {
-      font-size: 0.92rem;
-      font-weight: 700;
-      color: #ffffff;
-    }
-
-    .panel-subtitle {
-      font-size: 0.72rem;
-      color: rgba(255, 255, 255, 0.72);
-      font-weight: 500;
-    }
-
-    .flex-spacer {
-      flex: 1 1 auto;
-    }
-
-    .topbar-right-actions {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      position: relative;
-    }
-
-    .inbox-shortcut-icon {
-      color: rgba(255, 255, 255, 0.88);
-    }
-
-    /* NAVBAR USER OPTIONS MENU */
-    .navbar-user-options-menu {
-      min-width: 210px;
-      padding: 4px 0;
-      border-radius: 8px;
-    }
-
-    .user-menu-item {
-      height: 42px;
-      display: flex;
-      align-items: center;
-      padding: 0 16px;
-      &:hover {
-        background-color: var(--paper-canvas);
-      }
-    }
-
-    .user-menu-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-      margin-right: 12px;
-      color: var(--ink-muted);
-    }
-
-    .user-menu-text {
-      font-size: 0.86rem;
-      font-weight: 500;
-      color: var(--ink);
-      font-family: var(--font-ui);
-    }
-
-    /* SIDENAV CONTAINER */
     .sidenav-container {
       flex: 1;
-      height: calc(100vh - 56px);
-      background: var(--paper-canvas);
+      height: 100vh;
+      background: transparent !important;
     }
 
-    .sidenav-container.no-sidenav {
-      background: var(--paper-canvas);
-    }
-
-    /* DARK INSTITUTIONAL SIDENAV */
+    /* DARK INSTITUTIONAL SIDENAV EMERALD 24 CON GRADIENTE HACIA CLARO (FOTO 2) */
     .dark-institutional-sidenav {
-      width: 266px;
-      background: linear-gradient(180deg, #0b242a 0%, #10353d 100%);
-      color: rgba(255, 255, 255, 0.88);
-      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      width: 270px;
+      height: 100vh;
+      background: linear-gradient(180deg, #022419 0%, #053b29 32%, #0b563e 56%, #1c7054 74%, #3a886d 86%, #62a389 93%, #8bbda6 97%, #add2bf 100%) !important;
+      color: rgba(255, 255, 255, 0.92);
+      border-right: none;
       display: flex;
       flex-direction: column;
+      box-shadow: none;
     }
 
     .sidebar-brand-header {
-      padding: 15px 20px;
+      padding: 22px 20px 14px;
       display: flex;
       align-items: center;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .sidebar-logo-link {
@@ -416,47 +238,72 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
       align-items: center;
       gap: 10px;
       text-decoration: none;
-      color: #ffffff;
-      font-weight: 700;
-      font-size: 1rem;
-      letter-spacing: 0.04em;
+    }
+
+    .sidebar-brand-mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid rgba(52, 211, 153, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .sidebar-logo-icon {
-      color: var(--gold);
-      font-size: 22px;
-      width: 22px;
-      height: 22px;
+      color: #34d399;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    .sidebar-logo-text {
+      color: #ffffff;
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      text-transform: lowercase;
     }
 
     .close-sidebar-btn.mat-mdc-icon-button {
       color: rgba(255, 255, 255, 0.7);
     }
 
+    /* SELECTOR DE PERFIL PILL EN SIDEBAR */
     .sidebar-user-card {
-      padding: 20px 16px 16px;
+      margin: 6px 14px 12px;
+      padding: 9px 14px;
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       align-items: center;
-      text-align: center;
-      background: rgba(0, 0, 0, 0.14);
+      text-align: left;
+      gap: 11px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 9999px;
+      transition: background 0.15s ease, border-color 0.15s ease;
+      cursor: pointer;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.14);
+        border-color: rgba(255, 255, 255, 0.24);
+      }
     }
 
     .sidebar-user-avatar {
-      width: 56px;
-      height: 56px;
-      border-radius: 10px;
-      background: var(--gold);
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #059669;
       color: #ffffff;
-      font-size: 1.5rem;
+      font-size: 1rem;
       font-weight: 700;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 10px;
       overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.3);
       flex-shrink: 0;
     }
 
@@ -467,39 +314,60 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
       display: block;
     }
 
+    .sidebar-user-info {
+      flex: 1;
+      min-width: 0;
+    }
+
     .sidebar-user-name {
       margin: 0;
-      font-size: 0.92rem;
-      font-weight: 700;
+      font-size: 0.82rem;
+      font-weight: 600;
       color: #ffffff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .sidebar-user-email {
-      margin: 3px 0 0 0;
-      font-size: 0.76rem;
+      margin: 1px 0 0 0;
+      font-size: 0.69rem;
       color: rgba(255, 255, 255, 0.65);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .sidebar-divider.mat-divider {
-      border-top-color: rgba(255, 255, 255, 0.1);
+    .sidebar-user-chevron {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: rgba(255, 255, 255, 0.6);
+      flex-shrink: 0;
     }
 
     /* SCROLLABLE MENU ACCORDION */
     .sidebar-nav-scroll {
       flex: 1;
       overflow-y: auto;
-      padding: 10px 0;
+      padding: 6px 0;
       -webkit-overflow-scrolling: touch;
     }
 
+    .sidebar-home-pill {
+      margin-bottom: 8px !important;
+    }
+
     .menu-category-header {
-      padding: 11px 18px;
+      padding: 9px 14px;
+      margin: 2px 10px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
-      gap: 11px;
+      gap: 10px;
       cursor: pointer;
-      color: rgba(255, 255, 255, 0.9);
-      font-size: 0.78rem;
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 0.77rem;
       font-weight: 700;
       letter-spacing: 0.03em;
       transition: background 0.15s ease, color 0.15s ease;
@@ -514,7 +382,7 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
       font-size: 18px;
       width: 18px;
       height: 18px;
-      color: var(--gold);
+      color: #34d399;
     }
 
     .category-title {
@@ -531,27 +399,28 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
     .category-subitems {
       display: flex;
       flex-direction: column;
-      background: rgba(0, 0, 0, 0.16);
-      padding: 4px 0;
+      background: transparent;
+      padding: 2px 0 6px 0;
     }
 
     .subitem-link {
       display: flex;
       align-items: center;
-      gap: 11px;
-      padding: 9px 18px 9px 34px;
-      color: rgba(255, 255, 255, 0.72);
+      gap: 10px;
+      padding: 8px 16px 8px 26px;
+      margin: 2px 10px;
+      border-radius: 9999px;
+      color: rgba(255, 255, 255, 0.74);
       text-decoration: none;
-      font-size: 0.83rem;
+      font-size: 0.82rem;
       font-weight: 500;
-      border-left: 3px solid transparent;
-      transition: background 0.15s ease, color 0.15s ease;
+      transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 
       &:hover {
-        background: rgba(255, 255, 255, 0.06);
+        background: rgba(255, 255, 255, 0.08);
         color: #ffffff;
         .subitem-icon {
-          color: var(--gold);
+          color: #34d399;
         }
       }
     }
@@ -571,68 +440,235 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
     }
 
     .active-subitem.subitem-link {
-      background: linear-gradient(90deg, rgba(14, 116, 144, 0.34), rgba(214, 168, 79, 0.14));
-      color: #f8e5b5;
-      font-weight: 700;
-      border-left-color: var(--gold);
+      background: rgba(255, 255, 255, 0.16);
+      color: #ffffff;
+      font-weight: 600;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
       .subitem-icon {
-        color: #f8e5b5;
+        color: #34d399;
       }
     }
 
     .sidebar-footer {
-      padding: 12px 18px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 14px 18px;
       font-size: 0.72rem;
-      color: rgba(255, 255, 255, 0.58);
+      color: #043324;
+      font-weight: 700;
       text-align: center;
     }
 
-    /* MAIN CONTENT */
-    .main-content {
-      padding: 24px;
-      background: var(--paper-canvas);
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
+    /* VIEWPORT Y GRAN LIENZO FLOTANTE BLANCO (IN-SET CANVAS EMERALD 24) */
+    .main-viewport {
+      flex: 1;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: transparent !important;
     }
 
-    .main-content-home {
+    .canvas-floating-card {
+      flex: 1;
+      margin: 14px 18px 18px 0;
+      background: #ffffff;
+      border-radius: 28px;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .canvas-floating-card.canvas-home-card {
+      margin: 14px 18px 18px 18px;
+    }
+
+    .integrated-topbar {
+      height: 60px;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: #ffffff;
+      border-bottom: 1px solid #f1f5f9;
+      flex-shrink: 0;
+    }
+
+    .topbar-icon-btn.mat-mdc-icon-button {
+      color: #475569;
+      width: 38px;
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: background 0.15s ease, color 0.15s ease;
+
+      &:hover {
+        background: #f1f5f9;
+        color: #044e3b;
+      }
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    .breadcrumb-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .breadcrumb-home-link {
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+      padding: 4px;
+      border-radius: 6px;
+      transition: color 0.15s ease, background 0.15s ease;
+
+      &:hover {
+        color: #059669;
+        background: #ecfdf5;
+      }
+
+      mat-icon {
+        font-size: 19px;
+        width: 19px;
+        height: 19px;
+      }
+    }
+
+    .breadcrumb-separator {
+      color: #cbd5e1;
+      font-size: 1rem;
+      font-weight: 400;
+    }
+
+    .breadcrumb-title {
+      color: #0f172a;
+      font-size: 0.94rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .home-topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .home-avatar-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #059669;
+      color: #ffffff;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);
+    }
+
+    .avatar-circle-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .user-handle {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #0f172a;
+      display: block;
+    }
+
+    .panel-subtitle {
+      font-size: 0.74rem;
+      color: #64748b;
+      display: block;
+    }
+
+    .flex-spacer {
+      flex: 1 1 auto;
+    }
+
+    .topbar-right-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .inbox-shortcut-icon {
+      color: #475569;
+    }
+
+    .navbar-user-options-menu {
+      min-width: 210px;
+      padding: 4px 0;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    .user-menu-item {
+      height: 42px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      &:hover {
+        background-color: #f8fafc;
+      }
+    }
+
+    .user-menu-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      margin-right: 12px;
+      color: #64748b;
+    }
+
+    .user-menu-text {
+      font-size: 0.86rem;
+      font-weight: 500;
+      color: #0f172a;
+      font-family: var(--font-ui);
+    }
+
+    /* ÁREA DE SCROLL DEL LIENZO BLANCO */
+    .canvas-scroll-body {
+      flex: 1;
+      overflow-y: auto;
       padding: 24px 28px;
-      background: var(--paper-canvas);
+      background: #ffffff;
+      -webkit-overflow-scrolling: touch;
     }
 
     /* RESPONSIVE */
     @media (max-width: 860px) {
-      .main-topbar {
-        padding: 0 8px;
+      .canvas-floating-card {
+        margin: 0;
+        border-radius: 0;
+      }
+      .canvas-floating-card.canvas-home-card {
+        margin: 0;
+        border-radius: 0;
+      }
+      .integrated-topbar {
+        padding: 0 12px;
         height: 52px;
-        gap: 6px;
       }
-      .topbar-icon-btn.mat-mdc-icon-button {
-        width: 36px;
-        height: 36px;
-      }
-      .topbar-home-btn {
-        padding: 4px;
-      }
-      .breadcrumb-container {
-        flex: 1 1 auto;
-        min-width: 0;
-        max-width: none;
-      }
-      .breadcrumb-title {
-        font-size: 0.84rem;
-      }
-      .home-topbar-brand {
-        flex: 1 1 auto;
-        min-width: 0;
-        gap: 8px;
-      }
-      .user-handle {
-        font-size: 0.86rem;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+      .canvas-scroll-body {
+        padding: 12px 10px;
       }
       .action-hide-mobile {
         display: none;
@@ -640,17 +676,9 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
       .panel-subtitle {
         display: none;
       }
-      .main-content {
-        padding: 10px 8px;
-      }
-      .main-content-home {
-        padding: 12px 10px;
-      }
-      .sidenav-container {
-        height: calc(100vh - 52px);
-      }
       .dark-institutional-sidenav.mat-drawer {
         width: min(84vw, 280px);
+        background: #032b1f !important;
       }
     }
   `]
@@ -672,16 +700,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
   readonly sidenavOpen = signal(false);
   readonly isFullScreen = signal(false);
 
-  // Categorías de menú expandidas en el sidebar
-  readonly expandedGroups = signal<Record<string, boolean>>({
-    'CONFIGURACIÓN': true,
-    'ADMINISTRACIÓN': true,
-    'DOCUMENTOS': true,
-    'CATALOGOS': true,
-    'ARCHIVO': true,
-    'VENTANILLA ÚNICA': true,
-    'VENTANILLA': true
-  });
+  // Categorías de menú expandidas en el sidebar (cerradas por defecto, solo se abre la sección activa)
+  readonly expandedGroups = signal<Record<string, boolean>>({});
 
   // Determinar si estamos en el Home/Dashboard
   readonly isHomePage = computed(() => {
@@ -698,6 +718,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   // Título de la sección activa para el breadcrumb de páginas internas
   readonly currentSectionTitle = computed(() => {
     const url = this.currentUrl().split('?')[0].split('#')[0];
+    if (url === '/dashboard' || url === '/' || url === '') return 'Inicio';
     if (url.startsWith('/profile') || url.startsWith('/cuenta')) return 'Mi perfil';
     if (url.startsWith('/documentos')) return 'Documentos';
     if (url.startsWith('/plantillas')) return 'Plantillas';
@@ -879,7 +900,10 @@ export class LayoutComponent implements OnInit, OnDestroy {
     // Sincronizar ruta inicial
     this.currentUrl.set(this.router.url);
 
-    // Ajustar apertura de sidenav según la ruta inicial
+    // Abrir únicamente la categoría del menú correspondiente a la sección actual
+    this.syncExpandedGroupWithRoute(this.router.url);
+
+    // Ajustar apertura de sidenav según la ruta inicial: oculto en Home/Inicio
     if (this.isHomePage()) {
       this.sidenavOpen.set(false);
     } else {
@@ -893,16 +917,13 @@ export class LayoutComponent implements OnInit, OnDestroy {
       const newUrl = event.urlAfterRedirects || event.url;
       this.currentUrl.set(newUrl);
 
-      // Si navegamos al Home, desaparecer sidebar
+      // Si navegamos al Home, ocultar sidebar; en rutas internas abrirlo en desktop
       if (this.isHomePage()) {
         this.sidenavOpen.set(false);
       } else {
-        // En vista interna: en desktop abierto, en móvil cerrado por defecto
-        if (!this.isMobile()) {
-          this.sidenavOpen.set(true);
-        } else {
-          this.sidenavOpen.set(false);
-        }
+        this.sidenavOpen.set(!this.isMobile());
+        // Expandir solo el grupo de la nueva ruta navegada
+        this.syncExpandedGroupWithRoute(newUrl);
       }
     });
 
@@ -910,15 +931,10 @@ export class LayoutComponent implements OnInit, OnDestroy {
     this.bpSub = this.breakpointObserver.observe(['(max-width: 860px)']).subscribe((state) => {
       const mobile = state.matches;
       this.isMobile.set(mobile);
-
       if (this.isHomePage()) {
         this.sidenavOpen.set(false);
       } else {
-        if (mobile) {
-          this.sidenavOpen.set(false);
-        } else {
-          this.sidenavOpen.set(true);
-        }
+        this.sidenavOpen.set(!mobile);
       }
     });
   }
@@ -926,6 +942,39 @@ export class LayoutComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.bpSub?.unsubscribe();
     this.routerSub?.unsubscribe();
+  }
+
+  /**
+   * Obtiene la categoría/grupo padre en el sidebar que contiene la ruta especificada
+   */
+  private getActiveGroupForUrl(url: string): string | null {
+    const cleanUrl = url.split('?')[0].split('#')[0].replace(/^\//, '').toLowerCase();
+    if (!cleanUrl || cleanUrl === 'dashboard') return null;
+
+    const groups = this.menuGroups();
+    for (const group of groups) {
+      const match = group.items.some((item: any) => {
+        const itemUrl = (item.url || '').replace(/^\//, '').toLowerCase();
+        if (!itemUrl) return false;
+        return cleanUrl === itemUrl || cleanUrl.startsWith(itemUrl + '/') || itemUrl.startsWith(cleanUrl + '/');
+      });
+      if (match) {
+        return group.label;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Sincroniza los grupos expandidos dejando abierto únicamente el grupo de la ruta actual
+   */
+  private syncExpandedGroupWithRoute(url: string): void {
+    const activeGroup = this.getActiveGroupForUrl(url);
+    if (activeGroup) {
+      this.expandedGroups.set({ [activeGroup]: true });
+    } else {
+      this.expandedGroups.set({});
+    }
   }
 
   toggleSidenav(): void {

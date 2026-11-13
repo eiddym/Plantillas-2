@@ -13,8 +13,7 @@ import { PlantillasService } from '../../core/services/plantillas.service';
 import { SeguridadService } from '../../core/services/seguridad.service';
 
 import { HttpClient } from '@angular/common/http';
-import { EchartComponent } from '../../shared/components/echart/echart.component';
-import * as echarts from 'echarts';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 interface DashboardItem {
   label: string;
@@ -43,15 +42,26 @@ interface DashboardSection {
     MatTableModule,
     MatTooltipModule,
     MatDialogModule,
-    EchartComponent
   ],
   template: `
     <div class="home-portal-container">
       <!-- Encabezado de Bienvenida Institucional -->
       <header class="home-welcome-header">
-        <div class="welcome-text">
-          <h1>{{ saludo() }}, {{ user()?.first_name || user()?.username || 'usuario' }}</h1>
-          <p class="subtitle">{{ user()?.cargo || 'Personal institucional' }} — Cooperativa Minera Marabunta R.L.</p>
+        <div class="welcome-identity">
+          <div class="welcome-avatar-ring">
+            <div class="welcome-avatar-inner">
+              @if (user()?.foto && !avatarError()) {
+                <img [src]="user()?.foto" (error)="avatarError.set(true)" alt="Avatar de usuario" class="welcome-avatar-img">
+              } @else {
+                <span class="welcome-avatar-initials">{{ userInitials() }}</span>
+              }
+            </div>
+            <span class="welcome-online-dot" title="Sesión activa"></span>
+          </div>
+          <div class="welcome-text">
+            <h1>{{ saludo() }}, {{ user()?.first_name || user()?.username || 'usuario' }}</h1>
+            <p class="subtitle">{{ user()?.cargo || 'Personal institucional' }} — Cooperativa Minera Marabunta R.L.</p>
+          </div>
         </div>
         <div class="welcome-actions">
           <button mat-raised-button class="btn-redactar-doc" (click)="abrirNuevoDocumento()">
@@ -60,6 +70,48 @@ interface DashboardSection {
           </button>
         </div>
       </header>
+
+      <!-- Banner de atención -->
+      @if (totalPendientes() > 0 || totalObservados() > 0) {
+        <section class="attention-banner" aria-label="Requiere tu atención">
+          <div class="attention-icon"><mat-icon>notifications_active</mat-icon></div>
+          <div class="attention-text">
+            <strong>Requiere tu atención</strong>
+            <span>
+              @if (totalPendientes() > 0) { {{ totalPendientes() }} por atender }
+              @if (totalPendientes() > 0 && totalObservados() > 0) { · }
+              @if (totalObservados() > 0) { {{ totalObservados() }} observado(s) por subsanar }
+            </span>
+          </div>
+          <div class="attention-actions">
+            @if (totalPendientes() > 0) {
+              <button type="button" class="attention-btn" (click)="filtrarBandeja('atender')">Ver por atender</button>
+            }
+            @if (totalObservados() > 0) {
+              <button type="button" class="attention-btn" (click)="filtrarBandeja('observados')">Ver observados</button>
+            }
+          </div>
+        </section>
+      } @else if (datosCargados()) {
+        <section class="attention-banner is-clear" aria-label="Estás al día">
+          <div class="attention-icon"><mat-icon>check_circle</mat-icon></div>
+          <div class="attention-text">
+            <strong>Estás al día</strong>
+            <span>No tienes documentos pendientes ni observados.</span>
+          </div>
+        </section>
+      }
+
+      @if (user()?.celular === null && !avisoCelularOculto()) {
+        <div class="phone-hint">
+          <mat-icon>smartphone</mat-icon>
+          <span>Agrega tu número de celular para recibir alertas por WhatsApp.</span>
+          <a routerLink="/profile" class="phone-hint-link">Agregar en Mi perfil</a>
+          <button type="button" class="phone-hint-close" (click)="ocultarAvisoCelular()" aria-label="Ocultar aviso">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      }
 
       <!-- Estado de Bandeja Activa -->
       <section class="tray-overview-section" aria-label="Resumen de bandeja activa">
@@ -93,54 +145,46 @@ interface DashboardSection {
         </div>
       </section>
 
-      <!-- Barra de Acciones Rápidas -->
-      <section class="quick-actions-bar">
-        <span class="actions-label">Accesos directos:</span>
-        <button mat-stroked-button (click)="abrirNuevoDocumento()" class="quick-action-btn">
-          <mat-icon>add</mat-icon>
-          <span>Nuevo documento</span>
-        </button>
-        <button mat-stroked-button routerLink="/documentos" class="quick-action-btn">
-          <mat-icon>search</mat-icon>
-          <span>Buscar documento</span>
-        </button>
-        <button mat-stroked-button routerLink="/catalogos" class="quick-action-btn">
-          <mat-icon>folder_open</mat-icon>
-          <span>Catálogos</span>
-        </button>
-        @if (puedeVerVentanilla()) {
-          <button mat-stroked-button routerLink="/ventanilla/externa" class="quick-action-btn highlight-vu-btn">
-            <mat-icon>inbox</mat-icon>
-            <span>Ventanilla Única</span>
-          </button>
-        }
-      </section>
-
-      <!-- Métricas Operativas -->
-      <section class="charts-section">
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">
-              <mat-icon class="icon-flow">show_chart</mat-icon>
-              <span>Flujo de despacho mensual</span>
+      <section class="work-grid">
+        <div class="work-card">
+          <div class="section-header-line"><h2>Continúa donde lo dejaste</h2></div>
+          @if (docsRecientes().length === 0) {
+            <p class="activity-empty">Aún no tienes documentos recientes.</p>
+          } @else {
+            <div class="recent-chips">
+              @for (d of docsRecientes(); track d.id_documento) {
+                <button type="button" class="recent-chip" (click)="irAWorkbench(d)">
+                  <span class="chip-dot" [ngClass]="getStatusClass(d.estado)"></span>
+                  <span class="chip-main">
+                    <span class="chip-title">{{ tituloReciente(d) }}</span>
+                    <span class="chip-sub">{{ d.estado }}@if (d['referencia']) { · {{ d['referencia'] }} }</span>
+                  </span>
+                </button>
+              }
             </div>
-            <span class="chart-tag">Últimos 6 meses</span>
-          </div>
-          <app-echart [options]="tendenciaOptions()" [loading]="cargandoMetricas()" height="240px"></app-echart>
+          }
         </div>
 
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">
-              <mat-icon class="icon-dist">donut_large</mat-icon>
-              <span>Distribución operativa</span>
-            </div>
-            <span class="chart-tag">Estado actual</span>
-          </div>
-          <app-echart [options]="distribucionOptions()" [loading]="cargandoMetricas()" height="240px"></app-echart>
+        <div class="work-card">
+          <div class="section-header-line"><h2>Plantillas frecuentes</h2></div>
+          @if (plantillasFrecuentes().length === 0) {
+            <p class="activity-empty">No hay plantillas disponibles.</p>
+          } @else {
+            <ul class="tpl-list">
+              @for (p of plantillasFrecuentes(); track p.id_plantilla_formly) {
+                <li class="tpl-item">
+                  <span class="tpl-abbr">{{ p.abreviacion }}</span>
+                  <span class="tpl-name">{{ p.nombre }}</span>
+                  @if (p.usos > 0) { <span class="tpl-uses">{{ p.usos }}×</span> }
+                  <button type="button" class="tpl-use-btn" [disabled]="creandoDesdePlantilla()" (click)="usarPlantilla(p)">Usar</button>
+                </li>
+              }
+            </ul>
+          }
         </div>
       </section>
 
+      <div class="home-main-grid">
       <!-- Mis Documentos Pendientes de Atención -->
       <section class="recent-tramites-section">
         <div class="section-header-line">
@@ -148,8 +192,20 @@ interface DashboardSection {
           <a routerLink="/aprobacion" class="link-ver-todo">Ver bandeja completa</a>
         </div>
 
+        <div class="bandeja-tabs" role="tablist">
+          <button type="button" role="tab" class="bandeja-tab" [class.is-active]="filtroBandeja() === 'todos'" (click)="filtroBandeja.set('todos')">
+            Todos <span class="tab-count">{{ recentDocs().length }}</span>
+          </button>
+          <button type="button" role="tab" class="bandeja-tab" [class.is-active]="filtroBandeja() === 'atender'" (click)="filtroBandeja.set('atender')">
+            Por atender <span class="tab-count">{{ contarPorAtender() }}</span>
+          </button>
+          <button type="button" role="tab" class="bandeja-tab" [class.is-active]="filtroBandeja() === 'observados'" (click)="filtroBandeja.set('observados')">
+            Observados <span class="tab-count">{{ contarObservados() }}</span>
+          </button>
+        </div>
+
         <div class="table-responsive">
-          <table mat-table [dataSource]="recentDocs()" class="w-full recent-table">
+          <table mat-table [dataSource]="docsFiltrados()" class="w-full recent-table">
             <ng-container matColumnDef="nombre">
               <th mat-header-cell *matHeaderCellDef>CITE oficial</th>
               <td mat-cell *matCellDef="let d">
@@ -185,7 +241,7 @@ interface DashboardSection {
               <td mat-cell *matCellDef="let d" class="text-right">
                 <button mat-button class="btn-revisar" (click)="irAWorkbench(d)">
                   <mat-icon>edit_note</mat-icon>
-                  <span>Atender</span>
+                  <span>{{ d.estado === 'RECHAZADO' ? 'Subsanar' : 'Atender' }}</span>
                 </button>
               </td>
             </ng-container>
@@ -200,6 +256,8 @@ interface DashboardSection {
           </table>
         </div>
       </section>
+
+      </div>
 
       <!-- Directorio de Módulos del Sistema -->
       <section class="modules-portal-section">
@@ -228,7 +286,7 @@ interface DashboardSection {
             <div class="modules-cards-grid">
               @for (item of actual.items; track item.label) {
                 <button type="button" class="module-card" (click)="irARuta(item.url)">
-                  <div class="module-icon-box">
+                  <div class="module-icon-box" [ngClass]="'color-' + item.color">
                     <mat-icon>{{ item.icon }}</mat-icon>
                   </div>
 
@@ -264,6 +322,147 @@ interface DashboardSection {
       font-family: var(--font-ui);
     }
 
+    .phone-hint {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 8px 14px; margin-bottom: 14px; border-radius: 12px;
+      background: #f0f9ff; border: 1px solid #bae6fd; color: #0c4a6e; font-size: 0.82rem;
+    }
+    .phone-hint mat-icon { font-size: 18px; width: 18px; height: 18px; line-height: 18px; }
+    .phone-hint-link { color: #0369a1; font-weight: 600; text-decoration: none; margin-left: auto; }
+    .phone-hint-link:hover { text-decoration: underline; }
+    .phone-hint-close { border: none; background: transparent; cursor: pointer; color: #64748b; display: flex; padding: 0; }
+
+    .work-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+    .work-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 16px; min-width: 0; }
+    .recent-chips { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .recent-chip {
+      display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+      border: 1px solid #f3f4f6; background: #f9fafb; border-radius: 10px; padding: 8px 10px;
+      cursor: pointer; font-family: inherit;
+    }
+    .recent-chip:hover { background: #ecfdf5; border-color: #a7f3d0; }
+    .chip-dot { width: 8px; height: 8px; border-radius: 50%; background: #9ca3af; flex-shrink: 0; }
+    .chip-dot.status-aprobado { background: #10b981; }
+    .chip-dot.status-revision { background: #3b82f6; }
+    .chip-dot.status-observado { background: #f59e0b; }
+    .chip-main { display: flex; flex-direction: column; min-width: 0; }
+    .chip-title { font-size: 0.82rem; font-weight: 600; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chip-sub { font-size: 0.72rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tpl-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+    .tpl-item { display: flex; align-items: center; gap: 10px; padding: 6px 4px; border-bottom: 1px solid #f3f4f6; }
+    .tpl-item:last-child { border-bottom: none; }
+    .tpl-abbr {
+      min-width: 44px; text-align: center; padding: 3px 6px; border-radius: 8px;
+      background: #ecfdf5; color: #047857; font-size: 0.72rem; font-weight: 700;
+    }
+    .tpl-name { flex: 1; min-width: 0; font-size: 0.82rem; color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tpl-uses { font-size: 0.7rem; color: #9ca3af; }
+    .tpl-use-btn {
+      border: none; border-radius: 999px; padding: 5px 14px; cursor: pointer;
+      background: #111827; color: #fff; font-size: 0.76rem; font-weight: 600; font-family: inherit;
+    }
+    .tpl-use-btn:disabled { opacity: 0.5; cursor: default; }
+    .modules-toggle {
+      margin-left: auto; display: inline-flex; align-items: center; gap: 2px;
+      border: none; background: transparent; color: #047857; font-weight: 600;
+      font-size: 0.8rem; cursor: pointer; font-family: inherit;
+    }
+    @media (max-width: 800px) { .work-grid { grid-template-columns: minmax(0, 1fr); } }
+
+    /* BANNER DE ATENCIÓN */
+    .attention-banner {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 16px;
+      margin-bottom: 14px;
+      border-radius: 14px;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+    }
+    .attention-banner.is-clear {
+      background: #ecfdf5;
+      border-color: #a7f3d0;
+    }
+    .attention-icon {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: #fef3c7; color: #b45309; flex-shrink: 0;
+    }
+    .is-clear .attention-icon { background: #d1fae5; color: #047857; }
+    .attention-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+    .attention-text strong { font-size: 0.92rem; color: #111827; }
+    .attention-text span { font-size: 0.8rem; color: #6b7280; }
+    .attention-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .attention-btn {
+      border: none; cursor: pointer; border-radius: 999px;
+      padding: 7px 16px; font-size: 0.8rem; font-weight: 600;
+      background: #111827; color: #fff; font-family: inherit;
+    }
+    .attention-btn:hover { background: #1f2937; }
+
+    /* GRID PRINCIPAL: BANDEJA + ACTIVIDAD */
+    .home-main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+      margin-bottom: 18px;
+    }
+    .home-main-grid .recent-tramites-section { margin-bottom: 0; }
+
+    .bandeja-tabs { display: flex; gap: 6px; margin: 4px 0 10px; flex-wrap: wrap; }
+    .bandeja-tab {
+      border: 1px solid #e5e7eb; background: #fff; color: #4b5563;
+      border-radius: 999px; padding: 5px 12px; font-size: 0.78rem; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+    }
+    .bandeja-tab.is-active { background: #ecfdf5; border-color: #6ee7b7; color: #047857; }
+    .tab-count {
+      display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px;
+      border-radius: 999px; background: #f3f4f6; text-align: center; font-size: 0.7rem;
+    }
+    .bandeja-tab.is-active .tab-count { background: #d1fae5; }
+
+    /* ACTIVIDAD RECIENTE */
+    .activity-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 16px;
+    }
+    .activity-empty { margin: 8px 0 0; font-size: 0.82rem; color: #9ca3af; }
+    .activity-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; }
+    .activity-item {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 10px 6px; border-radius: 10px; cursor: pointer;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-item:hover { background: #f9fafb; }
+    .activity-icon {
+      width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #e5e7eb; color: #4b5563;
+    }
+    .activity-icon mat-icon { font-size: 17px; width: 17px; height: 17px; line-height: 17px; }
+    .act-ok { background: #d1fae5; color: #047857; }
+    .act-warn { background: #fef3c7; color: #b45309; }
+    .act-bad { background: #fee2e2; color: #b91c1c; }
+    .act-info { background: #dbeafe; color: #1d4ed8; }
+    .activity-body { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 1px; }
+    .activity-title { font-size: 0.82rem; color: #1f2937; }
+    .activity-doc { font-size: 0.74rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .activity-note { font-size: 0.74rem; color: #92400e; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .activity-time { font-size: 0.7rem; color: #9ca3af; white-space: nowrap; flex-shrink: 0; }
+
+    @media (max-width: 1000px) {
+      .home-main-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .attention-banner { flex-wrap: wrap; }
+    }
+
     /* ENCABEZADO DE BIENVENIDA */
     .home-welcome-header {
       display: flex;
@@ -291,27 +490,84 @@ interface DashboardSection {
       }
     }
 
-    .btn-redactar-doc.mat-mdc-raised-button {
-      background: linear-gradient(135deg, #0f3a42 0%, #0e7490 100%);
+    .welcome-identity {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .welcome-avatar-ring {
+      position: relative;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      padding: 2.5px;
+      background: linear-gradient(135deg, #059669 0%, #34d399 100%);
+      box-shadow: 0 4px 14px rgba(5, 150, 105, 0.20);
+      flex-shrink: 0;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .welcome-avatar-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: #043324;
+      border: 2px solid #ffffff;
       color: #ffffff;
-      border-radius: 12px;
-      padding: 0 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .welcome-avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .welcome-avatar-initials {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      color: #34d399;
+    }
+
+    .welcome-online-dot {
+      position: absolute;
+      bottom: 1px;
+      right: 1px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #10b981;
+      border: 2.5px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-redactar-doc.mat-mdc-raised-button {
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+      color: #ffffff !important;
+      border-radius: 9999px;
+      padding: 0 24px;
       height: 44px;
       font-weight: 700;
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      box-shadow: 0 6px 16px rgba(14, 116, 144, 0.25);
+      box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35);
       transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
 
       &:hover {
         transform: translateY(-1px);
-        box-shadow: 0 10px 22px rgba(14, 116, 144, 0.32);
-        filter: brightness(1.06);
+        box-shadow: 0 10px 24px rgba(16, 185, 129, 0.45);
+        filter: brightness(1.05);
       }
 
       mat-icon {
-        color: #f5dfaa;
+        color: #ffffff;
       }
     }
 
@@ -323,10 +579,10 @@ interface DashboardSection {
     .tray-overview-strip {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 18px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
       overflow: hidden;
     }
 
@@ -406,20 +662,21 @@ interface DashboardSection {
     }
 
     .quick-action-btn.mat-mdc-outlined-button {
-      border-radius: 10px;
-      border-color: var(--line-strong);
-      color: var(--ink);
-      background: var(--surface);
+      border-radius: 9999px;
+      border-color: #e2e8f0;
+      color: #334155;
+      background: #ffffff;
       font-weight: 600;
       font-size: 0.82rem;
-      height: 36px;
+      height: 38px;
+      padding: 0 16px;
 
-      mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--petrol-bright); }
+      mat-icon { font-size: 18px; width: 18px; height: 18px; color: #059669; }
 
       &:hover {
-        border-color: var(--petrol-bright);
-        background: #f0f9ff;
-        color: var(--petrol);
+        border-color: #10b981;
+        background: #ecfdf5;
+        color: #065f46;
       }
 
       &.highlight-vu-btn {
@@ -509,11 +766,21 @@ interface DashboardSection {
         color: var(--ink);
       }
       .link-ver-todo {
-        font-size: 0.82rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 5px 14px;
+        border-radius: 9999px;
+        background: #ecfdf5;
+        font-size: 0.80rem;
         font-weight: 700;
-        color: var(--petrol-bright);
+        color: #065f46;
         text-decoration: none;
-        &:hover { text-decoration: underline; }
+        transition: background 0.15s ease, color 0.15s ease;
+        &:hover {
+          background: #d1fae5;
+          color: #043324;
+        }
       }
     }
 
@@ -579,56 +846,62 @@ interface DashboardSection {
     }
 
     .module-section-box {
-      background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
-      padding: 16px 20px 20px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+      padding: 20px 24px 24px;
     }
 
     .module-tabs-bar {
       display: flex;
       flex-wrap: wrap;
-      gap: 4px;
+      gap: 6px;
       align-items: center;
-      margin-bottom: 18px;
-      border-bottom: 1px solid var(--line);
+      margin-bottom: 22px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 0;
     }
 
     .module-tab-btn {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 10px 14px;
+      padding: 10px 16px;
       background: transparent;
-      color: var(--ink-muted);
-      font-size: 0.85rem;
+      color: #64748b;
+      font-size: 0.86rem;
       font-weight: 600;
       border: none;
       border-bottom: 2px solid transparent;
       margin-bottom: -1px;
       cursor: pointer;
       font-family: inherit;
-      transition: color 0.15s ease, border-color 0.15s ease;
+      transition: color 0.16s ease, border-color 0.16s ease;
 
       .module-tab-icon {
         font-size: 18px;
         width: 18px;
         height: 18px;
-        color: var(--ink-muted);
+        color: #94a3b8;
+        transition: color 0.16s ease;
       }
 
       &:hover {
-        color: var(--ink);
+        color: #0f172a;
+        .module-tab-icon {
+          color: #475569;
+        }
       }
 
       &.is-active {
-        color: var(--petrol-bright);
+        background: transparent;
+        color: #0f172a;
+        border-bottom-color: #059669;
         font-weight: 700;
-        border-bottom-color: var(--petrol-bright);
 
         .module-tab-icon {
-          color: var(--petrol-bright);
+          color: #059669;
         }
       }
     }
@@ -636,7 +909,7 @@ interface DashboardSection {
     .modules-cards-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
+      gap: 16px;
     }
 
     @media (max-width: 1100px) {
@@ -649,45 +922,77 @@ interface DashboardSection {
       width: 100%;
       text-align: left;
       font-family: inherit;
-      background: var(--surface-tinted);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 14px 16px;
+      background: #ffffff !important;
+      border: 1px solid #e5e7eb;
+      border-radius: 18px;
+      padding: 16px 18px;
       display: flex;
       align-items: center;
       gap: 14px;
       cursor: pointer;
-      transition: transform 0.16s ease, border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+      transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 
       &:hover {
-        background: var(--surface);
-        border-color: var(--petrol-bright);
-        transform: translateY(-1px);
-        box-shadow: 0 6px 16px rgba(14, 116, 144, 0.1);
+        background: #ffffff !important;
+        border-color: #10b981;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(16, 185, 129, 0.08);
 
         .module-chevron {
-          color: var(--petrol-bright);
-          transform: translateX(2px);
+          color: #059669;
+          transform: translateX(3px);
         }
       }
     }
 
     .module-icon-box {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, #ecfeff 0%, #e0f2fe 100%);
-      border: 1px solid #bae6fd;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--petrol-bright);
       flex-shrink: 0;
+      transition: transform 0.18s ease;
 
       mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
+        font-size: 22px;
+        width: 22px;
+        height: 22px;
+      }
+
+      &.color-teal {
+        background: #ccfbf1;
+        color: #0f766e;
+      }
+      &.color-purple {
+        background: #f3e8ff;
+        color: #7e22ce;
+      }
+      &.color-green, &.color-emerald {
+        background: #d1fae5;
+        color: #047857;
+      }
+      &.color-blue {
+        background: #dbeafe;
+        color: #1d4ed8;
+      }
+      &.color-orange, &.color-amber {
+        background: #fef3c7;
+        color: #b45309;
+      }
+      &.color-indigo {
+        background: #e0e7ff;
+        color: #4338ca;
+      }
+      &.color-rose {
+        background: #ffe4e6;
+        color: #be123c;
+      }
+      &.color-slate {
+        background: #f1f5f9;
+        color: #334155;
       }
     }
 
@@ -703,25 +1008,26 @@ interface DashboardSection {
     }
 
     .module-name {
-      font-size: 0.88rem;
+      font-size: 0.90rem;
       font-weight: 700;
-      color: var(--ink);
+      color: #0f172a;
     }
 
     .module-count-badge {
       font-size: 0.72rem;
       font-weight: 700;
-      color: var(--petrol);
-      background: var(--gold-soft);
-      padding: 1px 7px;
+      color: #065f46;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      padding: 1px 8px;
       border-radius: 999px;
       font-variant-numeric: tabular-nums;
     }
 
     .module-desc {
-      margin: 2px 0 0 0;
+      margin: 3px 0 0 0;
       font-size: 0.78rem;
-      color: var(--ink-muted);
+      color: #64748b;
       line-height: 1.35;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -729,7 +1035,7 @@ interface DashboardSection {
     }
 
     .module-chevron {
-      color: var(--ink-muted);
+      color: #94a3b8;
       font-size: 18px;
       width: 18px;
       height: 18px;
@@ -853,8 +1159,19 @@ export class DashboardComponent implements OnInit {
   private readonly seguridadService = inject(SeguridadService);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
+  private readonly snackBar = inject(MatSnackBar);
 
   readonly user = this.authService.currentUser;
+  readonly avatarError = signal<boolean>(false);
+  readonly userInitials = computed(() => {
+    const u = this.user();
+    if (!u) return 'US';
+    const f = (u.first_name || '').trim();
+    const l = (u.last_name || '').trim();
+    if (f && l) return (f[0] + l[0]).toUpperCase();
+    if (f) return f.substring(0, 2).toUpperCase();
+    return (u.username || 'US').substring(0, 2).toUpperCase();
+  });
   private readonly menus = this.authService.currentMenu;
   readonly puedeVerVentanilla = computed(() =>
     this.authService.hasRole('ADMIN') || this.authService.hasRole('CORRESPONDENCIA')
@@ -865,11 +1182,24 @@ export class DashboardComponent implements OnInit {
   readonly totalDocs = signal<number>(0);
   readonly totalPendientes = signal<number>(0);
   readonly totalAprobados = signal<number>(0);
+  readonly totalObservados = signal<number>(0);
+  readonly datosCargados = signal<boolean>(false);
+  readonly filtroBandeja = signal<'todos' | 'atender' | 'observados'>('todos');
+  readonly docsRecientes = signal<Documento[]>([]);
+  readonly plantillasFrecuentes = signal<any[]>([]);
+  readonly creandoDesdePlantilla = signal<boolean>(false);
+  readonly avisoCelularOculto = signal<boolean>(localStorage.getItem('home_aviso_celular_oculto') === '1');
 
-  // Señales de métricas visuales Apache ECharts
-  readonly tendenciaOptions = signal<echarts.EChartsOption | null>(null);
-  readonly distribucionOptions = signal<echarts.EChartsOption | null>(null);
-  readonly cargandoMetricas = signal<boolean>(true);
+  readonly contarPorAtender = computed(() => this.recentDocs().filter(d => d.estado !== 'RECHAZADO').length);
+  readonly contarObservados = computed(() => this.recentDocs().filter(d => d.estado === 'RECHAZADO').length);
+  readonly docsFiltrados = computed(() => {
+    const f = this.filtroBandeja();
+    const docs = this.recentDocs();
+    if (f === 'atender') return docs.filter(d => d.estado !== 'RECHAZADO');
+    if (f === 'observados') return docs.filter(d => d.estado === 'RECHAZADO');
+    return docs;
+  });
+
 
   // Contadores reales dinámicos
   readonly totalPlantillas = signal<number>(6);
@@ -1025,20 +1355,44 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarDatosDashboard();
-    this.cargarMetricasOverview();
   }
 
   cargarDatosDashboard(): void {
     // 1. Cargar documentos pendientes de atención del usuario actual (recibidos por atender o devueltos para subsanar)
-    this.documentosService.getDocumentos(5, 1, 'ENVIADO,DERIVADO,RECHAZADO', '', 'home').subscribe({
+    this.documentosService.getDocumentos(10, 1, 'ENVIADO,DERIVADO,RECHAZADO', '', 'home').subscribe({
       next: (res) => {
         const docs = res?.datos?.resultado || [];
         this.recentDocs.set(docs);
+        this.datosCargados.set(true);
       },
       error: () => {
         this.recentDocs.set([]);
+        this.datosCargados.set(true);
       }
     });
+
+    // 1-obs. Contador de observados por subsanar
+    this.documentosService.getDocumentos(1, 1, 'RECHAZADO', '', 'home').subscribe({
+      next: (res) => {
+        if (res.datos && res.datos.total !== undefined) {
+          this.totalObservados.set(res.datos.total);
+        }
+      },
+      error: () => {}
+    });
+
+    // 1-rec. Documentos recientes propios
+    this.documentosService.getDocumentos(5, 1, 'NUEVO,RECHAZADO,ENVIADO,DERIVADO,APROBADO,CERRADO', '', 'documentos').subscribe({
+      next: (res) => this.docsRecientes.set(res?.datos?.resultado || []),
+      error: () => this.docsRecientes.set([])
+    });
+
+    // 1-tpl. Plantillas frecuentes
+    this.http.get<any>('/api/v1/dashboard/plantillas-frecuentes?limit=5').subscribe({
+      next: (res) => this.plantillasFrecuentes.set(Array.isArray(res?.datos) ? res.datos : []),
+      error: () => this.plantillasFrecuentes.set([])
+    });
+
 
     // 1a. Cargar contador de bandeja de pendientes recibidos
     this.documentosService.getDocumentos(1, 1, 'ENVIADO,DERIVADO', '', 'derivados').subscribe({
@@ -1191,13 +1545,58 @@ export class DashboardComponent implements OnInit {
     }
   }
 
+  tituloReciente(d: any): string {
+    const base = d?.nombre && d.nombre !== 'BORRADOR' ? d.nombre : 'Borrador';
+    return d?.nombre_plantilla ? `${base} · ${d.nombre_plantilla}` : base;
+  }
+
+  usarPlantilla(p: any): void {
+    if (this.creandoDesdePlantilla()) return;
+    this.creandoDesdePlantilla.set(true);
+    const usuarioId = this.user()?.id || 1;
+    const payload: any = {
+      nombre: 'BORRADOR',
+      nombre_plantilla: p.nombre,
+      abreviacion: p.abreviacion,
+      plantilla: p.plantilla,
+      plantilla_valor: JSON.stringify({ inputSelect: 'Reservado' }),
+      sw: { enviado: false, enviar: false },
+      fid_plantilla: p.id_plantilla_formly,
+      _usuario_creacion: usuarioId
+    };
+    this.documentosService.crearDocumento(payload).subscribe({
+      next: (res) => {
+        this.creandoDesdePlantilla.set(false);
+        const doc = res?.datos;
+        if (doc?.id_documento) {
+          this.snackBar.open('Borrador creado', 'Cerrar', { duration: 2500 });
+          this.router.navigate(['/documentos', doc.id_documento]);
+        }
+      },
+      error: (err) => {
+        this.creandoDesdePlantilla.set(false);
+        this.snackBar.open(err.error?.mensaje || 'No se pudo crear el documento', 'Cerrar', { duration: 3000 });
+      }
+    });
+  }
+
+  ocultarAvisoCelular(): void {
+    this.avisoCelularOculto.set(true);
+    localStorage.setItem('home_aviso_celular_oculto', '1');
+  }
+
+  filtrarBandeja(filtro: 'todos' | 'atender' | 'observados'): void {
+    this.filtroBandeja.set(filtro);
+    setTimeout(() => document.querySelector('.recent-tramites-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
+
   irARuta(url: string): void {
     if (url) {
       this.router.navigate(['/' + url]);
     }
   }
 
-  irAWorkbench(doc: Documento): void {
+  irAWorkbench(doc: { id_documento?: number }): void {
     if (doc.id_documento) {
       this.router.navigate(['/documentos', doc.id_documento]);
     }
@@ -1208,137 +1607,6 @@ export class DashboardComponent implements OnInit {
       width: '760px',
       maxWidth: '95vw',
       disableClose: false
-    });
-  }
-
-  cargarMetricasOverview(): void {
-    this.cargandoMetricas.set(true);
-    this.http.get<any>('/api/v1/admin/metrics/overview').subscribe({
-      next: (res) => {
-        const datos = res?.datos || {};
-        const docs = datos.documentos || {};
-        const serieMensual = Array.isArray(datos.serieMensual) ? datos.serieMensual : [];
-
-        // 1. Gráfico de Tendencia Mensual (Smooth Area Chart)
-        const mesesLabels = serieMensual.length > 0
-          ? serieMensual.map((s: any) => s.mesLabel || s.mes)
-          : ['May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct'];
-        const cantidades = serieMensual.length > 0
-          ? serieMensual.map((s: any) => s.cantidad || 0)
-          : [0, 0, 0, 0, 0, docs.total_general || 0];
-
-        this.tendenciaOptions.set({
-          tooltip: {
-            trigger: 'axis',
-            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-            borderColor: '#334155',
-            textStyle: { color: '#f8fafc', fontSize: 12 },
-            formatter: (params: any) => {
-              const p = params[0];
-              return `<strong>${p.name}</strong><br/>${p.marker} Documentos procesados: <strong>${p.value}</strong>`;
-            }
-          },
-          grid: {
-            top: 25,
-            left: '3%',
-            right: '4%',
-            bottom: '3%',
-            containLabel: true
-          },
-          xAxis: {
-            type: 'category',
-            boundaryGap: false,
-            data: mesesLabels,
-            axisLine: { lineStyle: { color: '#c7cfc2' } },
-            axisLabel: { color: '#525e4e', fontSize: 11 }
-          },
-          yAxis: {
-            type: 'value',
-            splitLine: { lineStyle: { color: '#eceee9', type: 'dashed' } },
-            axisLabel: { color: '#525e4e', fontSize: 11 }
-          },
-          series: [
-            {
-              name: 'Documentos',
-              type: 'line',
-              smooth: true,
-              showSymbol: true,
-              symbolSize: 6,
-              itemStyle: { color: '#0e7490' },
-              lineStyle: { width: 3, color: '#0e7490' },
-              areaStyle: {
-                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                  { offset: 0, color: 'rgba(14, 116, 144, 0.28)' },
-                  { offset: 1, color: 'rgba(14, 116, 144, 0.02)' }
-                ])
-              },
-              data: cantidades
-            }
-          ]
-        });
-
-        // 2. Gráfico de Distribución Operativa (Half-Donut animado)
-        const enCurso = docs.en_curso || 0;
-        const aprobados = docs.aprobados || 0;
-        const cerrados = docs.cerrados || 0;
-        const ventanilla = (docs.ventanilla_virtual || 0) + (docs.ventanilla_fisica || 0);
-
-        this.distribucionOptions.set({
-          tooltip: {
-            trigger: 'item',
-            backgroundColor: 'rgba(15, 23, 42, 0.92)',
-            borderColor: '#d6a84f',
-            textStyle: { color: '#f8fafc', fontSize: 12 },
-            formatter: '{b}: <strong>{c}</strong> ({d}%)'
-          },
-          legend: {
-            bottom: 0,
-            left: 'center',
-            icon: 'circle',
-            itemWidth: 8,
-            itemHeight: 8,
-            textStyle: { color: '#475569', fontSize: 11 }
-          },
-          color: ['#0284c7', '#059669', '#64748b', '#d6a84f'],
-          series: [
-            {
-              name: 'Estado de Flujo',
-              type: 'pie',
-              radius: ['45%', '72%'],
-              center: ['50%', '45%'],
-              avoidLabelOverlap: false,
-              itemStyle: {
-                borderRadius: 6,
-                borderColor: '#ffffff',
-                borderWidth: 2
-              },
-              label: {
-                show: false,
-                position: 'center'
-              },
-              emphasis: {
-                label: {
-                  show: true,
-                  fontSize: 14,
-                  fontWeight: 'bold',
-                  color: '#0f172a'
-                }
-              },
-              data: [
-                { value: enCurso, name: 'En Curso' },
-                { value: aprobados, name: 'Aprobados' },
-                { value: cerrados, name: 'Cerrados' },
-                { value: ventanilla, name: 'Ventanilla' }
-              ]
-            }
-          ]
-        });
-
-        this.cargandoMetricas.set(false);
-      },
-      error: () => {
-        this.cargandoMetricas.set(false);
-      }
     });
   }
 }
