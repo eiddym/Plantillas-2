@@ -22,21 +22,6 @@ import { AuthService } from '../../../core/auth/auth.service';
   ],
   template: `
     <div class="login-container">
-      <!-- Patrón Escultural en CSS Puro: Estratos de Óxido de Cobre / Malaquita -->
-      <div class="copper-ribbons-wrap" aria-hidden="true">
-        <div class="glow-orb glow-top"></div>
-        <div class="glow-orb glow-center"></div>
-        <div class="glow-orb glow-bottom"></div>
-
-        <div class="ribbon-blade blade-1"></div>
-        <div class="ribbon-blade blade-2"></div>
-        <div class="ribbon-blade blade-3"></div>
-        <div class="ribbon-blade blade-4"></div>
-        <div class="ribbon-blade blade-5"></div>
-        <div class="ribbon-blade blade-6"></div>
-        <div class="ribbon-blade blade-7"></div>
-      </div>
-
       <div class="login-card-horizontal">
         <!-- Panel Izquierdo: Identidad Oficial Cooperativa Marabunta R.L. -->
         <div class="panel-izquierdo">
@@ -51,7 +36,7 @@ import { AuthService } from '../../../core/auth/auth.service';
           <p class="folio-caption">Cooperativa Minera Marabunta R.L.</p>
         </div>
 
-        <!-- Panel Derecho: Formulario DOCS -->
+        <!-- Panel Derecho: Acceso al Sistema -->
         <div class="panel-derecho">
           <div class="header-centrado">
             <div class="cabecera-sistema">
@@ -71,8 +56,8 @@ import { AuthService } from '../../../core/auth/auth.service';
             </div>
           }
 
+          <!-- Formulario de acceso local (comentado a requerimiento para habilitar acceso único SSO)
           <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
-            <!-- Campo Usuario -->
             <div class="input-group">
               <mat-icon class="icon-field">person</mat-icon>
               <input
@@ -88,7 +73,6 @@ import { AuthService } from '../../../core/auth/auth.service';
               <div class="field-error">El nombre de usuario es obligatorio</div>
             }
 
-            <!-- Campo Contraseña -->
             <div class="input-group">
               <mat-icon class="icon-field">lock</mat-icon>
               <input
@@ -112,7 +96,6 @@ import { AuthService } from '../../../core/auth/auth.service';
               <div class="field-error">La contraseña es obligatoria</div>
             }
 
-            <!-- Botón Login -->
             <button
               type="submit"
               class="login-btn"
@@ -121,42 +104,26 @@ import { AuthService } from '../../../core/auth/auth.service';
               {{ loading() ? 'Ingresando al sistema...' : 'Ingresar al sistema' }}
             </button>
           </form>
+          -->
 
-          <!-- Acceso SSO Marabunta ID -->
-          <div class="sso-container">
-            <div class="sso-separator">
-              <span>o accede directamente</span>
-            </div>
-            <a href="/api/v1/auth/oidc/login" class="btn-sso">
+          <!-- Acceso SSO Marabunta ID Principal -->
+          <div class="sso-primary-wrap">
+            <a href="/api/v1/auth/oidc/login" class="btn-sso-primary">
               <mat-icon class="sso-icon">vpn_key</mat-icon>
-              <span>Acceder con Marabunta ID (SSO)</span>
+              <span>Acceder con Marabunta ID</span>
             </a>
+            <p class="sso-hint">Acceso seguro corporativo</p>
           </div>
 
-          <!-- Enlaces Públicos Destacados Institucionales -->
-          <div class="enlaces-publicos">
-            <!-- 1. Verifica tu documento (Arriba) -->
-            <a routerLink="/verificar" class="acceso-publico-card card-verificar">
-              <div class="card-icon-wrap icon-petroleo">
-                <mat-icon>verified_user</mat-icon>
-              </div>
-              <div class="card-text">
-                <strong class="card-title">Verifica tu documento aquí</strong>
-                <span class="card-subtitle">Cotejo de autenticidad y fe pública digital</span>
-              </div>
-              <mat-icon class="card-arrow">arrow_forward</mat-icon>
+          <!-- Enlaces Públicos Compactos en Píldoras -->
+          <div class="enlaces-publicos-pills">
+            <a routerLink="/verificar" class="pill-publico pill-verificar" matTooltip="Cotejo de autenticidad y fe pública digital">
+              <mat-icon>verified_user</mat-icon>
+              <span>Verificar documento</span>
             </a>
-
-            <!-- 2. Ventanilla Única Virtual (Abajo) -->
-            <a routerLink="/ventanilla-virtual" class="acceso-publico-card card-ventanilla">
-              <div class="card-icon-wrap icon-petroleo-secundario">
-                <mat-icon>mark_email_read</mat-icon>
-              </div>
-              <div class="card-text">
-                <strong class="card-title">Ventanilla Única Virtual</strong>
-                <span class="card-subtitle">Radicar notas externas o consultar documento</span>
-              </div>
-              <mat-icon class="card-arrow">arrow_forward</mat-icon>
+            <a routerLink="/ventanilla-virtual" class="pill-publico pill-ventanilla" matTooltip="Radicar notas externas o consultar documento">
+              <mat-icon>mark_email_read</mat-icon>
+              <span>Ventanilla Virtual</span>
             </a>
           </div>
         </div>
@@ -170,145 +137,29 @@ import { AuthService } from '../../../core/auth/auth.service';
       display: flex;
       align-items: center;
       justify-content: flex-end;
-      padding: 32px 7vw 32px 32px;
-      background:
-        radial-gradient(ellipse 65% 75% at 5% 50%, rgba(16, 185, 129, 0.18) 0%, transparent 60%),
-        radial-gradient(circle at 85% 15%, rgba(5, 150, 105, 0.10) 0%, transparent 45%),
-        linear-gradient(135deg, #01130c 0%, #022316 42%, #033221 72%, #01160d 100%);
+      padding: 40px 9vw 40px 40px;
+      background-color: #01140e;
+      background-image:
+        linear-gradient(to right, rgba(1, 20, 14, 0.12) 0%, rgba(1, 20, 14, 0.38) 45%, rgba(1, 20, 14, 0.72) 100%),
+        url('/assets/images/login-bg.jpg');
+      background-repeat: no-repeat;
+      background-position: center left;
+      background-size: cover;
       font-family: var(--font-ui);
       box-sizing: border-box;
       position: relative;
       overflow: hidden;
     }
 
-    /* --- PATRÓN ESCULTURAL EN CSS PURO: LÁMINAS 3D DE ÓXIDO DE COBRE --- */
-    .copper-ribbons-wrap {
-      position: absolute;
-      top: 0;
-      left: 0;
-      bottom: 0;
-      width: 54vw;
-      max-width: 820px;
-      height: 100%;
-      pointer-events: none;
-      overflow: hidden;
-      z-index: 1;
-    }
-
-    .glow-orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(80px);
-      pointer-events: none;
-    }
-
-    .glow-top {
-      top: 8%;
-      left: 6%;
-      width: 280px;
-      height: 280px;
-      background: rgba(16, 185, 129, 0.20);
-    }
-
-    .glow-center {
-      top: 38%;
-      left: 12%;
-      width: 360px;
-      height: 360px;
-      background: rgba(52, 211, 153, 0.24);
-    }
-
-    .glow-bottom {
-      bottom: 6%;
-      left: 4%;
-      width: 260px;
-      height: 260px;
-      background: rgba(5, 150, 105, 0.22);
-    }
-
-    .ribbon-blade {
-      position: absolute;
-      left: -100px;
-      width: 620px;
-      height: 165px;
-      border-radius: 40px 220px 180px 40px;
-      box-shadow:
-        -12px 20px 38px rgba(0, 10, 6, 0.88),
-        inset 0 2px 6px rgba(167, 243, 208, 0.45);
-      border-top: 1.5px solid rgba(167, 243, 208, 0.65);
-      border-right: 1.5px solid rgba(110, 231, 183, 0.45);
-      transform-origin: 0% 50%;
-      transition: transform 0.5s ease;
-    }
-
-    .blade-1 {
-      top: 4%;
-      transform: rotate(-32deg) scale(1.05);
-      background: linear-gradient(110deg, #01160f 0%, #032b1e 38%, #06543b 72%, #0f835d 100%);
-      opacity: 0.9;
-    }
-
-    .blade-2 {
-      top: 17%;
-      transform: rotate(-21deg) scale(1.12);
-      background: linear-gradient(110deg, #011a12 0%, #043625 34%, #086646 70%, #13976d 100%);
-      border-top-color: rgba(167, 243, 208, 0.72);
-      opacity: 0.94;
-    }
-
-    .blade-3 {
-      top: 30%;
-      transform: rotate(-9deg) scale(1.18);
-      background: linear-gradient(108deg, #011d14 0%, #05422e 30%, #0d7c56 68%, #20b382 100%);
-      border-top-color: rgba(167, 243, 208, 0.8);
-      opacity: 0.97;
-    }
-
-    .blade-4 {
-      top: 43%;
-      transform: rotate(3deg) scale(1.24);
-      background: linear-gradient(105deg, #022317 0%, #075239 26%, #109468 64%, #34d399 92%, #6ee7b7 100%);
-      border-top: 2px solid rgba(209, 250, 229, 0.95);
-      border-right: 2px solid rgba(167, 243, 208, 0.7);
-      box-shadow:
-        -16px 26px 46px rgba(0, 8, 4, 0.94),
-        inset 0 3px 8px rgba(209, 250, 229, 0.55);
-      z-index: 2;
-    }
-
-    .blade-5 {
-      top: 56%;
-      transform: rotate(16deg) scale(1.18);
-      background: linear-gradient(102deg, #011c13 0%, #05432f 32%, #0e7d57 70%, #1aa677 100%);
-      border-top-color: rgba(167, 243, 208, 0.78);
-      opacity: 0.96;
-    }
-
-    .blade-6 {
-      top: 69%;
-      transform: rotate(28deg) scale(1.12);
-      background: linear-gradient(98deg, #01170f 0%, #043525 36%, #0a6546 74%, #12875f 100%);
-      border-top-color: rgba(167, 243, 208, 0.68);
-      opacity: 0.92;
-    }
-
-    .blade-7 {
-      top: 81%;
-      transform: rotate(40deg) scale(1.05);
-      background: linear-gradient(95deg, #01120b 0%, #03271b 42%, #075037 80%, #0e6e4c 100%);
-      border-top-color: rgba(167, 243, 208, 0.58);
-      opacity: 0.88;
-    }
-
     .login-card-horizontal {
       display: flex;
       width: 100%;
-      max-width: 860px;
-      min-height: 480px;
+      max-width: 760px;
+      min-height: 380px;
       background-color: #ffffff;
-      border-radius: 26px;
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      box-shadow: 0 32px 64px rgba(1, 20, 14, 0.65), 0 0 0 1px rgba(16, 185, 129, 0.18);
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 32px 64px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(16, 185, 129, 0.15);
       overflow: hidden;
       position: relative;
       z-index: 2;
@@ -316,69 +167,57 @@ import { AuthService } from '../../../core/auth/auth.service';
 
     /* --- PANEL IZQUIERDO --- */
     .panel-izquierdo {
-      flex: 0.92;
+      flex: 0.9;
       background:
-        radial-gradient(circle at 18% 88%, rgba(52, 211, 153, 0.35) 0%, transparent 58%),
-        linear-gradient(160deg, #011c13 0%, #032f20 55%, #064e3b 100%);
+        radial-gradient(circle at 20% 85%, rgba(52, 211, 153, 0.32) 0%, transparent 60%),
+        linear-gradient(160deg, #011a12 0%, #032b1e 55%, #064e3b 100%);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 20px;
+      gap: 16px;
       padding: 36px 28px;
       position: relative;
       border-right: 1px solid rgba(52, 211, 153, 0.18);
-
-      &::before {
-        content: '';
-        position: absolute;
-        width: 240px;
-        height: 240px;
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(16, 185, 129, 0.22) 0%, transparent 70%);
-        pointer-events: none;
-      }
     }
 
     .logo-wrapper {
       display: flex;
       align-items: center;
       justify-content: center;
-      position: relative;
       cursor: pointer;
     }
 
     .logo-cooperativa {
       position: relative;
       width: 100%;
-      max-width: 220px;
+      max-width: 190px;
       height: auto;
-      max-height: 200px;
+      max-height: 170px;
       object-fit: contain;
-      filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.35));
+      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.35));
       transition: transform 0.42s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.42s ease;
 
       &:hover {
-        transform: scale(1.12);
-        filter: drop-shadow(0 18px 36px rgba(16, 185, 129, 0.45)) drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5));
+        transform: scale(1.10);
+        filter: drop-shadow(0 16px 30px rgba(16, 185, 129, 0.45));
       }
     }
 
     .folio-caption {
-      position: relative;
       margin: 0;
       font-family: var(--font-ui);
-      font-size: 0.88rem;
+      font-size: 0.84rem;
       font-weight: 600;
-      color: rgba(255, 255, 255, 0.88);
+      color: rgba(255, 255, 255, 0.9);
       text-align: center;
       letter-spacing: 0.02em;
     }
 
     /* --- PANEL DERECHO --- */
     .panel-derecho {
-      flex: 1.2;
-      padding: 38px 44px;
+      flex: 1.15;
+      padding: 40px 38px;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -387,7 +226,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 
     .header-centrado {
       text-align: center;
-      margin-bottom: 22px;
+      margin-bottom: 24px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -395,7 +234,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 
     .cabecera-sistema {
       text-align: center;
-      font-size: 0.74rem;
+      font-size: 0.72rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.07em;
@@ -407,285 +246,113 @@ import { AuthService } from '../../../core/auth/auth.service';
     .titulo-docs {
       text-align: center;
       font-family: var(--font-ui);
-      font-size: 2.15rem;
+      font-size: 2.1rem;
       font-weight: 800;
       color: #0f172a;
       margin: 0;
       letter-spacing: -0.025em;
     }
 
-    .login-form {
+    /* --- ACCESO PRINCIPAL SSO --- */
+    .sso-primary-wrap {
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
     }
 
-    .input-group {
-      position: relative;
-      width: 100%;
+    .btn-sso-primary {
       display: flex;
       align-items: center;
-    }
-
-    .input-blanco {
+      justify-content: center;
+      gap: 10px;
       width: 100%;
-      height: 46px;
-      background-color: #ffffff;
-      border: 1px solid #e2e8f0;
+      height: 48px;
       border-radius: 14px;
-      padding: 0 42px;
-      font-size: 0.92rem;
-      font-family: var(--font-ui);
-      color: #0f172a;
-      transition: border-color 0.16s ease, box-shadow 0.16s ease;
-
-      &::placeholder {
-        color: #94a3b8;
-        font-weight: 400;
-      }
-
-      &:hover {
-        border-color: #cbd5e1;
-      }
-
-      &:focus {
-        outline: none;
-        background-color: #ffffff;
-        border-color: #059669;
-        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.14);
-      }
-    }
-
-    .icon-field {
-      position: absolute;
-      left: 13px;
-      color: #64748b;
-      font-size: 19px;
-      width: 19px;
-      height: 19px;
-      pointer-events: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .toggle-password {
-      position: absolute;
-      right: 12px;
-      background: transparent;
-      border: none;
-      color: #64748b;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      &:hover {
-        color: #0f172a;
-      }
-      mat-icon {
-        font-size: 19px;
-        width: 19px;
-        height: 19px;
-      }
-    }
-
-    .field-error {
-      color: var(--state-err);
-      font-size: 0.76rem;
-      margin-top: -8px;
-      margin-left: 2px;
-      font-weight: 500;
-    }
-
-    /* Botón Login Píldora Carbón (Captura 3) */
-    .login-btn {
-      width: 100%;
-      height: 46px;
-      margin-top: 4px;
-      background: #111827;
+      background: linear-gradient(135deg, #065f46 0%, #047857 50%, #059669 100%);
       color: #ffffff;
-      border: none;
-      border-radius: 9999px;
-      font-family: var(--font-ui);
       font-weight: 700;
-      font-size: 0.92rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 6px 18px rgba(17, 24, 39, 0.22);
-      transition: transform 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
-
-      &:hover:not(:disabled) {
-        background: #1f2937;
-        transform: translateY(-1px);
-        box-shadow: 0 10px 24px rgba(17, 24, 39, 0.30);
-      }
-
-      &:disabled {
-        opacity: 0.55;
-        cursor: not-allowed;
-      }
-    }
-
-    /* --- BOTÓN SSO MARABUNTA ID (Caja limpia estilo Captura 3) --- */
-    .sso-container {
-      margin-top: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .sso-separator {
-      display: flex;
-      align-items: center;
-      text-align: center;
-      color: #94a3b8;
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-
-      &::before,
-      &::after {
-        content: '';
-        flex: 1;
-        border-bottom: 1px solid #f1f5f9;
-      }
-
-      span {
-        padding: 0 10px;
-      }
-    }
-
-    .btn-sso {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      height: 46px;
-      border-radius: 14px;
-      background: #ffffff;
-      color: #0f172a;
-      font-weight: 700;
-      font-size: 0.88rem;
+      font-size: 0.94rem;
       text-decoration: none;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
-      transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+      box-shadow: 0 6px 18px rgba(5, 150, 105, 0.32);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
 
       &:hover {
         transform: translateY(-1px);
-        border-color: #10b981;
-        background: #f8fafc;
+        box-shadow: 0 10px 24px rgba(5, 150, 105, 0.42);
+        filter: brightness(1.06);
       }
 
       .sso-icon {
-        font-size: 19px;
-        width: 19px;
-        height: 19px;
-        color: #059669;
-      }
-    }
-
-    /* --- ENLACES PÚBLICOS --- */
-    .enlaces-publicos {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 18px;
-      padding-top: 14px;
-      border-top: 1px solid var(--line);
-    }
-
-    .acceso-publico-card {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 11px 14px;
-      border-radius: 12px;
-      text-decoration: none;
-      color: var(--ink);
-      border: 1px solid var(--line);
-      transition: transform 0.16s ease, border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
-
-      &.card-verificar {
-        background: #f0f9ff;
-        border-color: #bae6fd;
-
-        &:hover {
-          background: #e0f2fe;
-          border-color: #0284c7;
-          transform: translateY(-1px);
-          box-shadow: 0 6px 16px rgba(2, 132, 199, 0.14);
-        }
-      }
-
-      &.card-ventanilla {
-        background: #ecfdf5;
-        border-color: #a7f3d0;
-
-        &:hover {
-          background: #d1fae5;
-          border-color: #059669;
-          transform: translateY(-1px);
-          box-shadow: 0 6px 16px rgba(5, 150, 105, 0.14);
-        }
-      }
-    }
-
-    .card-icon-wrap {
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      background: linear-gradient(135deg, #0284c7 0%, #0e7490 100%);
-      box-shadow: 0 4px 10px rgba(2, 132, 199, 0.25);
-
-      mat-icon {
-        color: #ffffff;
         font-size: 20px;
         width: 20px;
         height: 20px;
       }
+    }
 
-      &.icon-petroleo-secundario {
-        background: linear-gradient(135deg, #059669 0%, #0d9488 100%);
-        box-shadow: 0 4px 10px rgba(5, 150, 105, 0.25);
+    .sso-hint {
+      margin: 0;
+      font-size: 0.76rem;
+      color: #64748b;
+      text-align: center;
+    }
 
-        mat-icon {
-          color: #ffffff;
+    /* --- ENLACES PÚBLICOS EN PÍLDORAS COMPACTAS --- */
+    .enlaces-publicos-pills {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    .pill-publico {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 10px 12px;
+      border-radius: 11px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: transform 0.16s ease, background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+      white-space: nowrap;
+
+      mat-icon {
+        font-size: 17px;
+        width: 17px;
+        height: 17px;
+      }
+
+      &.pill-verificar {
+        background: #f0fdf4;
+        color: #065f46;
+        border: 1px solid #bbf7d0;
+
+        &:hover {
+          background: #dcfce7;
+          border-color: #86efac;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(6, 95, 70, 0.08);
         }
       }
-    }
 
-    .card-text {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-    }
+      &.pill-ventanilla {
+        background: #f8fafc;
+        color: #334155;
+        border: 1px solid #e2e8f0;
 
-    .card-title {
-      font-size: 0.84rem;
-      font-weight: 700;
-      color: var(--ink);
-    }
-
-    .card-subtitle {
-      font-size: 0.74rem;
-      color: var(--ink-muted);
-    }
-
-    .card-arrow {
-      color: var(--ink-muted);
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
+        &:hover {
+          background: #f1f5f9;
+          border-color: #cbd5e1;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(51, 65, 85, 0.08);
+        }
+      }
     }
 
     .error-banner {
@@ -706,87 +373,80 @@ import { AuthService } from '../../../core/auth/auth.service';
       margin-bottom: 0.75rem;
     }
 
-    @media (max-width: 1024px) {
+    @media (max-width: 900px) {
       .login-container {
         justify-content: center;
-        padding: 24px;
-      }
-
-      .copper-ribbons-wrap {
-        width: 100vw;
-        max-width: none;
-        opacity: 0.35;
+        padding: 30px 20px;
       }
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 680px) {
       .login-container {
-        padding: 16px 12px;
+        padding: 24px 16px;
         justify-content: center;
-      }
-
-      .copper-ribbons-wrap {
-        opacity: 0.22;
+        background-position: center center;
+        background-image:
+          linear-gradient(rgba(1, 20, 14, 0.45), rgba(1, 20, 14, 0.45)),
+          url('/assets/images/login-bg.jpg');
       }
 
       .login-card-horizontal {
         flex-direction: column;
-        max-width: 420px;
+        max-width: 360px;
+        width: 100%;
         min-height: auto;
-        border-radius: 18px;
+        border-radius: 22px;
+        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.55);
       }
 
       .panel-izquierdo {
-        padding: 22px 18px 16px;
+        padding: 20px 18px 14px;
         gap: 8px;
         border-right: none;
         border-bottom: 1px solid rgba(52, 211, 153, 0.22);
       }
 
-      .folio-caption {
-        display: block;
-        font-size: 0.78rem;
-      }
-
-      .logo-cooperativa {
-        max-width: 96px;
-        max-height: 76px;
-      }
-
-      .panel-derecho {
-        padding: 22px 20px 24px;
-        flex: unset;
-      }
-
-      .titulo-docs {
-        font-size: 1.65rem;
-        margin-bottom: 14px;
-      }
-
-      .input-blanco {
-        height: 42px;
-        font-size: 0.88rem;
-        padding: 0 38px;
-      }
-
-      .login-btn,
-      .btn-sso {
-        height: 42px;
-      }
-    }
-
-    @media (max-width: 380px) {
-      .login-container {
-        padding: 8px;
-      }
-
-      .panel-derecho {
-        padding: 16px 14px 18px;
-      }
-
       .logo-cooperativa {
         max-width: 76px;
         max-height: 58px;
+      }
+
+      .folio-caption {
+        font-size: 0.76rem;
+      }
+
+      .panel-derecho {
+        padding: 20px 18px 22px;
+      }
+
+      .header-centrado {
+        margin-bottom: 16px;
+      }
+
+      .cabecera-sistema {
+        font-size: 0.67rem;
+        margin-bottom: 3px;
+      }
+
+      .titulo-docs {
+        font-size: 1.6rem;
+      }
+
+      .btn-sso-primary {
+        height: 46px;
+        font-size: 0.90rem;
+      }
+
+      .enlaces-publicos-pills {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        margin-top: 18px;
+        padding-top: 14px;
+      }
+
+      .pill-publico {
+        padding: 9px 12px;
+        font-size: 0.76rem;
       }
     }
   `]
