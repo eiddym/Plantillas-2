@@ -22,6 +22,21 @@ import { AuthService } from '../../../core/auth/auth.service';
   ],
   template: `
     <div class="login-container">
+      <!-- Patrón Escultural en CSS Puro: Estratos de Óxido de Cobre / Malaquita -->
+      <div class="copper-ribbons-wrap" aria-hidden="true">
+        <div class="glow-orb glow-top"></div>
+        <div class="glow-orb glow-center"></div>
+        <div class="glow-orb glow-bottom"></div>
+
+        <div class="ribbon-blade blade-1"></div>
+        <div class="ribbon-blade blade-2"></div>
+        <div class="ribbon-blade blade-3"></div>
+        <div class="ribbon-blade blade-4"></div>
+        <div class="ribbon-blade blade-5"></div>
+        <div class="ribbon-blade blade-6"></div>
+        <div class="ribbon-blade blade-7"></div>
+      </div>
+
       <div class="login-card-horizontal">
         <!-- Panel Izquierdo: Identidad Oficial Cooperativa Marabunta R.L. -->
         <div class="panel-izquierdo">
@@ -156,15 +171,133 @@ import { AuthService } from '../../../core/auth/auth.service';
       align-items: center;
       justify-content: flex-end;
       padding: 32px 7vw 32px 32px;
-      background-color: #022016;
-      background-image: url('/assets/images/login-bg.jpg');
-      background-repeat: no-repeat;
-      background-position: center left;
-      background-size: cover;
+      background:
+        radial-gradient(ellipse 65% 75% at 5% 50%, rgba(16, 185, 129, 0.18) 0%, transparent 60%),
+        radial-gradient(circle at 85% 15%, rgba(5, 150, 105, 0.10) 0%, transparent 45%),
+        linear-gradient(135deg, #01130c 0%, #022316 42%, #033221 72%, #01160d 100%);
       font-family: var(--font-ui);
       box-sizing: border-box;
       position: relative;
       overflow: hidden;
+    }
+
+    /* --- PATRÓN ESCULTURAL EN CSS PURO: LÁMINAS 3D DE ÓXIDO DE COBRE --- */
+    .copper-ribbons-wrap {
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 54vw;
+      max-width: 820px;
+      height: 100%;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+    }
+
+    .glow-top {
+      top: 8%;
+      left: 6%;
+      width: 280px;
+      height: 280px;
+      background: rgba(16, 185, 129, 0.20);
+    }
+
+    .glow-center {
+      top: 38%;
+      left: 12%;
+      width: 360px;
+      height: 360px;
+      background: rgba(52, 211, 153, 0.24);
+    }
+
+    .glow-bottom {
+      bottom: 6%;
+      left: 4%;
+      width: 260px;
+      height: 260px;
+      background: rgba(5, 150, 105, 0.22);
+    }
+
+    .ribbon-blade {
+      position: absolute;
+      left: -100px;
+      width: 620px;
+      height: 165px;
+      border-radius: 40px 220px 180px 40px;
+      box-shadow:
+        -12px 20px 38px rgba(0, 10, 6, 0.88),
+        inset 0 2px 6px rgba(167, 243, 208, 0.45);
+      border-top: 1.5px solid rgba(167, 243, 208, 0.65);
+      border-right: 1.5px solid rgba(110, 231, 183, 0.45);
+      transform-origin: 0% 50%;
+      transition: transform 0.5s ease;
+    }
+
+    .blade-1 {
+      top: 4%;
+      transform: rotate(-32deg) scale(1.05);
+      background: linear-gradient(110deg, #01160f 0%, #032b1e 38%, #06543b 72%, #0f835d 100%);
+      opacity: 0.9;
+    }
+
+    .blade-2 {
+      top: 17%;
+      transform: rotate(-21deg) scale(1.12);
+      background: linear-gradient(110deg, #011a12 0%, #043625 34%, #086646 70%, #13976d 100%);
+      border-top-color: rgba(167, 243, 208, 0.72);
+      opacity: 0.94;
+    }
+
+    .blade-3 {
+      top: 30%;
+      transform: rotate(-9deg) scale(1.18);
+      background: linear-gradient(108deg, #011d14 0%, #05422e 30%, #0d7c56 68%, #20b382 100%);
+      border-top-color: rgba(167, 243, 208, 0.8);
+      opacity: 0.97;
+    }
+
+    .blade-4 {
+      top: 43%;
+      transform: rotate(3deg) scale(1.24);
+      background: linear-gradient(105deg, #022317 0%, #075239 26%, #109468 64%, #34d399 92%, #6ee7b7 100%);
+      border-top: 2px solid rgba(209, 250, 229, 0.95);
+      border-right: 2px solid rgba(167, 243, 208, 0.7);
+      box-shadow:
+        -16px 26px 46px rgba(0, 8, 4, 0.94),
+        inset 0 3px 8px rgba(209, 250, 229, 0.55);
+      z-index: 2;
+    }
+
+    .blade-5 {
+      top: 56%;
+      transform: rotate(16deg) scale(1.18);
+      background: linear-gradient(102deg, #011c13 0%, #05432f 32%, #0e7d57 70%, #1aa677 100%);
+      border-top-color: rgba(167, 243, 208, 0.78);
+      opacity: 0.96;
+    }
+
+    .blade-6 {
+      top: 69%;
+      transform: rotate(28deg) scale(1.12);
+      background: linear-gradient(98deg, #01170f 0%, #043525 36%, #0a6546 74%, #12875f 100%);
+      border-top-color: rgba(167, 243, 208, 0.68);
+      opacity: 0.92;
+    }
+
+    .blade-7 {
+      top: 81%;
+      transform: rotate(40deg) scale(1.05);
+      background: linear-gradient(95deg, #01120b 0%, #03271b 42%, #075037 80%, #0e6e4c 100%);
+      border-top-color: rgba(167, 243, 208, 0.58);
+      opacity: 0.88;
     }
 
     .login-card-horizontal {
@@ -577,7 +710,12 @@ import { AuthService } from '../../../core/auth/auth.service';
       .login-container {
         justify-content: center;
         padding: 24px;
-        background-position: center center;
+      }
+
+      .copper-ribbons-wrap {
+        width: 100vw;
+        max-width: none;
+        opacity: 0.35;
       }
     }
 
@@ -585,6 +723,10 @@ import { AuthService } from '../../../core/auth/auth.service';
       .login-container {
         padding: 16px 12px;
         justify-content: center;
+      }
+
+      .copper-ribbons-wrap {
+        opacity: 0.22;
       }
 
       .login-card-horizontal {
