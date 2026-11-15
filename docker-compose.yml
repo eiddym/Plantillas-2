@@ -14,7 +14,7 @@ services:
     image: postgres:16-alpine
     restart: always
     ports:
-      - "${DB_PUERTO_HOST:-5433}:5432"
+      - "127.0.0.1:${DB_PUERTO_HOST:-5433}:5432"
     env_file:
       - .env
     environment:
@@ -48,7 +48,7 @@ services:
     image: redis:7-alpine
     restart: always
     ports:
-      - "${REDIS_PUERTO_HOST:-6379}:6379"
+      - "127.0.0.1:${REDIS_PUERTO_HOST:-6379}:6379"
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy noeviction
     volumes:
       - redis_data:/data
@@ -99,7 +99,7 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "${BACKEND_PORT_RANGE:-8000-8010}:8000"
+      - "127.0.0.1:${BACKEND_PORT_RANGE:-8000-8010}:8000"
     working_dir: /app
     command: >
       sh -c "if [ -f /shared/url_verificacion.env ] && [ -z \"$$URL_VERIFICACION\" ]; then

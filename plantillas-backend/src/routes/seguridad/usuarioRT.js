@@ -178,6 +178,9 @@ module.exports = app => {
   });
 
   app.get('/api/v1/seguridad/usuario', (req,res) => {
+    if (!req.body.audit_usuario && !req.user) {
+      return res.status(401).send(util.formatearMensaje("ERROR", "Usuario no autenticado."));
+    }
     // Si existe consultas.
     if(Object.keys(req.query).length != 0){
       if(req.query.limit && req.query.page){

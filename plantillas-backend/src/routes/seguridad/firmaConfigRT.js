@@ -3,11 +3,30 @@ const util = require('../../lib/util.js');
 module.exports = (app) => {
   const sequelize = app.src.db.sequelize;
 
+  const verificarAdmin = (req, res) => {
+    const usuario = (req.body && req.body.audit_usuario) || req.user;
+    if (!usuario) {
+      res.status(401).send(util.formatearMensaje('ERROR', 'Usuario no autenticado'));
+      return false;
+    }
+    const roles = usuario.roles || [];
+    const esAdmin = roles.some(r => {
+      const nombre = (r.rol && r.rol.nombre) || r.nombre || '';
+      return nombre.toUpperCase() === 'ADMIN' || r.fid_rol === 1;
+    });
+    if (!esAdmin) {
+      res.status(403).send(util.formatearMensaje('ERROR', 'Acceso denegado. Se requiere rol de Administrador.'));
+      return false;
+    }
+    return true;
+  };
+
   /**
    * @api {get} /api/v1/admin/firma/config Consulta el método de firma/aprobación activo
    * @apiGroup FirmaConfig
    */
   app.get('/api/v1/admin/firma/config', async (req, res) => {
+    if (!verificarAdmin(req, res)) return;
     try {
       const [results] = await sequelize.query(`
         SELECT clave, valor, descripcion, _fecha_modificacion 
@@ -45,6 +64,7 @@ module.exports = (app) => {
    * @apiGroup FirmaConfig
    */
   app.put('/api/v1/admin/firma/config', async (req, res) => {
+    if (!verificarAdmin(req, res)) return;
     try {
       const { tipo_firma } = req.body;
 

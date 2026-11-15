@@ -434,6 +434,7 @@ module.exports={
     }],
   }),
   buscarRolTodos: (UsuarioRol, Rol, Usuario, Oficina, condicion) => Usuario.findAll({
+    attributes: { exclude: ['contrasena'] },
     where: condicion,
     order: [['estado', 'ASC'], ['usuario', 'ASC']],
     include: [{

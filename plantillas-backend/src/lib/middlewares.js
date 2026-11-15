@@ -444,11 +444,37 @@ module.exports = app => {
         }
         // Si no existe la autorizacion.
         else{
-          return next();
-          return res.status(403).send({
-            success: false,
-            message: ' Fallo la autenticación.',
-          });
+          const pathLimpio = (req.originalUrl || req.url || '').split('?')[0];
+
+          // Rutas públicas institucionales bajo /api que no requieren token Bearer
+          const esRutaPublica = (p) => {
+            return (
+              p === '/api/v1/autenticar' ||
+              p === '/api/v1/auth/oidc/login' ||
+              p === '/api/v1/auth/oidc/callback' ||
+              p === '/api/v1/auth/sso/consume' ||
+              p === '/api/v1/seguridad/login' ||
+              p === '/api/v1/seguridad/mosparo/config' ||
+              p === '/api/v1/mosparo/config' ||
+              p === '/api/v1/seguridad/verificarDocumento' ||
+              p === '/api/v1/seguridad/verificar' ||
+              p === '/api/v1/seguridad/pdfVerificado' ||
+              p === '/api/v1/salud' ||
+              p === '/api/v1/health' ||
+              p === '/api/v1/ready' ||
+              p.startsWith('/api/v1/verificar_documento') ||
+              p.startsWith('/api/v1/verificar/') ||
+              p.startsWith('/api/v1/ventanilla/mosparo/config') ||
+              p.startsWith('/api/v1/ventanilla/consultar') ||
+              p.startsWith('/api/v1/ventanilla/radicar')
+            );
+          };
+
+          if (esRutaPublica(pathLimpio)) {
+            return next();
+          }
+
+          return res.status(401).send(Util.formatearMensaje('ERROR', 'Usuario no autenticado. Inicie sesión para continuar.'));
         }
       }
       // Si es igual a 'OPTIONS'.
