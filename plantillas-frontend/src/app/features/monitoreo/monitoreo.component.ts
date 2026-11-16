@@ -12,8 +12,10 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSelectModule } from '@angular/material/select';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { AuthService } from '../../core/auth/auth.service';
 import { EchartComponent } from '../../shared/components/echart/echart.component';
+import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component';
 import * as echarts from 'echarts';
 
 export interface UsuarioEstadoDoc {
@@ -27,6 +29,8 @@ export interface UsuarioEstadoDoc {
   RECHAZADO: number | null;
   CERRADO: number | null;
   ELIMINADO: number | null;
+  PENDIENTE_FIRMA?: number | null;
+  FIRMADO?: number | null;
   total?: number;
 }
 
@@ -48,6 +52,7 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
     MatFormFieldModule,
     MatTooltipModule,
     MatSelectModule,
+    MatDialogModule,
     EchartComponent
   ],
   template: `
@@ -63,6 +68,10 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
         </div>
 
         <div class="scope-badges">
+          <span class="scope-badge scope-firma" [matTooltip]="'Método rector configurado en Administración → Método de Firma'">
+            <mat-icon>{{ metodoFirma() === 'CIUDADANIA_DIGITAL' ? 'verified_user' : 'fingerprint' }}</mat-icon>
+            <span>Método: {{ metodoFirmaLabel() }}</span>
+          </span>
           <span class="scope-badge" [class.scope-admin]="esAdminOMae()">
             <mat-icon>{{ esAdminOMae() ? 'public' : 'person' }}</mat-icon>
             <span>{{ esAdminOMae() ? 'Control MAE / Directivo' : 'Panel de Usuario' }}</span>
@@ -115,8 +124,8 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
       <!-- PESTAÑA 1: VISIÓN GLOBAL INSTITUCIONAL (MAE / ADMIN)           -->
       <!-- ============================================================== -->
       <div *ngIf="tabActiva() === 'global'" class="tab-content fade-in">
-        <!-- KPIs Globales -->
-        <div class="kpi-row">
+        <!-- 5 KPIs Globales Sincronizados con Ciclo de Firma -->
+        <div class="kpi-row kpi-row-5">
           <div class="kpi-stat-card card-total">
             <div class="kpi-icon-box bg-slate">
               <mat-icon>inventory_2</mat-icon>
@@ -133,7 +142,17 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
             </div>
             <div class="kpi-body">
               <span class="kpi-num">{{ globalResumen()?.totalPendientes || 0 }}</span>
-              <span class="kpi-label">PENDIENTES EN CURSO</span>
+              <span class="kpi-label">EN REDACCIÓN / REVISIÓN</span>
+            </div>
+          </div>
+
+          <div class="kpi-stat-card card-pend-firma">
+            <div class="kpi-icon-box bg-amber">
+              <mat-icon>{{ metodoFirma() === 'CIUDADANIA_DIGITAL' ? 'approval' : 'draw' }}</mat-icon>
+            </div>
+            <div class="kpi-body">
+              <span class="kpi-num text-amber">{{ globalResumen()?.totalPendientesFirma || 0 }}</span>
+              <span class="kpi-label">PENDIENTES DE FIRMA</span>
             </div>
           </div>
 
@@ -143,7 +162,7 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
             </div>
             <div class="kpi-body">
               <span class="kpi-num">{{ globalResumen()?.totalConcluidos || 0 }}</span>
-              <span class="kpi-label">CONCLUIDOS / CERRADOS</span>
+              <span class="kpi-label">FIRMADOS Y CONCLUIDOS</span>
             </div>
           </div>
 
@@ -153,42 +172,135 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
             </div>
             <div class="kpi-body">
               <span class="kpi-num">{{ globalResumen()?.tasaResolucion || 0 }}%</span>
-              <span class="kpi-label">TASA DE RESOLUCIÓN</span>
+              <span class="kpi-label">TASA DE CONCLUSIÓN</span>
             </div>
           </div>
         </div>
 
-        <!-- Fila de Gráficos ECharts Globales -->
+        <!-- Grid 2x2 de 4 Gráficas ECharts Institucionales -->
         <div class="charts-grid-2">
-          <!-- Gráfico de Carga de Pendientes vs Atendidos por Unidad -->
-          <mat-card class="chart-panel">
-            <div class="panel-header">
-              <div class="panel-title">
-                <mat-icon class="icon-bars">bar_chart</mat-icon>
-                <span>Carga de Documentos por Unidad Organizacional</span>
-              </div>
-              <span class="panel-tag">Pendientes vs Atendidos</span>
-            </div>
-            <app-echart [options]="chartUnidadesOptions()" [loading]="cargando()" height="320px"></app-echart>
-          </mat-card>
-
-          <!-- Gráfico de Distribución Global por Estado -->
+          <!-- G1: Estado del Ciclo Documental y Firma (Donut) -->
           <mat-card class="chart-panel">
             <div class="panel-header">
               <div class="panel-title">
                 <mat-icon class="icon-donut">donut_large</mat-icon>
-                <span>Distribución por Estado Actual</span>
+                <span>Ciclo Documental y Estado de Firma</span>
               </div>
-              <span class="panel-tag">Consolidado general</span>
+              <span class="panel-tag">Incluye Pendientes de Firma</span>
             </div>
-            <app-echart [options]="chartEstadosOptions()" [loading]="cargando()" height="320px"></app-echart>
+            <app-echart [options]="chartEstadosOptions()" [loading]="cargando()" height="300px"></app-echart>
+          </mat-card>
+
+          <!-- G2: Embudo / Conversión de Firmas por Modalidad -->
+          <mat-card class="chart-panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <mat-icon class="icon-bars">fingerprint</mat-icon>
+                <span>Conversión y Modalidad de Firma</span>
+              </div>
+              <span class="panel-tag">Con CITE vs Firmados</span>
+            </div>
+            <app-echart [options]="chartEmbudoFirmasOptions()" [loading]="cargando()" height="300px"></app-echart>
+          </mat-card>
+
+          <!-- G3: Producción por Tipo de Documento (Plantillas) -->
+          <mat-card class="chart-panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <mat-icon class="icon-bars">category</mat-icon>
+                <span>Producción por Tipo de Documento</span>
+              </div>
+              <span class="panel-tag">Revisión · Pend. Firma · Firmados</span>
+            </div>
+            <app-echart [options]="chartTiposOptions()" [loading]="cargando()" height="300px"></app-echart>
+          </mat-card>
+
+          <!-- G4: Evolución y Flujo Temporal -->
+          <mat-card class="chart-panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <mat-icon class="icon-flow">stacked_line_chart</mat-icon>
+                <span>Evolución Temporal (Últimos 6 Meses)</span>
+              </div>
+              <span class="panel-tag">Creados · Pend. Firma · Concluidos</span>
+            </div>
+            <app-echart [options]="chartTendenciaOptions()" [loading]="cargando()" height="300px"></app-echart>
           </mat-card>
         </div>
+
+        <!-- Nueva Bandeja en Monitoreo: Documentos Cerrados Pendientes de Firma -->
+        <mat-card class="table-card table-pend-firma mt-4">
+          <div class="table-header-box table-header-flex">
+            <div>
+              <h3>Documentos Cerrados Pendientes de Firma</h3>
+              <p class="table-sub">Documentos con CITE asignado que esperan validación mediante {{ metodoFirmaLabel() }}</p>
+            </div>
+            <span class="count-pill pill-amber">{{ docsPendientesFirma().length }} pendientes</span>
+          </div>
+          <div class="table-responsive">
+            <table class="w-full data-table">
+              <thead>
+                <tr>
+                  <th>CITE OFICIAL</th>
+                  <th>TIPO / REFERENCIA</th>
+                  <th>FIRMANTE ASIGNADO</th>
+                  <th class="text-center">MÉTODO REQUERIDO</th>
+                  <th class="text-center">ESPERA</th>
+                  <th class="text-right">ACCIONES</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let doc of docsPendientesFirma()">
+                  <td><strong>{{ doc.cite }}</strong></td>
+                  <td>
+                    <div class="doc-tipo-ref">
+                      <span class="doc-tipo-tag">{{ doc.tipo }}</span>
+                      <span class="asunto-text">{{ doc.asunto }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="user-names">
+                      <strong>{{ doc.firmante_nombre }}</strong>
+                      <small>{{ doc.firmante_cargo }}</small>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <span class="status-pill status-pend-firma">
+                      {{ doc.metodo_requerido === 'CIUDADANIA_DIGITAL' ? 'Ciudadanía Digital' : 'Firma Digital (Token)' }}
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <span class="dias-badge" [class.dias-alerta]="doc.dias_espera > 2">
+                      {{ doc.dias_espera === 0 ? 'Hoy' : doc.dias_espera + ' d' }}
+                    </span>
+                  </td>
+                  <td class="text-right">
+                    <div class="acciones-inline">
+                      <button mat-stroked-button class="btn-ver-unidad" (click)="verPdfDocumento(doc)">
+                        <mat-icon>visibility</mat-icon> Ver PDF
+                      </button>
+                      <button mat-raised-button class="btn-firmar-directo" (click)="irABandejaFirma()">
+                        <mat-icon>{{ metodoFirma() === 'CIUDADANIA_DIGITAL' ? 'verified_user' : 'draw' }}</mat-icon>
+                        Ir a Firmar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="docsPendientesFirma().length === 0">
+                  <td colspan="6" class="text-center py-4 text-green">
+                    <mat-icon class="inline-icon">check_circle</mat-icon>
+                    No existen documentos cerrados pendientes de firma en este momento.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </mat-card>
 
         <!-- Tabla Resumen por Unidad -->
         <mat-card class="table-card mt-4">
           <div class="table-header-box">
-            <h3>Detalle de Carga y Demora por Unidad</h3>
+            <h3>Detalle de Carga, Firmas y Demora por Unidad</h3>
           </div>
           <div class="table-responsive">
             <table class="w-full data-table">
@@ -196,9 +308,10 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
                 <tr>
                   <th>UNIDAD</th>
                   <th class="text-center">ABREV.</th>
-                  <th class="text-center">PENDIENTES</th>
+                  <th class="text-center">EN REVISIÓN</th>
+                  <th class="text-center">PEND. FIRMA</th>
                   <th class="text-center">CON DEMORA (>3 DÍAS)</th>
-                  <th class="text-center">CONCLUIDOS</th>
+                  <th class="text-center">FIRMADOS / CONCLUIDOS</th>
                   <th class="text-center">TOTAL</th>
                   <th class="text-center">ACCIÓN</th>
                 </tr>
@@ -210,6 +323,10 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
                   <td class="text-center">
                     <span class="count-pill pill-orange" *ngIf="u.pendientes > 0">{{ u.pendientes }}</span>
                     <span class="text-muted" *ngIf="u.pendientes === 0">0</span>
+                  </td>
+                  <td class="text-center">
+                    <span class="count-pill pill-amber" *ngIf="u.pendientes_firma > 0">{{ u.pendientes_firma }}</span>
+                    <span class="text-muted" *ngIf="!u.pendientes_firma">0</span>
                   </td>
                   <td class="text-center">
                     <span class="count-pill pill-red" *ngIf="u.con_demora > 0">
@@ -288,8 +405,9 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
                   <th class="text-center">&lt; 24H (AL DÍA)</th>
                   <th class="text-center">1-3 DÍAS (ATENCIÓN)</th>
                   <th class="text-center">&gt; 3 DÍAS (CRÍTICO)</th>
-                  <th class="text-center">PENDIENTES</th>
-                  <th class="text-center">CONCLUIDOS</th>
+                  <th class="text-center">EN REVISIÓN</th>
+                  <th class="text-center">PEND. FIRMA</th>
+                  <th class="text-center">FIRMADOS / CONCLUIDOS</th>
                 </tr>
               </thead>
               <tbody>
@@ -317,11 +435,15 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
                     <span class="count-pill pill-orange"><strong>{{ f.pendientes }}</strong></span>
                   </td>
                   <td class="text-center">
+                    <span class="count-pill pill-amber" *ngIf="f.pendientes_firma > 0">{{ f.pendientes_firma }}</span>
+                    <span class="text-muted" *ngIf="!f.pendientes_firma">0</span>
+                  </td>
+                  <td class="text-center">
                     <span class="count-pill pill-teal">{{ f.atendidos }}</span>
                   </td>
                 </tr>
                 <tr *ngIf="unidadFuncionarios().length === 0">
-                  <td colspan="7" class="text-center py-4 text-muted">
+                  <td colspan="8" class="text-center py-4 text-muted">
                     No se encontraron usuarios activos en esta unidad.
                   </td>
                 </tr>
@@ -336,7 +458,7 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
       <!-- ============================================================== -->
       <div *ngIf="tabActiva() === 'personal'" class="tab-content fade-in">
         <!-- Fila Superior de Métricas Personales -->
-        <div class="kpi-row">
+        <div class="kpi-row kpi-row-5">
           <div class="kpi-stat-card card-total">
             <div class="kpi-icon-box bg-blue">
               <mat-icon>assignment</mat-icon>
@@ -357,13 +479,23 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
             </div>
           </div>
 
+          <div class="kpi-stat-card card-pend-firma">
+            <div class="kpi-icon-box bg-amber">
+              <mat-icon>{{ metodoFirma() === 'CIUDADANIA_DIGITAL' ? 'approval' : 'draw' }}</mat-icon>
+            </div>
+            <div class="kpi-body">
+              <span class="kpi-num text-amber">{{ personalResumen()?.pendientesFirma || 0 }}</span>
+              <span class="kpi-label">PENDIENTES DE MI FIRMA</span>
+            </div>
+          </div>
+
           <div class="kpi-stat-card card-atendidos">
             <div class="kpi-icon-box bg-teal">
               <mat-icon>task_alt</mat-icon>
             </div>
             <div class="kpi-body">
               <span class="kpi-num">{{ personalResumen()?.atendidos || 0 }}</span>
-              <span class="kpi-label">DESPACHADOS / ATENDIDOS</span>
+              <span class="kpi-label">DESPACHADOS / FIRMADOS</span>
             </div>
           </div>
 
@@ -425,9 +557,11 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
                   <td><strong>{{ p.cite }}</strong></td>
                   <td><span class="asunto-text">{{ p.asunto || 'Sin asunto registrado' }}</span></td>
                   <td class="text-center">
-                    <span class="status-pill status-nuevo" *ngIf="p.estado === 'NUEVO'">NUEVO</span>
-                    <span class="status-pill status-derivado" *ngIf="p.estado === 'DERIVADO'">DERIVADO</span>
-                    <span class="status-pill status-enviado" *ngIf="p.estado === 'ENVIADO'">EN CURSO</span>
+                    <span class="status-pill status-pend-firma" *ngIf="p.estado_monitoreo === 'PENDIENTE_FIRMA'">PENDIENTE DE FIRMA</span>
+                    <span class="status-pill status-nuevo" *ngIf="p.estado_monitoreo !== 'PENDIENTE_FIRMA' && p.estado === 'NUEVO'">NUEVO</span>
+                    <span class="status-pill status-derivado" *ngIf="p.estado_monitoreo !== 'PENDIENTE_FIRMA' && p.estado === 'DERIVADO'">DERIVADO</span>
+                    <span class="status-pill status-enviado" *ngIf="p.estado_monitoreo !== 'PENDIENTE_FIRMA' && p.estado === 'ENVIADO'">EN CURSO</span>
+                    <span class="status-pill status-derivado" *ngIf="p.estado_monitoreo !== 'PENDIENTE_FIRMA' && p.estado === 'RECHAZADO'">OBSERVADO</span>
                   </td>
                   <td class="text-center">
                     <span class="dias-badge" [class.dias-alerta]="p.dias_espera > 2">
@@ -435,9 +569,19 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
                     </span>
                   </td>
                   <td class="text-center">
-                    <button mat-raised-button class="btn-atender" [routerLink]="['/documentos', p.id_documento]">
-                      <mat-icon>edit_note</mat-icon> Atender
+                    <button
+                      *ngIf="p.estado_monitoreo === 'PENDIENTE_FIRMA'; else btnAtenderNormal"
+                      mat-raised-button
+                      class="btn-firmar-directo"
+                      (click)="irABandejaFirma()"
+                    >
+                      <mat-icon>{{ metodoFirma() === 'CIUDADANIA_DIGITAL' ? 'verified_user' : 'draw' }}</mat-icon> Firmar Ahora
                     </button>
+                    <ng-template #btnAtenderNormal>
+                      <button mat-raised-button class="btn-atender" [routerLink]="['/documentos', p.id_documento]">
+                        <mat-icon>edit_note</mat-icon> Atender
+                      </button>
+                    </ng-template>
                   </td>
                 </tr>
                 <tr *ngIf="personalPendientes().length === 0">
@@ -541,6 +685,22 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
                 </td>
               </ng-container>
 
+              <ng-container matColumnDef="pendientes_firma">
+                <th mat-header-cell *matHeaderCellDef class="text-center">PEND. FIRMA</th>
+                <td mat-cell *matCellDef="let row" class="text-center">
+                  <span class="count-pill pill-amber" *ngIf="row.PENDIENTE_FIRMA">{{ row.PENDIENTE_FIRMA }}</span>
+                  <span class="text-muted" *ngIf="!row.PENDIENTE_FIRMA">-</span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="firmados">
+                <th mat-header-cell *matHeaderCellDef class="text-center">FIRMADOS</th>
+                <td mat-cell *matCellDef="let row" class="text-center">
+                  <span class="count-pill pill-teal" *ngIf="row.FIRMADO">{{ row.FIRMADO }}</span>
+                  <span class="text-muted" *ngIf="!row.FIRMADO">-</span>
+                </td>
+              </ng-container>
+
               <ng-container matColumnDef="total">
                 <th mat-header-cell *matHeaderCellDef class="text-right">TOTAL ACCIONES</th>
                 <td mat-cell *matCellDef="let row" class="text-right">
@@ -584,6 +744,13 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
 
     .subtitle { margin: 4px 0 0 0; font-size: 0.85rem; color: #64748b; }
 
+    .scope-badges {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
     .scope-badge {
       display: inline-flex;
       align-items: center;
@@ -596,6 +763,7 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
       color: #334155;
       mat-icon { font-size: 18px; width: 18px; height: 18px; }
       &.scope-admin { background: #dbeafe; color: #1e40af; }
+      &.scope-firma { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
     }
 
     /* PESTAÑAS (TABS NAV) */
@@ -640,9 +808,13 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
     /* KPIS ROW */
     .kpi-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
       gap: 16px;
       margin-bottom: 24px;
+    }
+
+    .kpi-row-5 {
+      grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
     }
 
     .kpi-stat-card {
@@ -654,21 +826,32 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
       align-items: center;
       gap: 16px;
       box-shadow: 0 2px 6px rgba(15, 32, 39, 0.03);
+
+      &.card-pend-firma {
+        border-color: #fde68a;
+        background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%);
+      }
     }
 
     .kpi-icon-box {
       width: 46px;
       height: 46px;
       border-radius: 10px;
+      flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
       mat-icon { color: #ffffff; font-size: 22px; width: 22px; height: 22px; }
       &.bg-slate { background: #475569; }
       &.bg-orange { background: #f97316; }
+      &.bg-amber { background: #d97706; }
       &.bg-teal { background: #0d9488; }
       &.bg-blue { background: #2563eb; }
       &.bg-green { background: #16a34a; }
+    }
+
+    .text-amber {
+      color: #b45309 !important;
     }
 
     .kpi-body {
@@ -824,24 +1007,54 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
       box-shadow: 0 2px 8px rgba(15, 32, 39, 0.04);
     }
 
+    .table-pend-firma {
+      border-color: #fde68a;
+      background: linear-gradient(180deg, #fffbeb 0%, #ffffff 72px);
+    }
+
     .table-header-box {
       margin-bottom: 12px;
       h3 { margin: 0; font-size: 0.94rem; font-weight: 800; color: #0f172a; }
     }
 
+    .table-header-flex {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+      h3 { margin: 0; font-size: 0.94rem; font-weight: 800; color: #0f172a; }
+    }
+
+    .table-sub {
+      margin: 2px 0 0;
+      font-size: 0.78rem;
+      color: #64748b;
+    }
+
     .data-table {
       width: 100%;
-      border-collapse: collapse;
+      border-collapse: separate;
+      border-spacing: 0;
       font-size: 0.84rem;
 
       th {
-        background: #0f2027;
+        background: linear-gradient(180deg, #0b2e26 0%, #07221c 100%);
         color: #ffffff;
         font-size: 11px;
         font-weight: 700;
         letter-spacing: 0.6px;
-        padding: 10px 14px;
+        padding: 11px 14px;
         text-align: left;
+      }
+
+      th:first-child {
+        border-radius: 12px 0 0 12px;
+      }
+
+      th:last-child {
+        border-radius: 0 12px 12px 0;
       }
 
       td {
@@ -857,17 +1070,61 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
 
     .monitoreo-table {
       width: 100%;
+      border-collapse: separate !important;
+      border-spacing: 0 !important;
       th.mat-mdc-header-cell {
-        background-color: #0f2027 !important;
+        background-color: #0b2e26 !important;
         color: #ffffff !important;
         font-size: 11px;
         font-weight: 700;
         letter-spacing: 0.6px;
+        border-bottom: none !important;
+      }
+      th.mat-mdc-header-cell:first-child {
+        border-radius: 12px 0 0 12px;
+      }
+      th.mat-mdc-header-cell:last-child {
+        border-radius: 0 12px 12px 0;
       }
       td.mat-mdc-cell {
         font-size: 0.84rem;
         padding: 10px 14px;
       }
+    }
+
+    .doc-tipo-ref {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      strong { color: #0f172a; font-size: 0.82rem; }
+      small {
+        color: #64748b;
+        font-size: 0.74rem;
+        max-width: 320px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+
+    .doc-tipo-tag {
+      display: inline-block;
+      width: fit-content;
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: #0f766e;
+      background: #ccfbf1;
+      padding: 1px 7px;
+      border-radius: 8px;
+      text-transform: uppercase;
+    }
+
+    .acciones-inline {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
     .user-cell {
@@ -906,6 +1163,7 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
       font-weight: 800;
       font-size: 0.76rem;
       &.pill-orange { background: #ffedd5; color: #c2410c; }
+      &.pill-amber { background: #fef3c7; color: #b45309; }
       &.pill-blue { background: #dbeafe; color: #1d4ed8; }
       &.pill-teal { background: #ccfbf1; color: #0f766e; }
       &.pill-green { background: #dcfce7; color: #15803d; }
@@ -940,6 +1198,7 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
       &.status-nuevo { background: #e0f2fe; color: #0369a1; }
       &.status-derivado { background: #ffedd5; color: #c2410c; }
       &.status-enviado { background: #ede9fe; color: #6d28d9; }
+      &.status-pend-firma { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
     }
 
     .dias-badge {
@@ -970,6 +1229,16 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
       mat-icon { font-size: 16px; width: 16px; height: 16px; }
     }
 
+    .btn-firmar-directo {
+      background: #d97706 !important;
+      color: #ffffff !important;
+      border-radius: 16px !important;
+      height: 30px !important;
+      font-size: 0.76rem !important;
+      font-weight: 700 !important;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    }
+
     .inline-icon { font-size: 16px; width: 16px; height: 16px; vertical-align: middle; }
     .text-center { text-align: center; }
     .text-right { text-align: right; }
@@ -988,6 +1257,7 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
 
     @media (max-width: 768px) {
       .monitoreo-shell { padding: 14px; }
+      .kpi-row-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .charts-grid-2 { grid-template-columns: 1fr; }
       .filters-row, .date-pickers { flex-direction: column; align-items: stretch; }
       .date-field, .search-user-field, .btn-filtrar { width: 100% !important; }
@@ -998,16 +1268,24 @@ export class MonitoreoComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly dialog = inject(MatDialog);
 
   readonly user = this.authService.currentUser;
   readonly cargando = signal(true);
   readonly tabActiva = signal<MonitoreoTab>('global');
 
+  // Método de firma activo configurado en sistema
+  readonly metodoFirma = signal<'FIRMA_DIGITAL' | 'CIUDADANIA_DIGITAL'>('FIRMA_DIGITAL');
+  readonly metodoFirmaLabel = signal<string>('Firma Digital (Token / FirmaTIC)');
+
   // Metadatos Globales (MAE/Admin)
   readonly globalResumen = signal<any>(null);
   readonly globalUnidades = signal<any[]>([]);
-  readonly chartUnidadesOptions = signal<echarts.EChartsOption | null>(null);
+  readonly docsPendientesFirma = signal<any[]>([]);
   readonly chartEstadosOptions = signal<echarts.EChartsOption | null>(null);
+  readonly chartEmbudoFirmasOptions = signal<echarts.EChartsOption | null>(null);
+  readonly chartTiposOptions = signal<echarts.EChartsOption | null>(null);
+  readonly chartTendenciaOptions = signal<echarts.EChartsOption | null>(null);
 
   // Metadatos por Unidad (Jefatura)
   readonly unidadFuncionarios = signal<any[]>([]);
@@ -1025,7 +1303,17 @@ export class MonitoreoComponent implements OnInit {
   readonly searchFilter = signal('');
   fechaInicial = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
   fechaFinal = new Date().toISOString().split('T')[0];
-  readonly displayedColumns = ['funcionario', 'enviados', 'derivados', 'aprobados', 'rechazados', 'cerrados', 'total'];
+  readonly displayedColumns = [
+    'funcionario',
+    'enviados',
+    'derivados',
+    'aprobados',
+    'rechazados',
+    'cerrados',
+    'pendientes_firma',
+    'firmados',
+    'total'
+  ];
 
   readonly esAdminOMae = computed(() => {
     const u = this.user();
@@ -1070,6 +1358,27 @@ export class MonitoreoComponent implements OnInit {
     this.cambiarTab('unidad');
   }
 
+  verPdfDocumento(doc: any): void {
+    this.dialog.open(VisorPdfDialogComponent, {
+      width: '94vw',
+      maxWidth: '940px',
+      height: '90vh',
+      maxHeight: '90vh',
+      panelClass: ['modal-sin-padding', 'modal-vista-previa-escala'],
+      data: {
+        titulo: `${doc.cite} - Documento Oficial`,
+        docCite: doc.cite,
+        idDocumento: doc.id_documento,
+        esBorrador: false
+      }
+    });
+  }
+
+  irABandejaFirma(): void {
+    const ruta = this.metodoFirma() === 'CIUDADANIA_DIGITAL' ? '/aprobar_documento' : '/firmar';
+    this.router.navigate([ruta]);
+  }
+
   /**
    * Carga métricas globales para la MAE y Administradores
    */
@@ -1078,74 +1387,31 @@ export class MonitoreoComponent implements OnInit {
     this.http.get<any>('/api/v1/monitoreo/metricas/global').subscribe({
       next: (res) => {
         const datos = res?.datos || {};
+        if (datos.metodoFirma === 'CIUDADANIA_DIGITAL' || datos.metodoFirma === 'FIRMA_DIGITAL') {
+          this.metodoFirma.set(datos.metodoFirma);
+        }
+        if (datos.metodoFirmaLabel) {
+          this.metodoFirmaLabel.set(datos.metodoFirmaLabel);
+        }
+
         this.globalResumen.set(datos.resumen || {});
         const unidades = Array.isArray(datos.porUnidad) ? datos.porUnidad : [];
         this.globalUnidades.set(unidades);
+        this.docsPendientesFirma.set(
+          Array.isArray(datos.documentosPendientesFirma) ? datos.documentosPendientesFirma : []
+        );
 
         // Preseleccionar la primera unidad con pendientes si existe
         if (unidades.length > 0 && !this.unidadSeleccionadaId) {
           this.unidadSeleccionadaId = unidades[0].id_unidad;
         }
 
-        // 1. Gráfico de Barras Horizontales (Pendientes vs Atendidos por Unidad)
-        const unidadesNombres = unidades.map((u: any) => u.abreviacion || u.unidad);
-        const pendientesSerie = unidades.map((u: any) => u.pendientes);
-        const atendidosSerie = unidades.map((u: any) => u.atendidos);
-
-        this.chartUnidadesOptions.set({
-          tooltip: {
-            trigger: 'axis',
-            axisPointer: { type: 'shadow' },
-            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-            borderColor: '#334155',
-            textStyle: { color: '#f8fafc', fontSize: 12 }
-          },
-          legend: {
-            top: 0,
-            icon: 'circle',
-            textStyle: { color: '#475569', fontSize: 11 }
-          },
-          grid: {
-            top: 35,
-            left: '3%',
-            right: '4%',
-            bottom: '3%',
-            containLabel: true
-          },
-          xAxis: {
-            type: 'value',
-            splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
-            axisLabel: { color: '#64748b', fontSize: 11 }
-          },
-          yAxis: {
-            type: 'category',
-            data: unidadesNombres,
-            axisLabel: { color: '#1e293b', fontWeight: 'bold', fontSize: 11 }
-          },
-          series: [
-            {
-              name: 'Pendientes',
-              type: 'bar',
-              stack: 'total',
-              itemStyle: { color: '#f97316' },
-              data: pendientesSerie
-            },
-            {
-              name: 'Atendidos / Concluidos',
-              type: 'bar',
-              stack: 'total',
-              itemStyle: { color: '#0d9488' },
-              data: atendidosSerie
-            }
-          ]
-        });
-
-        // 2. Gráfico de Dona de Estados Globales
+        // G1. Dona de Ciclo Documental y Estado de Firma
         const estados = datos.distribucionEstados || {};
         this.chartEstadosOptions.set({
           tooltip: {
             trigger: 'item',
-            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+            backgroundColor: 'rgba(15, 23, 42, 0.92)',
             borderColor: '#334155',
             textStyle: { color: '#f8fafc', fontSize: 12 },
             formatter: '{b}: <strong>{c}</strong> ({d}%)'
@@ -1155,24 +1421,179 @@ export class MonitoreoComponent implements OnInit {
             icon: 'circle',
             textStyle: { color: '#475569', fontSize: 11 }
           },
-          color: ['#0284c7', '#f97316', '#8b5cf6', '#10b981', '#475569', '#ef4444'],
+          color: ['#0284c7', '#6366f1', '#f97316', '#ef4444', '#f59e0b', '#10b981', '#334155'],
           series: [
             {
-              name: 'Estado Global',
+              name: 'Ciclo Documental',
               type: 'pie',
-              radius: ['45%', '70%'],
-              center: ['50%', '45%'],
-              avoidLabelOverlap: false,
+              radius: ['44%', '70%'],
+              center: ['50%', '43%'],
+              avoidLabelOverlap: true,
               itemStyle: { borderRadius: 6, borderColor: '#ffffff', borderWidth: 2 },
               label: { show: false },
               data: [
                 { value: estados.NUEVO || 0, name: 'Nuevos' },
                 { value: estados.ENVIADO || 0, name: 'Enviados' },
                 { value: estados.DERIVADO || 0, name: 'Derivados' },
-                { value: estados.APROBADO || 0, name: 'Aprobados' },
-                { value: estados.CERRADO || 0, name: 'Cerrados' },
-                { value: estados.RECHAZADO || 0, name: 'Rechazados' }
+                { value: estados.RECHAZADO || 0, name: 'Observados' },
+                { value: estados.PENDIENTE_FIRMA || 0, name: 'Pendientes de Firma' },
+                { value: estados.FIRMADO || 0, name: 'Firmados Oficiales' },
+                { value: estados.CUSTODIA_INSTITUCIONAL || 0, name: 'Custodia Institucional' }
               ]
+            }
+          ]
+        });
+
+        // G2. Conversión y Modalidad de Firma
+        const embudo = datos.embudoFirmas || {};
+        this.chartEmbudoFirmasOptions.set({
+          tooltip: {
+            trigger: 'axis',
+            axisPointer: { type: 'shadow' },
+            backgroundColor: 'rgba(15, 23, 42, 0.92)',
+            borderColor: '#334155',
+            textStyle: { color: '#f8fafc', fontSize: 12 }
+          },
+          grid: { top: 28, left: '3%', right: '4%', bottom: '8%', containLabel: true },
+          xAxis: {
+            type: 'category',
+            data: ['Emitidos CITE', 'Pend. Firma', 'Firmados Token', 'Aprobados CD', 'Custodia Inst.'],
+            axisLabel: { color: '#334155', fontSize: 11, fontWeight: 'bold', interval: 0, rotate: 12 }
+          },
+          yAxis: {
+            type: 'value',
+            minInterval: 1,
+            splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
+            axisLabel: { color: '#64748b', fontSize: 11 }
+          },
+          series: [
+            {
+              name: 'Documentos',
+              type: 'bar',
+              barWidth: '46%',
+              label: { show: true, position: 'top', fontWeight: 'bold', color: '#0f172a', fontSize: 11 },
+              itemStyle: { borderRadius: [6, 6, 0, 0] },
+              data: [
+                { value: embudo.emitidosConCite || 0, itemStyle: { color: '#0284c7' } },
+                { value: embudo.pendientesFirma || 0, itemStyle: { color: '#f59e0b' } },
+                { value: embudo.firmadosToken || 0, itemStyle: { color: '#10b981' } },
+                { value: embudo.aprobadosCd || 0, itemStyle: { color: '#8b5cf6' } },
+                { value: embudo.custodiaInstitucional || 0, itemStyle: { color: '#334155' } }
+              ]
+            }
+          ]
+        });
+
+        // G3. Producción por Tipo de Documento (Barras Horizontales Apiladas)
+        const tiposRaw = Array.isArray(datos.porTipoPlantilla) ? [...datos.porTipoPlantilla].reverse() : [];
+        const hasTipos = tiposRaw.length > 0;
+        const tiposLabels = hasTipos ? tiposRaw.map((t: any) => t.tipo) : ['Sin registros'];
+        this.chartTiposOptions.set({
+          tooltip: {
+            trigger: 'axis',
+            axisPointer: { type: 'shadow' },
+            backgroundColor: 'rgba(15, 23, 42, 0.92)',
+            borderColor: '#334155',
+            textStyle: { color: '#f8fafc', fontSize: 12 }
+          },
+          legend: {
+            top: 0,
+            icon: 'circle',
+            textStyle: { color: '#475569', fontSize: 11 }
+          },
+          grid: { top: 34, left: '3%', right: '5%', bottom: '4%', containLabel: true },
+          xAxis: {
+            type: 'value',
+            minInterval: 1,
+            splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
+            axisLabel: { color: '#64748b', fontSize: 11 }
+          },
+          yAxis: {
+            type: 'category',
+            data: tiposLabels,
+            axisLabel: { color: '#1e293b', fontWeight: 'bold', fontSize: 11, width: 135, overflow: 'truncate' }
+          },
+          series: [
+            {
+              name: 'En Revisión',
+              type: 'bar',
+              stack: 'tipos',
+              itemStyle: { color: '#3b82f6' },
+              data: hasTipos ? tiposRaw.map((t: any) => t.en_curso || 0) : [0]
+            },
+            {
+              name: 'Pend. Firma',
+              type: 'bar',
+              stack: 'tipos',
+              itemStyle: { color: '#f59e0b' },
+              data: hasTipos ? tiposRaw.map((t: any) => t.pendientes_firma || 0) : [0]
+            },
+            {
+              name: 'Firmados / Concluidos',
+              type: 'bar',
+              stack: 'tipos',
+              itemStyle: { color: '#10b981', borderRadius: [0, 4, 4, 0] },
+              data: hasTipos ? tiposRaw.map((t: any) => t.firmados_concluidos || 0) : [0]
+            }
+          ]
+        });
+
+        // G4. Evolución Temporal de los últimos 6 meses (Líneas / Área)
+        const tendencia = Array.isArray(datos.tendenciaMensual) ? datos.tendenciaMensual : [];
+        const hasTendencia = tendencia.length > 0;
+        const mesesLabels = hasTendencia ? tendencia.map((t: any) => t.mesLabel || t.mes) : ['Sin datos'];
+        this.chartTendenciaOptions.set({
+          tooltip: {
+            trigger: 'axis',
+            backgroundColor: 'rgba(15, 23, 42, 0.92)',
+            borderColor: '#334155',
+            textStyle: { color: '#f8fafc', fontSize: 12 }
+          },
+          legend: {
+            top: 0,
+            icon: 'circle',
+            textStyle: { color: '#475569', fontSize: 11 }
+          },
+          grid: { top: 34, left: '3%', right: '4%', bottom: '4%', containLabel: true },
+          xAxis: {
+            type: 'category',
+            boundaryGap: false,
+            data: mesesLabels,
+            axisLabel: { color: '#475569', fontSize: 11 }
+          },
+          yAxis: {
+            type: 'value',
+            minInterval: 1,
+            splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
+            axisLabel: { color: '#64748b', fontSize: 11 }
+          },
+          series: [
+            {
+              name: 'Creados',
+              type: 'line',
+              smooth: true,
+              symbolSize: 7,
+              itemStyle: { color: '#0284c7' },
+              areaStyle: { color: 'rgba(2, 132, 199, 0.12)' },
+              data: hasTendencia ? tendencia.map((t: any) => t.creados || 0) : [0]
+            },
+            {
+              name: 'Pendientes de Firma',
+              type: 'line',
+              smooth: true,
+              symbolSize: 7,
+              itemStyle: { color: '#f59e0b' },
+              areaStyle: { color: 'rgba(245, 158, 11, 0.12)' },
+              data: hasTendencia ? tendencia.map((t: any) => t.pendientes_firma || 0) : [0]
+            },
+            {
+              name: 'Concluidos',
+              type: 'line',
+              smooth: true,
+              symbolSize: 7,
+              itemStyle: { color: '#10b981' },
+              areaStyle: { color: 'rgba(16, 185, 129, 0.15)' },
+              data: hasTendencia ? tendencia.map((t: any) => t.concluidos || 0) : [0]
             }
           ]
         });
@@ -1269,10 +1690,17 @@ export class MonitoreoComponent implements OnInit {
     this.http.get<any>(`/api/v1/monitoreo/metricas/mi-actividad?id_usuario=${idUsuario}`).subscribe({
       next: (res) => {
         const datos = res?.datos || {};
+        if (datos.metodoFirma === 'CIUDADANIA_DIGITAL' || datos.metodoFirma === 'FIRMA_DIGITAL') {
+          this.metodoFirma.set(datos.metodoFirma);
+        }
+        if (datos.metodoFirmaLabel) {
+          this.metodoFirmaLabel.set(datos.metodoFirmaLabel);
+        }
+
         this.personalResumen.set(datos.resumenMes || {});
         this.personalPendientes.set(datos.misPendientesCriticos || []);
 
-        const tasa = datos.resumenMes?.tasaEficiencia || 100;
+        const tasa = datos.resumenMes?.tasaEficiencia ?? 100;
 
         // 1. Tacómetro Gauge de Eficiencia
         this.chartGaugeOptions.set({
@@ -1309,11 +1737,12 @@ export class MonitoreoComponent implements OnInit {
           grid: { top: 25, left: '3%', right: '4%', bottom: '3%', containLabel: true },
           xAxis: {
             type: 'category',
-            data: diasLabels.length > 0 ? diasLabels : ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+            data: diasLabels.length > 0 ? diasLabels : ['Sin registros'],
             axisLabel: { color: '#64748b', fontSize: 11 }
           },
           yAxis: {
             type: 'value',
+            minInterval: 1,
             splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } }
           },
           series: [
@@ -1328,7 +1757,7 @@ export class MonitoreoComponent implements OnInit {
                 ]),
                 borderRadius: [4, 4, 0, 0]
               },
-              data: accionesData.length > 0 ? accionesData : [2, 4, 1, 6, 8, 3, 0]
+              data: accionesData.length > 0 ? accionesData : [0]
             }
           ]
         });
@@ -1353,7 +1782,14 @@ export class MonitoreoComponent implements OnInit {
         const raw = Array.isArray(res?.datos) ? res.datos : [];
         const procesados = raw.map((d: any) => ({
           ...d,
-          total: (d.CREADO || 0) + (d.ENVIADO || 0) + (d.DERIVADO || 0) + (d.APROBADO || 0) + (d.CERRADO || 0)
+          total:
+            (d.CREADO || 0) +
+            (d.ENVIADO || 0) +
+            (d.DERIVADO || 0) +
+            (d.APROBADO || 0) +
+            (d.RECHAZADO || 0) +
+            (d.CERRADO || 0) +
+            (d.FIRMADO || 0)
         }));
         this.datosHistoricos.set(procesados);
         this.cargando.set(false);

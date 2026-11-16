@@ -18,6 +18,36 @@ module.exports = app => {
   const modelos = app.src.db.models;
   const presupuestoService = require('../../services/presupuestoService');
 
+  const SQL_EN_REVISION = `d.estado IN ('NUEVO', 'ENVIADO', 'DERIVADO', 'RECHAZADO')`;
+  const SQL_PEND_FIRMA = `d.estado IN ('CERRADO', 'APROBADO') AND COALESCE(d.firmado, false) = false AND COALESCE(d.aprobado_cd, false) = false AND (d.firmante_actual IS NOT NULL OR d.aprobador_cd_actual IS NOT NULL)`;
+  const SQL_FIRMADO = `d.estado IN ('CERRADO', 'APROBADO') AND (COALESCE(d.firmado, false) = true OR COALESCE(d.aprobado_cd, false) = true)`;
+  const SQL_CUSTODIA = `d.estado IN ('CERRADO', 'APROBADO') AND COALESCE(d.firmado, false) = false AND COALESCE(d.aprobado_cd, false) = false AND d.firmante_actual IS NULL AND d.aprobador_cd_actual IS NULL`;
+  const SQL_CONCLUIDO = `d.estado IN ('CERRADO', 'APROBADO') AND (COALESCE(d.firmado, false) = true OR COALESCE(d.aprobado_cd, false) = true OR (d.firmante_actual IS NULL AND d.aprobador_cd_actual IS NULL))`;
+
+  /**
+   * Consulta el método rector de firma/aprobación configurado en el sistema
+   */
+  async function obtenerMetodoFirma() {
+    try {
+      const [row] = await sequelize.query(
+        `SELECT valor FROM configuracion_sistema WHERE clave = 'TIPO_FIRMA_VALIDACION' LIMIT 1;`,
+        { type: sequelize.QueryTypes.SELECT }
+      );
+      if (row && row.valor === 'CIUDADANIA_DIGITAL') {
+        return {
+          metodo: 'CIUDADANIA_DIGITAL',
+          label: 'Ciudadanía Digital (AGETIC)'
+        };
+      }
+    } catch (e) {
+      logger.warn('[METRICAS] No se pudo consultar TIPO_FIRMA_VALIDACION, usando defecto FIRMA_DIGITAL:', e.message);
+    }
+    return {
+      metodo: 'FIRMA_DIGITAL',
+      label: 'Firma Digital (Token / FirmaTIC)'
+    };
+  }
+
   /**
    * Helper para extraer ID de usuario y rol autenticado
    */
@@ -32,64 +62,109 @@ module.exports = app => {
   /**
    * GET /api/v1/monitoreo/metricas/global
    * Visión Global Estratégica (MAE / Admin):
-   * - Carga y pendientes por unidad
-   * - Distribución de estados
+   * - Carga, pendientes de revisión y pendientes de firma por unidad
+   * - Distribución de estados del ciclo documental y firma
+   * - Embudo/comparativa de modalidades de firma
+   * - Producción por tipo de documento / plantilla
    * - Tendencia mensual (últimos 6 meses)
-   * - Documentos con demora crítica (> 3 días)
+   * - Listado detallado de documentos cerrados pendientes de firma
    */
   app.get('/api/v1/monitoreo/metricas/global', async (req, res) => {
     try {
-      // 1. Carga de pendientes y despachados por Unidad
+      const { metodo: metodoFirma, label: metodoFirmaLabel } = await obtenerMetodoFirma();
+      const colFirmanteActivo = metodoFirma === 'CIUDADANIA_DIGITAL'
+        ? 'COALESCE(d.aprobador_cd_actual, d.firmante_actual)'
+        : 'COALESCE(d.firmante_actual, d.aprobador_cd_actual)';
+
+      // 1. Carga de pendientes de revisión, pendientes de firma y concluidos por Unidad
       const qryUnidades = `
         SELECT 
           un.id_unidad,
           un.nombre AS unidad,
           un.abreviacion,
-          COUNT(d.id_documento) FILTER (WHERE d.estado IN ('NUEVO', 'ENVIADO', 'DERIVADO')) AS pendientes,
-          COUNT(d.id_documento) FILTER (WHERE d.estado IN ('APROBADO', 'CERRADO')) AS atendidos,
-          COUNT(d.id_documento) FILTER (WHERE d.estado IN ('NUEVO', 'ENVIADO', 'DERIVADO') AND (NOW() - d._fecha_modificacion) > INTERVAL '3 days') AS con_demora,
-          COUNT(d.id_documento) AS total
+          COUNT(DISTINCT d.id_documento) FILTER (WHERE ${SQL_EN_REVISION}) AS pendientes,
+          COUNT(DISTINCT d.id_documento) FILTER (WHERE ${SQL_PEND_FIRMA}) AS pendientes_firma,
+          COUNT(DISTINCT d.id_documento) FILTER (WHERE ${SQL_FIRMADO}) AS firmados,
+          COUNT(DISTINCT d.id_documento) FILTER (WHERE ${SQL_CONCLUIDO}) AS atendidos,
+          COUNT(DISTINCT d.id_documento) FILTER (WHERE (${SQL_EN_REVISION} OR ${SQL_PEND_FIRMA}) AND (NOW() - d._fecha_modificacion) > INTERVAL '3 days') AS con_demora,
+          COUNT(DISTINCT d.id_documento) AS total
         FROM unidad un
         LEFT JOIN usuario us ON (us.fid_unidad = un.id_unidad AND us.estado = 'ACTIVO')
         LEFT JOIN documento d ON (
-          (d.via_actual = us.id_usuario OR (d.via_actual IS NULL AND d._usuario_creacion = us.id_usuario))
-          AND d.estado != 'ELIMINADO'
+          d.estado != 'ELIMINADO' AND (
+            d.via_actual = us.id_usuario
+            OR d.firmante_actual = us.id_usuario
+            OR d.aprobador_cd_actual = us.id_usuario
+            OR (d.via_actual IS NULL AND d.firmante_actual IS NULL AND d.aprobador_cd_actual IS NULL AND d._usuario_creacion = us.id_usuario)
+          )
         )
         WHERE un.estado = 'ACTIVO'
         GROUP BY un.id_unidad, un.nombre, un.abreviacion
-        ORDER BY pendientes DESC, un.nombre ASC;
+        ORDER BY pendientes_firma DESC, pendientes DESC, un.nombre ASC;
       `;
       const unidades = await sequelize.query(qryUnidades, { type: sequelize.QueryTypes.SELECT });
 
-      // 2. Distribución global por Estado
-      const qryEstados = `
-        SELECT 
-          estado,
-          COUNT(*) AS cantidad
-        FROM documento
-        WHERE estado != 'ELIMINADO'
-        GROUP BY estado;
+      // 2. Distribución global exacta por estado + ciclo de firma
+      const qryCiclo = `
+        SELECT
+          COUNT(*) FILTER (WHERE d.estado = 'NUEVO') AS nuevo,
+          COUNT(*) FILTER (WHERE d.estado = 'ENVIADO') AS enviado,
+          COUNT(*) FILTER (WHERE d.estado = 'DERIVADO') AS derivado,
+          COUNT(*) FILTER (WHERE d.estado = 'RECHAZADO') AS rechazado,
+          COUNT(*) FILTER (WHERE ${SQL_PEND_FIRMA}) AS pendiente_firma,
+          COUNT(*) FILTER (WHERE ${SQL_FIRMADO}) AS firmado,
+          COUNT(*) FILTER (WHERE ${SQL_CUSTODIA}) AS custodia_institucional,
+          COUNT(*) FILTER (WHERE d.estado IN ('CERRADO', 'APROBADO')) AS emitidos_cite,
+          COUNT(*) FILTER (WHERE d.estado IN ('CERRADO', 'APROBADO') AND COALESCE(d.firmado, false) = true) AS firmados_token,
+          COUNT(*) FILTER (WHERE d.estado IN ('CERRADO', 'APROBADO') AND COALESCE(d.aprobado_cd, false) = true) AS aprobados_cd,
+          COUNT(*) AS total_global
+        FROM documento d
+        WHERE d.estado != 'ELIMINADO';
       `;
-      const estadosRaw = await sequelize.query(qryEstados, { type: sequelize.QueryTypes.SELECT });
-      const distribucionEstados = {
-        NUEVO: 0,
-        ENVIADO: 0,
-        DERIVADO: 0,
-        APROBADO: 0,
-        CERRADO: 0,
-        RECHAZADO: 0
-      };
-      estadosRaw.forEach(e => {
-        distribucionEstados[e.estado] = parseInt(e.cantidad, 10);
-      });
+      const [ciclo] = await sequelize.query(qryCiclo, { type: sequelize.QueryTypes.SELECT });
 
-      // 3. Tendencia temporal de los últimos 6 meses (para Gráfico de Área ECharts)
+      const distribucionEstados = {
+        NUEVO: parseInt(ciclo?.nuevo || 0, 10),
+        ENVIADO: parseInt(ciclo?.enviado || 0, 10),
+        DERIVADO: parseInt(ciclo?.derivado || 0, 10),
+        RECHAZADO: parseInt(ciclo?.rechazado || 0, 10),
+        PENDIENTE_FIRMA: parseInt(ciclo?.pendiente_firma || 0, 10),
+        FIRMADO: parseInt(ciclo?.firmado || 0, 10),
+        CUSTODIA_INSTITUCIONAL: parseInt(ciclo?.custodia_institucional || 0, 10)
+      };
+
+      const totalGlobal = parseInt(ciclo?.total_global || 0, 10);
+      const totalPendientes = distribucionEstados.NUEVO + distribucionEstados.ENVIADO + distribucionEstados.DERIVADO + distribucionEstados.RECHAZADO;
+      const totalPendientesFirma = distribucionEstados.PENDIENTE_FIRMA;
+      const totalFirmados = distribucionEstados.FIRMADO;
+      const totalCustodia = distribucionEstados.CUSTODIA_INSTITUCIONAL;
+      const totalConcluidos = totalFirmados + totalCustodia;
+      const tasaResolucion = totalGlobal > 0 ? Math.round((totalConcluidos / totalGlobal) * 100) : 0;
+
+      // 3. Producción por Tipo de Documento / Plantilla (Gráfica G3)
+      const qryTipos = `
+        SELECT
+          COALESCE(NULLIF(TRIM(d.nombre_plantilla), ''), 'Documento General') AS tipo,
+          COUNT(*) FILTER (WHERE ${SQL_EN_REVISION}) AS en_curso,
+          COUNT(*) FILTER (WHERE ${SQL_PEND_FIRMA}) AS pendientes_firma,
+          COUNT(*) FILTER (WHERE ${SQL_CONCLUIDO}) AS firmados_concluidos,
+          COUNT(*) AS total
+        FROM documento d
+        WHERE d.estado != 'ELIMINADO'
+        GROUP BY COALESCE(NULLIF(TRIM(d.nombre_plantilla), ''), 'Documento General')
+        ORDER BY total DESC, tipo ASC
+        LIMIT 10;
+      `;
+      const tiposRaw = await sequelize.query(qryTipos, { type: sequelize.QueryTypes.SELECT });
+
+      // 4. Tendencia temporal de los últimos 6 meses (Gráfica G4)
       const qryTendencia = `
         SELECT 
           TO_CHAR(d._fecha_creacion, 'YYYY-MM') AS mes,
           COUNT(*) AS creados,
-          COUNT(*) FILTER (WHERE d.estado IN ('APROBADO', 'CERRADO')) AS concluidos,
-          COUNT(*) FILTER (WHERE d.estado IN ('NUEVO', 'ENVIADO', 'DERIVADO')) AS pendientes
+          COUNT(*) FILTER (WHERE ${SQL_EN_REVISION}) AS en_revision,
+          COUNT(*) FILTER (WHERE ${SQL_PEND_FIRMA}) AS pendientes_firma,
+          COUNT(*) FILTER (WHERE ${SQL_CONCLUIDO}) AS concluidos
         FROM documento d
         WHERE d._fecha_creacion >= (NOW() - INTERVAL '6 months') AND d.estado != 'ELIMINADO'
         GROUP BY TO_CHAR(d._fecha_creacion, 'YYYY-MM')
@@ -97,25 +172,60 @@ module.exports = app => {
       `;
       const tendencia = await sequelize.query(qryTendencia, { type: sequelize.QueryTypes.SELECT });
 
-      // 4. Totales Consolidados
-      const totalGlobal = Object.values(distribucionEstados).reduce((a, b) => a + b, 0);
-      const totalPendientes = (distribucionEstados.NUEVO || 0) + (distribucionEstados.ENVIADO || 0) + (distribucionEstados.DERIVADO || 0);
-      const totalConcluidos = (distribucionEstados.APROBADO || 0) + (distribucionEstados.CERRADO || 0);
-      const tasaResolucion = totalGlobal > 0 ? Math.round((totalConcluidos / totalGlobal) * 100) : 0;
+      // 5. Listado detallado de documentos cerrados/aprobados pendientes de firma
+      const qryDocsPendFirma = `
+        SELECT
+          d.id_documento,
+          d.nombre AS cite,
+          COALESCE(NULLIF(TRIM(d.nombre_plantilla), ''), 'Documento') AS tipo,
+          COALESCE(NULLIF(TRIM(d.referencia), ''), 'Sin referencia') AS asunto,
+          COALESCE(d.clasificacion::text, 'PUBLICO') AS clasificacion,
+          ${colFirmanteActivo} AS firmante_id,
+          TRIM(CONCAT(COALESCE(uf.nombres, ''), ' ', COALESCE(uf.apellidos, ''))) AS firmante_nombre,
+          COALESCE(uf.cargo, 'Autoridad / Usuario') AS firmante_cargo,
+          d._fecha_modificacion AS fecha_cierre,
+          FLOOR(EXTRACT(EPOCH FROM (NOW() - d._fecha_modificacion)) / 86400) AS dias_espera
+        FROM documento d
+        LEFT JOIN usuario uf ON uf.id_usuario = ${colFirmanteActivo}
+        WHERE d.estado != 'ELIMINADO' AND (${SQL_PEND_FIRMA})
+        ORDER BY d._fecha_modificacion ASC;
+      `;
+      const docsPendFirma = await sequelize.query(qryDocsPendFirma, { type: sequelize.QueryTypes.SELECT });
 
       res.status(200).send(util.formatearMensaje('EXITO', 'Métricas globales obtenidas.', {
+        metodoFirma,
+        metodoFirmaLabel,
         resumen: {
           totalGlobal,
           totalPendientes,
+          totalPendientesFirma,
+          totalFirmados,
+          totalCustodia,
           totalConcluidos,
           tasaResolucion
         },
         distribucionEstados,
+        embudoFirmas: {
+          emitidosConCite: parseInt(ciclo?.emitidos_cite || 0, 10),
+          pendientesFirma: totalPendientesFirma,
+          firmadosToken: parseInt(ciclo?.firmados_token || 0, 10),
+          aprobadosCd: parseInt(ciclo?.aprobados_cd || 0, 10),
+          custodiaInstitucional: totalCustodia
+        },
+        porTipoPlantilla: tiposRaw.map(t => ({
+          tipo: t.tipo,
+          en_curso: parseInt(t.en_curso || 0, 10),
+          pendientes_firma: parseInt(t.pendientes_firma || 0, 10),
+          firmados_concluidos: parseInt(t.firmados_concluidos || 0, 10),
+          total: parseInt(t.total || 0, 10)
+        })),
         porUnidad: unidades.map(u => ({
           id_unidad: u.id_unidad,
           unidad: u.unidad,
           abreviacion: u.abreviacion || u.unidad.substring(0, 4).toUpperCase(),
           pendientes: parseInt(u.pendientes || 0, 10),
+          pendientes_firma: parseInt(u.pendientes_firma || 0, 10),
+          firmados: parseInt(u.firmados || 0, 10),
           atendidos: parseInt(u.atendidos || 0, 10),
           con_demora: parseInt(u.con_demora || 0, 10),
           total: parseInt(u.total || 0, 10)
@@ -124,8 +234,22 @@ module.exports = app => {
           mes: t.mes,
           mesLabel: moment(t.mes, 'YYYY-MM').locale('es').format('MMM YYYY'),
           creados: parseInt(t.creados || 0, 10),
-          concluidos: parseInt(t.concluidos || 0, 10),
-          pendientes: parseInt(t.pendientes || 0, 10)
+          en_revision: parseInt(t.en_revision || 0, 10),
+          pendientes_firma: parseInt(t.pendientes_firma || 0, 10),
+          concluidos: parseInt(t.concluidos || 0, 10)
+        })),
+        documentosPendientesFirma: docsPendFirma.map(p => ({
+          id_documento: p.id_documento,
+          cite: p.cite,
+          tipo: p.tipo,
+          asunto: p.asunto,
+          clasificacion: p.clasificacion,
+          firmante_id: p.firmante_id,
+          firmante_nombre: p.firmante_nombre || 'Sin asignar',
+          firmante_cargo: p.firmante_cargo,
+          metodo_requerido: metodoFirma,
+          fecha_cierre: p.fecha_cierre,
+          dias_espera: Math.max(0, parseInt(p.dias_espera || 0, 10))
         }))
       }));
     } catch (err) {
@@ -137,7 +261,7 @@ module.exports = app => {
   /**
    * GET /api/v1/monitoreo/metricas/unidad/:id_unidad
    * Visión Táctica de Unidad (Jefatura de Área):
-   * - Balance de carga por funcionario (quién tiene cuántos pendientes)
+   * - Balance de carga por funcionario (revisión + pendientes de firma + concluidos)
    * - Semáforo de antigüedad de expedientes en bandeja:
    *   Verde (< 24h), Amarillo (1 a 3 días), Rojo (> 3 días)
    */
@@ -155,19 +279,25 @@ module.exports = app => {
           u.nombres,
           u.apellidos,
           u.cargo,
-          COUNT(d.id_documento) FILTER (WHERE d.estado IN ('NUEVO', 'ENVIADO', 'DERIVADO')) AS pendientes,
-          COUNT(d.id_documento) FILTER (WHERE d.estado IN ('NUEVO', 'ENVIADO', 'DERIVADO') AND (NOW() - d._fecha_modificacion) < INTERVAL '24 hours') AS verde,
-          COUNT(d.id_documento) FILTER (WHERE d.estado IN ('NUEVO', 'ENVIADO', 'DERIVADO') AND (NOW() - d._fecha_modificacion) BETWEEN INTERVAL '24 hours' AND INTERVAL '3 days') AS amarillo,
-          COUNT(d.id_documento) FILTER (WHERE d.estado IN ('NUEVO', 'ENVIADO', 'DERIVADO') AND (NOW() - d._fecha_modificacion) > INTERVAL '3 days') AS rojo,
-          COUNT(d.id_documento) FILTER (WHERE d.estado IN ('APROBADO', 'CERRADO')) AS atendidos
+          COUNT(DISTINCT d.id_documento) FILTER (WHERE ${SQL_EN_REVISION}) AS pendientes,
+          COUNT(DISTINCT d.id_documento) FILTER (WHERE ${SQL_PEND_FIRMA} AND (d.firmante_actual = u.id_usuario OR d.aprobador_cd_actual = u.id_usuario)) AS pendientes_firma,
+          COUNT(DISTINCT d.id_documento) FILTER (WHERE (${SQL_EN_REVISION} OR ${SQL_PEND_FIRMA}) AND (NOW() - d._fecha_modificacion) < INTERVAL '24 hours') AS verde,
+          COUNT(DISTINCT d.id_documento) FILTER (WHERE (${SQL_EN_REVISION} OR ${SQL_PEND_FIRMA}) AND (NOW() - d._fecha_modificacion) BETWEEN INTERVAL '24 hours' AND INTERVAL '3 days') AS amarillo,
+          COUNT(DISTINCT d.id_documento) FILTER (WHERE (${SQL_EN_REVISION} OR ${SQL_PEND_FIRMA}) AND (NOW() - d._fecha_modificacion) > INTERVAL '3 days') AS rojo,
+          COUNT(DISTINCT d.id_documento) FILTER (WHERE ${SQL_FIRMADO}) AS firmados,
+          COUNT(DISTINCT d.id_documento) FILTER (WHERE ${SQL_CONCLUIDO}) AS atendidos
         FROM usuario u
         LEFT JOIN documento d ON (
-          (d.via_actual = u.id_usuario OR (d.via_actual IS NULL AND d._usuario_creacion = u.id_usuario))
-          AND d.estado != 'ELIMINADO'
+          d.estado != 'ELIMINADO' AND (
+            d.via_actual = u.id_usuario
+            OR d.firmante_actual = u.id_usuario
+            OR d.aprobador_cd_actual = u.id_usuario
+            OR (d.via_actual IS NULL AND d.firmante_actual IS NULL AND d.aprobador_cd_actual IS NULL AND d._usuario_creacion = u.id_usuario)
+          )
         )
         WHERE u.fid_unidad = :idUnidad AND u.estado = 'ACTIVO'
         GROUP BY u.id_usuario, u.nombres, u.apellidos, u.cargo
-        ORDER BY pendientes DESC, u.apellidos ASC;
+        ORDER BY pendientes_firma DESC, pendientes DESC, u.apellidos ASC;
       `;
 
       const funcionarios = await sequelize.query(qryFuncionarios, {
@@ -182,6 +312,8 @@ module.exports = app => {
           nombreCompleto: `${f.nombres || ''} ${f.apellidos || ''}`.trim(),
           cargo: f.cargo || 'Usuario',
           pendientes: parseInt(f.pendientes || 0, 10),
+          pendientes_firma: parseInt(f.pendientes_firma || 0, 10),
+          firmados: parseInt(f.firmados || 0, 10),
           atendidos: parseInt(f.atendidos || 0, 10),
           semaforo: {
             verde: parseInt(f.verde || 0, 10),
@@ -205,21 +337,30 @@ module.exports = app => {
     try {
       const user = obtenerUsuarioAutenticado(req);
       const idUsuario = user ? user.id_usuario : (req.query.id_usuario ? parseInt(req.query.id_usuario, 10) : 1);
+      const { metodo: metodoFirma, label: metodoFirmaLabel } = await obtenerMetodoFirma();
 
-      // 1. Mis pendientes en bandeja
+      // 1. Mis pendientes en bandeja (incluyendo los cerrados pendientes de firma asignados al usuario)
       const qryPendientes = `
         SELECT 
           d.id_documento,
           d.nombre AS cite,
-          COALESCE(d.referencia, '') AS asunto,
+          COALESCE(NULLIF(TRIM(d.referencia), ''), d.nombre_plantilla, 'Sin asunto') AS asunto,
           d.estado,
+          CASE
+            WHEN ${SQL_PEND_FIRMA} AND (d.firmante_actual = :idUsuario OR d.aprobador_cd_actual = :idUsuario)
+            THEN 'PENDIENTE_FIRMA'
+            ELSE d.estado::text
+          END AS estado_monitoreo,
           d._fecha_modificacion,
-          EXTRACT(DAY FROM (NOW() - d._fecha_modificacion)) AS dias_en_bandeja
+          FLOOR(EXTRACT(DAY FROM (NOW() - d._fecha_modificacion))) AS dias_en_bandeja
         FROM documento d
-        WHERE (d.via_actual = :idUsuario OR (d.via_actual IS NULL AND d._usuario_creacion = :idUsuario))
-          AND d.estado IN ('NUEVO', 'ENVIADO', 'DERIVADO')
+        WHERE d.estado != 'ELIMINADO'
+          AND (
+            ((d.via_actual = :idUsuario OR (d.via_actual IS NULL AND d._usuario_creacion = :idUsuario)) AND d.estado IN ('NUEVO', 'ENVIADO', 'DERIVADO', 'RECHAZADO'))
+            OR (${SQL_PEND_FIRMA} AND (d.firmante_actual = :idUsuario OR d.aprobador_cd_actual = :idUsuario))
+          )
         ORDER BY d._fecha_modificacion ASC
-        LIMIT 10;
+        LIMIT 15;
       `;
       const pendientes = await sequelize.query(qryPendientes, {
         replacements: { idUsuario },
@@ -242,13 +383,14 @@ module.exports = app => {
         type: sequelize.QueryTypes.SELECT
       });
 
-      // 3. Resumen de rendimiento del mes en curso
+      // 3. Resumen de rendimiento del mes en curso (incluyendo firmas)
       const qryRendimientoMes = `
         SELECT 
           COUNT(*) FILTER (WHERE h.accion = 'CREADO') AS creados,
           COUNT(*) FILTER (WHERE h.accion = 'DERIVADO') AS derivados,
           COUNT(*) FILTER (WHERE h.accion = 'APROBADO') AS aprobados,
-          COUNT(*) FILTER (WHERE h.accion = 'CERRADO') AS cerrados
+          COUNT(*) FILTER (WHERE h.accion = 'CERRADO') AS cerrados,
+          COUNT(*) FILTER (WHERE h.accion IN ('FIRMO', 'APROBADO_CD')) AS firmados
         FROM historial_flujo h
         WHERE h._usuario_creacion = :idUsuario
           AND h._fecha_creacion >= DATE_TRUNC('month', NOW());
@@ -258,16 +400,22 @@ module.exports = app => {
         type: sequelize.QueryTypes.SELECT
       });
 
-      const totalAtendidos = (parseInt(rendimiento?.derivados || 0, 10)) + (parseInt(rendimiento?.aprobados || 0, 10)) + (parseInt(rendimiento?.cerrados || 0, 10));
+      const totalPendientesFirmaUser = pendientes.filter(p => p.estado_monitoreo === 'PENDIENTE_FIRMA').length;
+      const totalFirmadosUser = parseInt(rendimiento?.firmados || 0, 10);
+      const totalAtendidos = (parseInt(rendimiento?.derivados || 0, 10)) + (parseInt(rendimiento?.aprobados || 0, 10)) + (parseInt(rendimiento?.cerrados || 0, 10)) + totalFirmadosUser;
       const totalCreados = parseInt(rendimiento?.creados || 0, 10);
       const totalPendientesCount = pendientes.length;
 
       res.status(200).send(util.formatearMensaje('EXITO', 'Métricas personales obtenidas.', {
         id_usuario: idUsuario,
+        metodoFirma,
+        metodoFirmaLabel,
         resumenMes: {
           creados: totalCreados,
           atendidos: totalAtendidos,
           pendientes: totalPendientesCount,
+          pendientesFirma: totalPendientesFirmaUser,
+          firmados: totalFirmadosUser,
           tasaEficiencia: (totalAtendidos + totalPendientesCount) > 0
             ? Math.round((totalAtendidos / (totalAtendidos + totalPendientesCount)) * 100)
             : 100
@@ -282,7 +430,8 @@ module.exports = app => {
           cite: p.cite || 'S/N',
           asunto: p.asunto || 'Sin asunto',
           estado: p.estado,
-          dias_espera: Math.floor(p.dias_en_bandeja || 0)
+          estado_monitoreo: p.estado_monitoreo,
+          dias_espera: Math.max(0, Math.floor(p.dias_en_bandeja || 0))
         }))
       }));
     } catch (err) {
