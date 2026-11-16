@@ -123,16 +123,22 @@ module.exports = {
             if(!Array.isArray(pRespuesta)) pRespuesta = [pRespuesta];
             return resolve(Promise.each(pRespuesta, (it) => {
               const remitentes = parseIdsSeguro(it.de, it.plantilla_valor, 'de', [Number(it._usuario_creacion)]);
-              delete datosActualizar.firmante_actual;
-              if(it.firmante_actual === null && it.firmaron === null) {
-                datosActualizar.firmante_actual = remitentes[0];
-                datosActualizar.aprobador_cd_actual = remitentes[0];
+              const docDatos = Object.assign({}, datosActualizar);
+              if(!it.firmante_actual && (!it.firmaron || it.firmaron.length === 0)) {
+                docDatos.firmante_actual = remitentes[0] || Number(it._usuario_creacion);
+                docDatos.aprobador_cd_actual = remitentes[0] || Number(it._usuario_creacion);
               }
-              return module.exports.actualizarDocumento(it, datosActualizar, pModelos.historial_flujo, tr);
+              return module.exports.actualizarDocumento(it, docDatos, pModelos.historial_flujo, tr);
             }));
           })
           .catch( pError => reject(pError))
       }else {
+        const remitentes = parseIdsSeguro(pDocumento.de, pDocumento.plantilla_valor, 'de', [Number(pDocumento._usuario_creacion)]);
+        const primerFirmante = remitentes[0] || Number(pDocumento._usuario_creacion);
+        if(!pDocumento.firmante_actual && (!pDocumento.firmaron || pDocumento.firmaron.length === 0)) {
+          datosActualizar.firmante_actual = primerFirmante;
+          datosActualizar.aprobador_cd_actual = primerFirmante;
+        }
         return module.exports.actualizarDocumento(pDocumento, datosActualizar, pModelos.historial_flujo, tr)
           .then(() => resolve(true))
           .catch(pError => reject(pError));

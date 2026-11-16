@@ -1,5 +1,5 @@
 import { Component, OnInit, computed, inject, signal, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormGroup, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -45,7 +45,7 @@ import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
       <!-- Barra Superior de Control Documental -->
       <header class="workbench-topbar">
         <div class="topbar-left">
-          <button mat-icon-button routerLink="/documentos" matTooltip="Volver a la bandeja" class="btn-back">
+          <button mat-icon-button (click)="volverAtras()" matTooltip="Volver a la bandeja anterior" class="btn-back">
             <mat-icon>arrow_back</mat-icon>
           </button>
           <div class="doc-identity">
@@ -1355,6 +1355,7 @@ export class DocumentWorkbenchComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly location = inject(Location);
 
   readonly currentUser = this.authService.currentUser;
   readonly doc = signal<Documento | null>(null);
@@ -1421,6 +1422,10 @@ export class DocumentWorkbenchComponent implements OnInit {
     if (idParam) {
       this.cargarDocumento(Number(idParam));
     }
+  }
+
+  volverAtras(): void {
+    this.location.back();
   }
 
   setModo(esEdicion: boolean): void {

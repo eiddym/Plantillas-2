@@ -13,13 +13,14 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Documento, DocumentosService } from '../../core/services/documentos.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { VisorPdfDialogComponent } from '../visor-pdf/visor-pdf-dialog.component';
 import { NuevoDocumentoDialogComponent } from './nuevo-documento-dialog.component';
 import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.component';
+import { FirmaDigitalDialogComponent } from './firma-digital-dialog.component';
 
 @Component({
   selector: 'app-documentos-list',
@@ -73,8 +74,8 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
       </header>
 
       <mat-card class="table-card">
-        <!-- Tabs de filtro por estado (Ocultos en bandeja de firmar) -->
-        <mat-tab-group *ngIf="modoVista() !== 'firmar'" (selectedTabChange)="onTabChange($event.index)">
+        <!-- Tabs de filtro por estado (Ocultos en bandeja de firmar y de aprobar) -->
+        <mat-tab-group *ngIf="modoVista() !== 'firmar' && modoVista() !== 'aprobar_documento'" (selectedTabChange)="onTabChange($event.index)">
           <ng-container *ngIf="modoVista() === 'documentos'">
             <mat-tab label="Todos los Documentos"></mat-tab>
             <mat-tab label="Nuevos / Borrador"></mat-tab>
@@ -100,21 +101,22 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
             <mat-tab label="Borradores (NUEVO)"></mat-tab>
             <mat-tab label="Derivados"></mat-tab>
           </ng-container>
-
-          <ng-container *ngIf="modoVista() === 'aprobar_documento'">
-            <mat-tab label="Pendientes de Aprobación"></mat-tab>
-            <mat-tab label="Aprobados"></mat-tab>
-          </ng-container>
         </mat-tab-group>
 
         <!-- Avisos contextuales de bandeja -->
-        <div class="toolbar-filter" *ngIf="modoVista() === 'firmar' || modoVista() === 'impresion'">
+        <div class="toolbar-filter" *ngIf="modoVista() === 'firmar' || modoVista() === 'impresion' || modoVista() === 'aprobar_documento'">
           <span class="toolbar-spacer"></span>
 
           <!-- Mensaje informativo para la bandeja de firmar -->
           <div *ngIf="modoVista() === 'firmar'" class="firmar-info-badge">
             <mat-icon>verified_user</mat-icon>
             <span>Solo documentos con CITE aprobados por jefatura</span>
+          </div>
+
+          <!-- Mensaje informativo para la bandeja de aprobar con CD -->
+          <div *ngIf="modoVista() === 'aprobar_documento'" class="firmar-info-badge cd-badge">
+            <mat-icon>how_to_reg</mat-icon>
+            <span>Solo documentos con CITE pendientes de aprobación con Ciudadanía Digital</span>
           </div>
 
           <!-- Mensaje informativo de restricción para impresión -->
@@ -173,6 +175,9 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
                 <span class="badge-tag" [ngClass]="getEstadoClass(d.estado)">
                   {{ d.estado }}
                 </span>
+                <span *ngIf="d.firmado" class="badge-tag badge-firmado-oficial" style="margin-left: 5px; background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-weight: 700;">
+                  FIRMADO
+                </span>
               </td>
             </ng-container>
 
@@ -190,11 +195,25 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
               <td mat-cell *matCellDef="let d" class="text-right">
                 <!-- ACCIÓN PARA BANDEJA DE FIRMAR -->
                 <ng-container *ngIf="modoVista() === 'firmar'">
-                  <button mat-raised-button color="primary" class="btn-firmar-action" (click)="abrirWorkbench(d)">
+                  <button mat-raised-button color="primary" class="btn-firmar-action" (click)="abrirFirmaDigital(d)">
                     <mat-icon>fingerprint</mat-icon>
                     <span>Firmar</span>
                   </button>
                   <button mat-icon-button (click)="verPdf(d)" [matTooltip]="(d.estado === 'APROBADO' || d.estado === 'CERRADO') ? 'Ver Documento Oficial (PDF)' : 'Vista Previa HTML'">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="verHistorial(d)" matTooltip="Trazabilidad y Flujo" class="btn-history-action">
+                    <mat-icon>history</mat-icon>
+                  </button>
+                </ng-container>
+
+                <!-- ACCIÓN PARA BANDEJA DE APROBAR CON CIUDADANÍA DIGITAL -->
+                <ng-container *ngIf="modoVista() === 'aprobar_documento'">
+                  <button mat-raised-button color="primary" class="btn-aprobar-cd-action" (click)="aprobarConCiudadania(d)">
+                    <mat-icon>how_to_reg</mat-icon>
+                    <span>Aprobar con CD</span>
+                  </button>
+                  <button mat-icon-button (click)="verPdf(d)" matTooltip="Ver Documento Oficial (PDF)">
                     <mat-icon>visibility</mat-icon>
                   </button>
                   <button mat-icon-button (click)="verHistorial(d)" matTooltip="Trazabilidad y Flujo" class="btn-history-action">
@@ -222,7 +241,7 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
                 </ng-container>
 
                 <!-- ACCIÓN PARA BANDEJAS REGULARES -->
-                <ng-container *ngIf="modoVista() !== 'firmar' && modoVista() !== 'impresion'">
+                <ng-container *ngIf="modoVista() !== 'firmar' && modoVista() !== 'impresion' && modoVista() !== 'aprobar_documento'">
                   <button *ngIf="puedeEditar(d)" mat-icon-button (click)="abrirWorkbench(d)" matTooltip="Editar / Revisar">
                     <mat-icon>edit_note</mat-icon>
                   </button>
@@ -260,9 +279,10 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
             <!-- Fila Vacía -->
             <tr class="mat-row" *matNoDataRow>
               <td class="mat-cell empty-cell" [attr.colspan]="displayedColumns.length">
-                <mat-icon class="empty-icon">{{ modoVista() === 'firmar' ? 'done_all' : 'folder_open' }}</mat-icon>
+                <mat-icon class="empty-icon">{{ (modoVista() === 'firmar' || modoVista() === 'aprobar_documento') ? 'done_all' : 'folder_open' }}</mat-icon>
                 <p *ngIf="modoVista() === 'firmar'">No tiene documentos cerrados pendientes de su firma en este momento.</p>
-                <p *ngIf="modoVista() !== 'firmar'">No se encontraron documentos en esta bandeja.</p>
+                <p *ngIf="modoVista() === 'aprobar_documento'">No tiene documentos pendientes de su aprobación con Ciudadanía Digital en este momento.</p>
+                <p *ngIf="modoVista() !== 'firmar' && modoVista() !== 'aprobar_documento'">No se encontraron documentos en esta bandeja.</p>
               </td>
             </tr>
           </table>
@@ -686,6 +706,27 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
       }
     }
 
+    .btn-aprobar-cd-action {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+      color: #ffffff !important;
+      border-radius: 18px !important;
+      font-weight: 700 !important;
+      font-size: 0.82rem !important;
+      padding: 0 16px !important;
+      height: 36px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      margin-right: 4px;
+      box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25) !important;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+
     .btn-history-action {
       color: #0d5c63 !important;
       &:hover {
@@ -948,6 +989,24 @@ export class DocumentosListComponent implements OnInit {
             this.loading.set(false);
           }
         });
+    } else if (this.modoVista() === 'aprobar_documento') {
+      let params = new HttpParams()
+        .set('limit', this.pageSize().toString())
+        .set('page', (this.pageIndex() + 1).toString())
+        .set('order', '-id_documento');
+      if (this.searchFilter) params = params.set('filter', this.searchFilter);
+
+      this.http.get<any>('/api/v1/documento/aprobarCiudadania', { params }).subscribe({
+        next: (res) => {
+          this.loading.set(false);
+          const data = res?.datos || {};
+          this.documentos.set(data.resultado || []);
+          this.total.set(data.total || 0);
+        },
+        error: () => {
+          this.loading.set(false);
+        }
+      });
     } else {
       let estadoFiltro = this.currentEstado;
       if (this.modoVista() === 'derivados' && !estadoFiltro) {
@@ -1140,6 +1199,51 @@ export class DocumentosListComponent implements OnInit {
     if (doc.id_documento) {
       this.router.navigate(['/documentos', doc.id_documento]);
     }
+  }
+
+  abrirFirmaDigital(doc: Documento): void {
+    if (!doc.id_documento) return;
+    const dialogRef = this.dialog.open(FirmaDigitalDialogComponent, {
+      width: '600px',
+      maxWidth: '95vw',
+      panelClass: 'modal-sin-padding',
+      autoFocus: false,
+      data: {
+        idDocumento: doc.id_documento,
+        docCite: doc.nombre,
+        referencia: this.getReferencia(doc),
+        nombrePlantilla: doc.nombre_plantilla
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((firmado) => {
+      if (firmado) {
+        this.cargarDocumentos();
+      }
+    });
+  }
+
+  aprobarConCiudadania(doc: Documento): void {
+    if (!doc.id_documento) return;
+    this.snackBar.open('Iniciando servicio de aprobación con Ciudadanía Digital (AGETIC)...', 'Cerrar', { duration: 3000 });
+    this.http.post<{ link?: string; estadoProceso?: string; finalizado?: boolean }>(
+      '/api/v1/documento/aprobarCiudadania',
+      { id_documento: doc.id_documento }
+    ).subscribe({
+      next: (res) => {
+        if (res && res.link) {
+          window.open(res.link, '_blank');
+          this.snackBar.open('Se abrió la pasarela de Ciudadanía Digital de AGETIC para su aprobación.', 'Aceptar', { duration: 5000 });
+        } else {
+          this.snackBar.open('Solicitud de aprobación procesada correctamente.', 'Aceptar', { duration: 4000 });
+          this.cargarDocumentos();
+        }
+      },
+      error: (err) => {
+        const msg = err.error?.mensaje || 'Error al conectar con el servicio de Ciudadanía Digital.';
+        this.snackBar.open(typeof msg === 'string' ? msg : JSON.stringify(msg), 'Cerrar', { duration: 4500 });
+      }
+    });
   }
 
   verPdf(doc: Documento): void {

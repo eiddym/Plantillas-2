@@ -69,43 +69,66 @@ module.exports = app => {
       if(!documentoResp) throw Error('Usted no esta autorizado a firmar el documento.');
       documento = documentoResp.dataValues;
       documentoInstancia = documentoResp;
-      const firmaron = documento.firmaron || [];
-      firmantes = JSON.parse(documento.de).concat(JSON.parse(documento.via)).concat(JSON.parse(documento.para));
-      if (documento.firmaron === null) documento.firmaron = [];
-      // if(documento.firmaron.indexOf(usuarioFirmante) > -1 ) throw new Error('Usted ya firmo el documento');
-      if(documento.firmaron.indexOf(usuarioFirmante) > -1 ) {
-        datos = bl.validarYaFirmo(firmantes, documento.firmaron, usuarioFirmante);
+
+      const parseIds = (val) => {
+        if (!val) return [];
+        if (Array.isArray(val)) return val.map(Number).filter(n => !isNaN(n) && n > 0);
+        if (typeof val === 'string') {
+          try {
+            const parsed = JSON.parse(val);
+            if (Array.isArray(parsed)) return parsed.map(Number).filter(n => !isNaN(n) && n > 0);
+            if (typeof parsed === 'number' && !isNaN(parsed) && parsed > 0) return [parsed];
+          } catch (_) {
+            const m = val.match(/\d+/g);
+            if (m) return m.map(Number).filter(n => !isNaN(n) && n > 0);
+          }
+        }
+        if (typeof val === 'number' && !isNaN(val) && val > 0) return [val];
+        return [];
+      };
+
+      const deList = parseIds(documento.de);
+      const viaList = parseIds(documento.via);
+      const paraList = parseIds(documento.para);
+      firmantes = [...deList, ...viaList, ...paraList];
+      if (firmantes.length === 0) {
+        firmantes = [Number(usuarioFirmante)];
+      }
+
+      let firmaron = Array.isArray(documento.firmaron) ? [...documento.firmaron] : [];
+      if(firmaron.indexOf(usuarioFirmante) > -1 ) {
+        datos = bl.validarYaFirmo(firmantes, firmaron, usuarioFirmante);
         firmanteValido = false;
         return;
       }
       if(estadosValidos.indexOf(documento.estado) === -1) throw new Error('El documento aun no puede ser firmado por su estado.');
-      let firmanteActual= null;
-      if(firmantes.indexOf(usuarioFirmante) === -1 ) {
 
+      let firmanteActual = null;
+      if(firmantes.indexOf(usuarioFirmante) === -1 ) {
         if(firmaron.length === 0) {
           firmanteActual = firmantes[0];
-        }
-        else {
+        } else {
           const faltantes = _.xor(firmaron, firmantes);
           firmanteActual = faltantes[0];
         }
-
-        datos = { firmante_actual: firmanteActual, firmaron };
+        datos = { firmante_actual: firmanteActual, aprobador_cd_actual: firmanteActual, firmaron };
         firmanteValido = false;
         return;
       }
 
-      if(firmaron.length === 0) firmaron.push(usuarioFirmante);
-      else firmaron.push(usuarioFirmante);
-      const indiceFirmante = firmantes.indexOf(usuarioFirmante);
-      const nuevoFirmante = null;
-      if(indiceFirmante < firmantes.length -1) {
-        firmanteActual = firmantes[indiceFirmante+1];
+      if(firmaron.indexOf(usuarioFirmante) === -1) {
+        firmaron.push(usuarioFirmante);
       }
-      datos = { firmante_actual: firmanteActual, firmaron };
+      const indiceFirmante = firmantes.indexOf(usuarioFirmante);
+      if(indiceFirmante > -1 && indiceFirmante < firmantes.length - 1) {
+        firmanteActual = firmantes[indiceFirmante + 1];
+      }
+      datos = { firmante_actual: firmanteActual, aprobador_cd_actual: firmanteActual, firmaron };
 
-      if(indiceFirmante === firmantes.length -1) {
+      if(indiceFirmante === firmantes.length - 1 || firmanteActual === null) {
         datos.firmado = true;
+        datos.firmante_actual = null;
+        datos.aprobador_cd_actual = null;
       }
       return;
 
@@ -325,15 +348,32 @@ module.exports = app => {
       if (!documento.dataValues.firma) return bl.crearCodigoFirma(Modelos, documento.dataValues, req);
       return documento.dataValues.firma.dataValues.codigo;
     })
-    .then(() => {
-      const documentoExiste =fs.existsSync(dirArch);
-      if(!documentoExiste || documentoExiste === false) throw Error('No se pudo obtener el documento a firmar.');
-      return fs.readFile(dirArch, (error, data) => {
-        if(error) {
-          throw Error(process.env.NODE_ENV==='production'?'No se pudo obtener el documento a firmar.': error);
+    .then(async () => {
+      let documentoExiste = fs.existsSync(dirArch);
+      if (!documentoExiste) {
+        try {
+          await bl.obtenerCrearHash(documento.dataValues, req);
+        } catch (e) {
+          logger.warn('[POST /documento/firmar] Error al generar PDF bajo demanda:', e.message || e);
         }
-        return res.send(data);
-      });
+        documentoExiste = fs.existsSync(dirArch);
+      }
+      if (!documentoExiste) throw Error('No se pudo obtener el documento a firmar.');
+
+      const fileBuffer = fs.readFileSync(dirArch);
+      const isJsonRequested = (req.headers.accept && req.headers.accept.includes('application/json')) || req.body.formato === 'base64';
+
+      if (isJsonRequested) {
+        return res.json({
+          tipoMensaje: 'EXITO',
+          mensaje: 'Documento obtenido para firma',
+          base64: fileBuffer.toString('base64'),
+          nombre: `${nombreDocumento}.pdf`,
+          cite: documento.dataValues.nombre
+        });
+      }
+      res.contentType('application/pdf');
+      return res.send(fileBuffer);
     })
     .catch(error => {
       logger.error("Error en la busqueda del documento", error, req.body);
