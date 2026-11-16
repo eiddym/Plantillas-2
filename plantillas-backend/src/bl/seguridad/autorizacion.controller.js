@@ -293,14 +293,12 @@ module.exports = (app) => {
           if (!respLdap) return resolve(respuesta);
           _.each(respLdap.other, usuario => {
             const email = usuario.mail;
-            const validar = email.split('@');
-            if (validar[1].indexOf('agetic.gob.bo') == -1) {
-              respuesta.mensaje = 'Usted no esta autorizado para ingresar al sistema.';
+            if (email && email.includes('@')) {
+              respuesta.valido = true;
+            } else {
+              respuesta.mensaje = 'El usuario no cuenta con un correo electrónico válido.';
               respuesta.valido = false;
               return resolve(respuesta);
-            }
-            else {
-              respuesta.valido = true;
             }
           });
           return resolve(respuesta);

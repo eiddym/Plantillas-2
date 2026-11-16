@@ -80,7 +80,7 @@ export interface FirmaDigitalData {
           </div>
           <div class="status-details">
             <div class="status-title-row">
-              <strong>Servicio Local Jacobitus (ADSIB)</strong>
+              <strong>Servicio Local Jacobitus (Firma Digital)</strong>
               <span class="badge-status" [class.badge-online]="jacobitusOnline()" [class.badge-offline]="!jacobitusOnline()">
                 {{ jacobitusOnline() ? 'CONECTADO (Puerto 9000)' : 'NO DETECTADO' }}
               </span>
@@ -106,7 +106,7 @@ export interface FirmaDigitalData {
             <mat-label>Slot / Token Detectado</mat-label>
             <mat-select [(ngModel)]="slotSeleccionado">
               <mat-option *ngFor="let s of slotsDisponibles" [value]="s.slot">
-                {{ s.nombre || 'Token Criptográfico ADSIB' }} (Slot {{ s.slot }})
+                {{ s.nombre || 'Token Criptográfico' }} (Slot {{ s.slot }})
               </mat-option>
             </mat-select>
           </mat-form-field>
@@ -451,7 +451,7 @@ export class FirmaDigitalDialogComponent implements OnInit {
   readonly jacobitusOnline = signal(false);
   readonly errorMensaje = signal<string | null>(null);
 
-  slotsDisponibles: any[] = [{ slot: 0, nombre: 'Token Criptográfico ADSIB / PKCS#11' }];
+  slotsDisponibles: any[] = [{ slot: 0, nombre: 'Token Criptográfico / PKCS#11' }];
   slotSeleccionado = 0;
   pinToken = '';
 

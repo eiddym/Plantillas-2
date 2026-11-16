@@ -100,7 +100,7 @@ export interface ActivoFijoItem {
             <input
               type="text"
               class="search-input"
-              placeholder="Buscar por código de barras (ej. ADSIB-12400-0001), descripción o marca..."
+              placeholder="Buscar por código de barras (ej. ACT-12400-0001), descripción o marca..."
               [(ngModel)]="filtroBusqueda"
               (ngModelChange)="buscarEnNsiaf($event)"
             />
@@ -160,7 +160,7 @@ export interface ActivoFijoItem {
                   <input
                     type="text"
                     class="table-input code-input"
-                    placeholder="Ej. ADSIB-12400-0001"
+                    placeholder="Ej. ACT-12400-0001"
                     [(ngModel)]="row.barcode"
                     (ngModelChange)="actualizarValores()"
                     [disabled]="to.disabled || false"

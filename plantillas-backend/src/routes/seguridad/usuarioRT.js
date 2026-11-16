@@ -47,7 +47,7 @@ module.exports = app => {
      "nombres": "Ariel",
      "apellidos": "campos",
      "cargo": "Profesional de Desarrollo de Sistemas",
-     "email": "acampos@agetic.gob.bo",
+     "email": "usuario@institucion.gob.bo",
      "estado": "ACTIVO",
      "_usuario_creacion": 1,
      "_usuario_modificacion": 1,
@@ -94,7 +94,7 @@ module.exports = app => {
      "nombres": "Ariel",
      "apellidos": "campos",
      "cargo": "Profesional de Desarrollo de Sistemas",
-     "email": "acampos@agetic.gob.bo",
+     "email": "usuario@institucion.gob.bo",
      "estado": "ACTIVO",
      "_usuario_creacion": 1,
      "_usuario_modificacion": 1,
@@ -283,7 +283,7 @@ module.exports = app => {
             "fid_unidad": 9,
             "numero_documento": "12345678",
             "cargo": "JEFE DE UNIDAD",
-            "email": "juan.perez@agetic.gob.bo",
+            "email": "juan.perez@institucion.gob.bo",
             "virtual": false,
             "estado": "ACTIVO",
             "_usuario_creacion": 3,
@@ -1393,7 +1393,7 @@ module.exports = app => {
    *        "required": true,
    *        "options": [
    *          {
-   *            "name": "AGETIC AGETIC",
+   *            "name": "USUARIO SISTEMA",
    *            "value": 1
    *          },
    *          {

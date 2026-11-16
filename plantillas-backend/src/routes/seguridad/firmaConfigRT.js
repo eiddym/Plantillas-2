@@ -44,7 +44,7 @@ module.exports = (app) => {
         `);
         return res.status(200).send(util.formatearMensaje('EXITO', 'Configuración de firma recuperada', {
           tipo_firma: 'FIRMA_DIGITAL',
-          descripcion: 'Firma Digital Oficial (FirmaTIC / Token / AGETIC)',
+          descripcion: 'Firma Digital Oficial (Token Criptográfico / PKCS#11)',
           _fecha_modificacion: new Date()
         }));
       }
@@ -73,7 +73,7 @@ module.exports = (app) => {
       }
 
       const desc = tipo_firma === 'FIRMA_DIGITAL'
-        ? 'Firma Digital Oficial con Token / FirmaTIC (AGETIC)'
+        ? 'Firma Digital Oficial con Token Criptográfico (PKCS#11 / Jacobitus)'
         : 'Aprobación de Documentos Oficiales con Ciudadanía Digital (AGETIC)';
 
       await sequelize.query(`

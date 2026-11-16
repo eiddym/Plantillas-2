@@ -267,7 +267,7 @@ module.exports = app => {
           "id":160,
           "username":"correspondencia",
           "first_name":"Correspondencia",
-          "last_name":"AGETIC",
+          "last_name":"Institucional",
           "cargo":"Correspondencia",
           "doc":"sinCI"
         },

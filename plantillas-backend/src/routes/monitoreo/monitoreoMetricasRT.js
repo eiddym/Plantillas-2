@@ -45,7 +45,7 @@ module.exports = app => {
     }
     return {
       metodo: 'FIRMA_DIGITAL',
-      label: 'Firma Digital (Token / FirmaTIC)'
+      label: 'Firma Digital (Token / PKCS#11)'
     };
   }
 

@@ -61,14 +61,14 @@ interface FirmaConfigResp {
               <mat-icon>fingerprint</mat-icon>
             </div>
             <div>
-              <h2>Firma Digital Oficial (FirmaTIC / Token)</h2>
-              <span class="sub-label">Estándar PKI - AGETIC / ATT</span>
+              <h2>Firma Digital Oficial (Token / PKCS#11)</h2>
+              <span class="sub-label">Estándar PKI Nacional (Ley N° 164 / ATT)</span>
             </div>
           </div>
 
           <div class="card-body">
             <p>
-              Emisión de documentos oficiales suscritos mediante certificados digitales en dispositivos criptográficos físicos (Token USB) o en la nube a través de la pasarela <strong>FirmaTIC (AGETIC)</strong>.
+              Emisión de documentos oficiales suscritos mediante certificados digitales en dispositivos criptográficos físicos (Token USB / PKCS#11 / Jacobitus).
             </p>
             <ul class="method-features">
               <li><mat-icon>done</mat-icon> Plena equivalencia jurídica y no repudio (Ley N° 164 de Telecomunicaciones y TIC).</li>
@@ -459,7 +459,7 @@ export class FirmaConfigComponent implements OnInit {
         this.guardando.set(false);
         this.tipoFirmaActivo.set(this.tipoFirmaSeleccionado);
         this.snackBar.open(
-          `Mecanismo rector actualizado a: ${this.tipoFirmaSeleccionado === 'FIRMA_DIGITAL' ? 'Firma Digital (FirmaTIC)' : 'Ciudadanía Digital (AGETIC)'}`,
+          `Mecanismo rector actualizado a: ${this.tipoFirmaSeleccionado === 'FIRMA_DIGITAL' ? 'Firma Digital (Token / PKCS#11)' : 'Ciudadanía Digital (AGETIC)'}`,
           'Aceptar',
           { duration: 4000 }
         );

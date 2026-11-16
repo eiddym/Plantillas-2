@@ -27,7 +27,7 @@
       "forceLanguage": "es"
     }
   },
-  "author": "AGETIC",
+  "author": "Sistema de Plantillas",
   "license": "UNLICENSED",
   "dependencies": {
     "@mosparo/api-client": "^2.0.0",

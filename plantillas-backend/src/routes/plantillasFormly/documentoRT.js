@@ -2385,7 +2385,7 @@ module.exports = app => {
     {
       "usuario" : 1,
       "observaciones" : "Este informe no contiene informacion alguna",
-      "observado_por" : "AGETIC AGETIC"
+      "observado_por" : "sys_default"
     }
 
     @apiSuccessExample {json} Respuesta del Ejemplo:
