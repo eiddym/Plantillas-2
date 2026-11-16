@@ -117,7 +117,7 @@ export interface VerificacionResultado {
                       autocomplete="off"
                     />
                     <mat-icon matPrefix class="form-icon">tag</mat-icon>
-                    <mat-error *ngIf="verifyForm.get('cite')?.hasError('required')">El CITE es obligatorio</mat-error>
+                    <mat-error *ngIf="verifyForm.get('cite')?.hasError('required') && (verifyForm.get('cite')?.touched || verifyForm.get('cite')?.dirty)">El CITE es obligatorio</mat-error>
                   </mat-form-field>
                 </div>
 
@@ -133,13 +133,15 @@ export interface VerificacionResultado {
                       style="font-family: monospace; letter-spacing: 1px;"
                     />
                     <mat-icon matPrefix class="form-icon">pin</mat-icon>
-                    <mat-error *ngIf="verifyForm.get('codigo')?.hasError('required')">El código es obligatorio</mat-error>
+                    <mat-error *ngIf="verifyForm.get('codigo')?.hasError('required') && (verifyForm.get('codigo')?.touched || verifyForm.get('codigo')?.dirty)">El código es obligatorio</mat-error>
                   </mat-form-field>
                 </div>
 
-                <!-- Widget de Protección Mosparo (solo en consulta manual sin QR antes de validar) -->
+                <!-- Widget de Protección Mosparo (Paso 2: habilitado solo tras ingresar datos válidos) -->
                 <app-mosparo 
                   *ngIf="!esAccesoDirectoQr()"
+                  [disabled]="verifyForm.invalid"
+                  disabledMessage="Complete CITE y Código para activar la verificación"
                   (verified)="onMosparoVerified($event)" 
                   (tokensChanged)="onMosparoTokensChanged($event)"
                 ></app-mosparo>
@@ -1250,6 +1252,16 @@ export class VerificarComponent implements OnInit {
   private pdfBlob: Blob | null = null;
 
   ngOnInit(): void {
+    // Si el usuario modifica los campos tras haber verificado Mosparo, invalidar tokens
+    this.verifyForm.valueChanges.subscribe(() => {
+      if (this.mosparoTokens()) {
+        this.mosparoTokens.set(null);
+        if (this.mosparoComponent) {
+          this.mosparoComponent.reset();
+        }
+      }
+    });
+
     this.route.queryParams.subscribe((qp) => {
       this.aplicarParametrosYConsultar(qp, false);
     });

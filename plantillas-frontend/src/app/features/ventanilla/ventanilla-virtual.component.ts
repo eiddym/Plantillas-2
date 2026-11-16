@@ -217,6 +217,8 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
                   <!-- Protección Soberana Mosparo -->
                   <div class="col-span-full">
                     <app-mosparo 
+                      [disabled]="solicitudForm.invalid"
+                      disabledMessage="Complete los campos obligatorios para activar la verificación"
                       (verified)="onMosparoVerified($event)" 
                       (tokensChanged)="onMosparoTokensChanged($event)"
                     ></app-mosparo>
@@ -1174,6 +1176,14 @@ export class VentanillaVirtualComponent {
     citeExterno: new FormControl(''),
     referencia: new FormControl('', [Validators.required])
   });
+
+  constructor() {
+    this.solicitudForm.valueChanges.subscribe(() => {
+      if (this.mosparoTokens()) {
+        this.mosparoTokens.set(null);
+      }
+    });
+  }
 
   onFileSelected(event: any): void {
     const file = event.target.files[0];

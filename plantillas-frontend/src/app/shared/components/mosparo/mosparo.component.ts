@@ -14,8 +14,10 @@ export interface MosparoTokens {
     <div class="mosparo-container">
       <div 
         class="mosparo-card" 
+        [class.card-disabled]="disabled"
         [class.card-verified]="status() === 'verified'"
         [class.card-checking]="status() === 'checking'"
+        [class.card-shake]="avisoIncompleto()"
         (click)="onCheckboxClick()"
       >
         <div class="mosparo-left">
@@ -23,8 +25,10 @@ export interface MosparoTokens {
             class="mosparo-checkbox" 
             [class.checked]="status() === 'verified'" 
             [class.spinning]="status() === 'checking'"
+            [class.cb-disabled]="disabled"
             role="checkbox"
             [attr.aria-checked]="status() === 'verified'"
+            [attr.aria-disabled]="disabled"
             tabindex="0"
             (keydown.enter)="onCheckboxClick()"
             (keydown.space)="onCheckboxClick()"
@@ -42,7 +46,9 @@ export interface MosparoTokens {
 
           <div class="mosparo-label-wrap">
             <span class="mosparo-label">
-              @if (status() === 'verified') {
+              @if (disabled) {
+                Verificación de seguridad
+              } @else if (status() === 'verified') {
                 Verificación exitosa
               } @else if (status() === 'checking') {
                 Comprobando navegador...
@@ -51,10 +57,14 @@ export interface MosparoTokens {
               }
             </span>
             <span class="sub-status-txt">
-              @if (status() === 'verified') {
+              @if (disabled) {
+                {{ disabledMessage }}
+              } @else if (status() === 'verified') {
                 Protección anti-bot validada
+              } @else if (status() === 'checking') {
+                Evaluando integridad del dispositivo...
               } @else {
-                Protección soberana contra spam
+                Haga clic para validar seguridad
               }
             </span>
           </div>
@@ -72,10 +82,18 @@ export interface MosparoTokens {
           <span class="brand-subtitle">Seguridad Soberana</span>
         </div>
 
-        <!-- Inputs ocultos para compatibilidad con serialización estándar de formularios -->
+        <!-- Inputs ocultos para serialización nativa de formularios -->
         <input type="hidden" name="_mosparo_submitToken" [value]="currentTokens?.submitToken || ''">
         <input type="hidden" name="_mosparo_validationToken" [value]="currentTokens?.validationToken || ''">
       </div>
+
+      <!-- Alerta cuando el usuario intenta validar sin completar el paso 1 -->
+      @if (avisoIncompleto()) {
+        <div class="aviso-banner">
+          <span class="aviso-icon">ℹ️</span>
+          <span>Paso 1 requerido: Ingrese primero el CITE y Código de verificación.</span>
+        </div>
+      }
     </div>
   `,
   styles: [`
@@ -98,10 +116,17 @@ export interface MosparoTokens {
       cursor: pointer;
     }
 
-    .mosparo-card:hover {
+    .mosparo-card:hover:not(.card-disabled):not(.card-verified) {
       border-color: #0d5c63;
       background: #ffffff;
       box-shadow: 0 3px 10px rgba(13, 92, 99, 0.08);
+    }
+
+    .mosparo-card.card-disabled {
+      background: #f1f5f9;
+      border-color: #e2e8f0;
+      opacity: 0.75;
+      cursor: not-allowed;
     }
 
     .mosparo-card.card-verified {
@@ -109,6 +134,17 @@ export interface MosparoTokens {
       border-color: #86efac;
       box-shadow: 0 2px 8px rgba(22, 163, 74, 0.12);
       cursor: default;
+    }
+
+    .card-shake {
+      animation: shake 0.4s ease-in-out;
+      border-color: #f59e0b !important;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
     }
 
     .mosparo-left {
@@ -132,11 +168,17 @@ export interface MosparoTokens {
       outline: none;
     }
 
-    .mosparo-card:hover .mosparo-checkbox:not(.checked):not(.spinning) {
+    .mosparo-checkbox.cb-disabled {
+      background: #e2e8f0;
+      border-color: #cbd5e1;
+      cursor: not-allowed;
+    }
+
+    .mosparo-card:hover:not(.card-disabled) .mosparo-checkbox:not(.checked):not(.spinning) {
       border-color: #0d5c63;
     }
 
-    .mosparo-checkbox:focus-visible {
+    .mosparo-checkbox:focus-visible:not(.cb-disabled) {
       border-color: #0d5c63;
       box-shadow: 0 0 0 3px rgba(13, 92, 99, 0.2);
     }
@@ -208,6 +250,10 @@ export interface MosparoTokens {
       letter-spacing: -0.2px;
     }
 
+    .card-disabled .mosparo-label {
+      color: #64748b;
+    }
+
     .card-verified .mosparo-label {
       color: #15803d;
     }
@@ -216,6 +262,10 @@ export interface MosparoTokens {
       font-size: 11px;
       color: #64748b;
       font-weight: 500;
+    }
+
+    .card-disabled .sub-status-txt {
+      color: #94a3b8;
     }
 
     .card-verified .sub-status-txt {
@@ -249,12 +299,39 @@ export interface MosparoTokens {
       letter-spacing: -0.4px;
     }
 
+    .card-disabled .brand-title {
+      color: #64748b;
+    }
+
     .brand-subtitle {
       font-size: 8.5px;
       color: #64748b;
       letter-spacing: 0.3px;
       text-transform: uppercase;
       font-weight: 600;
+    }
+
+    .aviso-banner {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #92400e;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    .aviso-icon {
+      font-size: 14px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   `]
 })
@@ -263,11 +340,14 @@ export class MosparoComponent implements OnInit, OnDestroy {
 
   @Input() containerId = 'mosparo-box-' + Math.random().toString(36).substring(2, 9);
   @Input() configUrl = '/api/v1/seguridad/mosparo/config';
+  @Input() disabled = false;
+  @Input() disabledMessage = 'Complete CITE y Código para activar este paso';
 
   @Output() verified = new EventEmitter<MosparoTokens>();
   @Output() tokensChanged = new EventEmitter<MosparoTokens | null>();
 
   status = signal<'unverified' | 'checking' | 'verified'>('unverified');
+  avisoIncompleto = signal(false);
   currentTokens: MosparoTokens | null = null;
 
   ngOnInit(): void {}
@@ -279,10 +359,17 @@ export class MosparoComponent implements OnInit, OnDestroy {
   }
 
   onCheckboxClick(): void {
+    if (this.disabled) {
+      this.avisoIncompleto.set(true);
+      setTimeout(() => this.avisoIncompleto.set(false), 3500);
+      return;
+    }
+
     if (this.status() === 'verified' || this.status() === 'checking') {
       return;
     }
 
+    this.avisoIncompleto.set(false);
     this.status.set('checking');
 
     // Simula comprobación de seguridad del navegador y genera tokens criptográficos soberanos
@@ -303,6 +390,7 @@ export class MosparoComponent implements OnInit, OnDestroy {
   reset(): void {
     this.status.set('unverified');
     this.currentTokens = null;
+    this.avisoIncompleto.set(false);
     this.tokensChanged.emit(null);
   }
 }

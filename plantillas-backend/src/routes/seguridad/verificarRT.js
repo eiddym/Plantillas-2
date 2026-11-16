@@ -167,11 +167,19 @@ module.exports = app => {
 
       if (!citeLimpio) throw Error('No se puede realizar la búsqueda sin el CITE.');
       if (!codigoLimpio) throw Error('No se puede realizar la búsqueda sin el código de verificación.');
-      if (!req.body.recaptcha) throw Error('Complete la solución del reCaptcha.');
+      // Validación anti-bot: Soporta Mosparo (preferente) o reCAPTCHA (compatibilidad)
+      const tieneMosparo = req.body._mosparo_submitToken || (req.headers && req.headers['x-mosparo-submit-token']) || req.body.mosparoSubmitToken;
+      const tieneRecaptcha = req.body.recaptcha;
 
-      const respRecaptcha = await recaptcha.validar(req, res);
-      if (respRecaptcha.status !== 200 || respRecaptcha.data.success !== true) {
-        throw new Error('Error en la validación del reCaptcha.');
+      if (tieneMosparo) {
+        await mosparo.validar(req);
+      } else if (tieneRecaptcha) {
+        const respRecaptcha = await recaptcha.validar(req, res);
+        if (respRecaptcha.status !== 200 || respRecaptcha.data.success !== true) {
+          throw new Error('Error en la validación del reCaptcha.');
+        }
+      } else if (process.env.NODE_ENV === 'production') {
+        throw Error('Complete la verificación de seguridad (Mosparo / Captcha).');
       }
 
       const respDocumento = await Documento.findOne({
