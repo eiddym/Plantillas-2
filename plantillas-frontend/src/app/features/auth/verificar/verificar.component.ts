@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -147,7 +147,7 @@ export interface VerificacionResultado {
                 <button 
                   type="submit" 
                   class="btn-validar" 
-                  [disabled]="verifyForm.invalid || loading()"
+                  [disabled]="verifyForm.invalid || loading() || (!esAccesoDirectoQr() && !mosparoTokens())"
                 >
                   <mat-icon>search</mat-icon>
                   <span>Validar Documento Oficial</span>
@@ -1229,6 +1229,7 @@ export interface VerificacionResultado {
   `]
 })
 export class VerificarComponent implements OnInit {
+  @ViewChild(MosparoComponent) mosparoComponent?: MosparoComponent;
   private readonly fb = inject(FormBuilder);
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
@@ -1455,8 +1456,12 @@ export class VerificarComponent implements OnInit {
     this.pdfBytes.set(null);
     this.pdfBlob = null;
     this.esAccesoDirectoQr.set(false);
+    this.mosparoTokens.set(null);
     this.verifyForm.enable();
     this.verifyForm.reset({ cite: '', codigo: '' });
+    if (this.mosparoComponent) {
+      this.mosparoComponent.reset();
+    }
     this.router.navigate(['/verificar'], { queryParams: {}, replaceUrl: true });
   }
 }

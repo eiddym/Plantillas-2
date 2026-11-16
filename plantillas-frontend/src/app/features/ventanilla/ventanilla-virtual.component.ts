@@ -227,7 +227,7 @@ import { MosparoComponent, MosparoTokens } from '../../shared/components/mosparo
                       type="submit" 
                       mat-flat-button 
                       class="btn-radicar-public" 
-                      [disabled]="solicitudForm.invalid || enviando()"
+                      [disabled]="solicitudForm.invalid || enviando() || !mosparoTokens()"
                     >
                       <mat-icon>send</mat-icon>
                       <span>Completar Radicación Digital</span>

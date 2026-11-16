@@ -454,17 +454,17 @@ module.exports = app => {
               p === '/api/v1/auth/oidc/callback' ||
               p === '/api/v1/auth/sso/consume' ||
               p === '/api/v1/seguridad/login' ||
-              p === '/api/v1/seguridad/mosparo/config' ||
-              p === '/api/v1/mosparo/config' ||
+              p.startsWith('/api/v1/seguridad/mosparo') ||
+              p.startsWith('/api/v1/mosparo') ||
               p === '/api/v1/seguridad/verificarDocumento' ||
               p === '/api/v1/seguridad/verificar' ||
               p === '/api/v1/seguridad/pdfVerificado' ||
-              p === '/api/v1/salud' ||
-              p === '/api/v1/health' ||
-              p === '/api/v1/ready' ||
+              p.startsWith('/api/v1/salud') ||
+              p.startsWith('/api/v1/health') ||
+              p.startsWith('/api/v1/ready') ||
               p.startsWith('/api/v1/verificar_documento') ||
               p.startsWith('/api/v1/verificar/') ||
-              p.startsWith('/api/v1/ventanilla/mosparo/config') ||
+              p.startsWith('/api/v1/ventanilla/mosparo') ||
               p.startsWith('/api/v1/ventanilla/consultar') ||
               p.startsWith('/api/v1/ventanilla/radicar')
             );

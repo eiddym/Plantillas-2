@@ -38,7 +38,7 @@ module.exports = app => {
         host: cfg.host,
         publicKey: cfg.publicKey,
         uuid: cfg.uuid,
-        enabled: !cfg.disabled && !!cfg.host
+        enabled: !cfg.disabled
       }
     });
   });
