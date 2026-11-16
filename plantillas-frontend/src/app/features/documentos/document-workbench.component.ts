@@ -56,7 +56,7 @@ import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
           </div>
         </div>
 
-        <div class="topbar-center">
+        <div class="topbar-center" *ngIf="esBorradorEditable()">
           <!-- Conmutador Redacción / Vista Previa -->
           <div class="view-mode-toggle">
             <button 
@@ -262,7 +262,7 @@ import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
       }
 
       <!-- Área de Trabajo: Hoja Física + Metadatos -->
-      <div class="workbench-grid">
+      <div class="workbench-grid" [class.no-inspector]="!esBorradorEditable() && !esDestinatarioActual()">
         <!-- Columna Central: Representación fiel de la Hoja Física (Carta / Oficio) -->
         <main class="workbench-canvas-column">
           <!-- Panel Desplegable para Derivar Documento (Jefatura / Destinatario) -->
@@ -402,7 +402,7 @@ import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
         </main>
 
         <!-- Columna Derecha: Panel Lateral de Metadatos y Trazabilidad -->
-        <aside class="workbench-inspector-column">
+        <aside class="workbench-inspector-column" *ngIf="esBorradorEditable() || esDestinatarioActual()">
           <!-- Tarjeta de Metadatos -->
           <div class="inspector-card">
             <h4 class="inspector-title">
@@ -450,9 +450,15 @@ import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
               }
               <div class="inspector-item">
                 <span class="item-label">Formato de Hoja</span>
-                <span class="item-badge-hoja" (click)="setTipoHoja(tipoHoja() === 'Oficio' ? 'Letter' : 'Oficio')" matTooltip="Haga clic para alternar Carta / Oficio">
-                  {{ tipoHoja() === 'Oficio' ? 'Oficio (21.6 x 33 cm)' : 'Carta (21.6 x 27.9 cm)' }}
-                </span>
+                @if (esBorradorEditable()) {
+                  <span class="item-badge-hoja" (click)="setTipoHoja(tipoHoja() === 'Oficio' ? 'Letter' : 'Oficio')" matTooltip="Haga clic para alternar Carta / Oficio">
+                    {{ tipoHoja() === 'Oficio' ? 'Oficio (21.6 x 33 cm)' : 'Carta (21.6 x 27.9 cm)' }}
+                  </span>
+                } @else {
+                  <span class="item-value">
+                    {{ tipoHoja() === 'Oficio' ? 'Oficio (21.6 x 33 cm)' : 'Carta (21.6 x 27.9 cm)' }}
+                  </span>
+                }
               </div>
               <div class="inspector-item">
                 <span class="item-label">Fecha de Creación</span>
@@ -696,6 +702,10 @@ import { normalizarEsquemaFormly } from '../../shared/utils/formly-normalizer';
       grid-template-columns: 1fr 340px;
       overflow: hidden;
       height: calc(100vh - 64px);
+
+      &.no-inspector {
+        grid-template-columns: 1fr;
+      }
     }
 
     .workbench-canvas-column {
@@ -1362,7 +1372,13 @@ export class DocumentWorkbenchComponent implements OnInit {
   readonly esBorradorEditable = computed(() => {
     const d = this.doc();
     if (!d) return false;
-    return d.estado === 'NUEVO' || d.estado === 'BORRADOR' || d.estado === 'RECHAZADO';
+    return (
+      d.estado === 'NUEVO' ||
+      d.estado === 'BORRADOR' ||
+      d.estado === 'RECHAZADO' ||
+      d.estado === 'DEVUELTO' ||
+      d.estado === 'OBSERVADO'
+    );
   });
 
   readonly esDestinatarioActual = computed(() => {

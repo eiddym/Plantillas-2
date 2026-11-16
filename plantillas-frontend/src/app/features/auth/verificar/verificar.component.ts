@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -11,6 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MosparoComponent, MosparoTokens } from '../../../shared/components/mosparo/mosparo.component';
+import { PdfCanvasViewerComponent } from '../../../shared/components/pdf-canvas-viewer/pdf-canvas-viewer.component';
 
 export interface Firmante {
   nombres?: string;
@@ -46,7 +46,8 @@ export interface VerificacionResultado {
     MatButtonModule,
     MatIconModule,
     MatProgressBarModule,
-    MosparoComponent
+    MosparoComponent,
+    PdfCanvasViewerComponent
   ],
   template: `
     <div class="verif-portal">
@@ -64,7 +65,7 @@ export interface VerificacionResultado {
             </div>
             <div class="brand-text">
               <span class="system-title">SISTEMA OFICIAL DE VALIDACIÓN DOCUMENTAL</span>
-              <span class="system-sub">Portal Público de Fe Pública y Autenticidad Jurídica</span>
+              <span class="system-sub">Cooperativa Minera Marabunta R.L.</span>
             </div>
           </div>
           <div class="header-actions">
@@ -76,25 +77,11 @@ export interface VerificacionResultado {
         </div>
       </header>
 
-      <!-- Banner Hero Institucional Petróleo -->
-      <section class="verif-hero">
-        <div class="hero-inner">
-          <div class="hero-badge">
-            <mat-icon>verified</mat-icon>
-            <span>Portal Oficial de Fe Pública y Autenticidad Jurídica</span>
-          </div>
-          <h1 class="hero-title">Cotejo y Verificación de Documentos</h1>
-          <p class="hero-subtitle">
-            Consulte la validez legal, integridad criptográfica y firmas digitales de resoluciones, notas y documentos institucionales custodiados.
-          </p>
-        </div>
-      </section>
-
       <!-- Contenedor Principal -->
       <main class="verif-main">
         <div class="verif-layout">
           
-          <!-- Columna Izquierda: Formulario de Consulta y Firmantes -->
+          <!-- Columna Izquierda: Formulario de Consulta -->
           <div class="col-query">
             
             <!-- Tarjeta de Búsqueda -->
@@ -104,8 +91,8 @@ export interface VerificacionResultado {
                   <mat-icon>verified_user</mat-icon>
                 </div>
                 <div>
-                  <h1 class="lead-title">Cotejo de Autenticidad</h1>
-                  <p class="lead-desc">Ingrese el CITE y código de seguridad impreso en el pie de página o código QR del documento.</p>
+                  <h1 class="lead-title">Autenticidad Documental</h1>
+                  <p class="lead-desc">Ingrese el CITE y código de verificación impreso en el pie de página o código QR del documento.</p>
                 </div>
               </div>
 
@@ -128,7 +115,7 @@ export interface VerificacionResultado {
                 </div>
 
                 <div class="field-row">
-                  <label class="field-label" for="codigo-input">Código de Seguridad / Verificación</label>
+                  <label class="field-label" for="codigo-input">Código de Verificación</label>
                   <mat-form-field appearance="outline" class="w-full">
                     <input 
                       id="codigo-input"
@@ -143,8 +130,9 @@ export interface VerificacionResultado {
                   </mat-form-field>
                 </div>
 
-                <!-- Widget de Protección Soberana Mosparo -->
+                <!-- Widget de Protección Mosparo (solo en consulta manual sin QR antes de validar) -->
                 <app-mosparo 
+                  *ngIf="!esAccesoDirectoQr() && !resultado()"
                   (verified)="onMosparoVerified($event)" 
                   (tokensChanged)="onMosparoTokensChanged($event)"
                 ></app-mosparo>
@@ -152,7 +140,7 @@ export interface VerificacionResultado {
                 <button 
                   type="submit" 
                   class="btn-validar" 
-                  [disabled]="verifyForm.invalid || loading()"
+                  [disabled]="verifyForm.invalid || loading() || !!resultado()"
                 >
                   <mat-icon *ngIf="!loading()">search</mat-icon>
                   <mat-icon *ngIf="loading()" class="spin">sync</mat-icon>
@@ -170,40 +158,6 @@ export interface VerificacionResultado {
               </div>
             </div>
 
-            <!-- Panel de Firmantes Digitales (visible si hay resultado) -->
-            <div *ngIf="resultado() as res" class="signers-card">
-              <div class="signers-header">
-                <mat-icon>how_to_reg</mat-icon>
-                <h2>Autoridades y Firmantes Acreditados</h2>
-              </div>
-
-              <div *ngIf="res.firmantes && res.firmantes.length > 0; else noFirmantes" class="signers-list">
-                <div *ngFor="let f of res.firmantes" class="signer-item">
-                  <div class="signer-badge">
-                    <mat-icon>security</mat-icon>
-                  </div>
-                  <div class="signer-info">
-                    <div class="signer-name">{{ f.nombres || '' }} {{ f.apellidos || '' }} {{ f.nombre_completo || '' }}</div>
-                    <div class="signer-cargo">{{ f.cargo || 'Usuario Autorizado' }}</div>
-                    <div class="signer-meta" *ngIf="f.fecha || f.fecha_firma">
-                      <span class="meta-label">Estampado Digital:</span>
-                      <span class="meta-val">{{ (f.fecha || f.fecha_firma) | date:'dd/MM/yyyy HH:mm' }}</span>
-                    </div>
-                  </div>
-                  <div class="signer-status">
-                    <span class="tag-valido">Firma Válida</span>
-                  </div>
-                </div>
-              </div>
-
-              <ng-template #noFirmantes>
-                <div class="empty-signers">
-                  <mat-icon>info</mat-icon>
-                  <span>El documento cuenta con aprobación oficial registrada en la base de datos central.</span>
-                </div>
-              </ng-template>
-            </div>
-
           </div>
 
           <!-- Columna Derecha: Certificación Oficial y Visor de Copia Digital -->
@@ -214,7 +168,7 @@ export interface VerificacionResultado {
                 <mat-icon>verified</mat-icon>
               </div>
               <h3>Esperando Consulta de Documento</h3>
-              <p>Ingrese los datos de verificación o escanee el código QR desde su dispositivo para consultar el dictamen de autenticidad y el documento digital custodiado.</p>
+              <p>Ingrese los datos de verificación o escanee el código QR desde su dispositivo para consultar la autenticidad y el documento digital custodiado.</p>
               <div class="badge-legal-notice">
                 <mat-icon>gavel</mat-icon>
                 <span>Conforme a la Ley N° 164 y D.S. 3525 de Validez Jurídica de Documentos Digitales</span>
@@ -224,14 +178,13 @@ export interface VerificacionResultado {
             <!-- Vista del Resultado Positivo -->
             <div *ngIf="resultado() as res" class="certified-card">
               
-              <!-- Insignia Solemne de Validez -->
+              <!-- Insignia de Validez: Check - Documento Auténtico - Válido -->
               <div class="cert-banner">
                 <div class="cert-icon-wrap">
                   <mat-icon>check_circle</mat-icon>
                 </div>
                 <div class="cert-headline">
-                  <span class="cert-eyebrow">DICTAMEN OFICIAL DE VALIDEZ JURÍDICA</span>
-                  <h2>DOCUMENTO AUTÉNTICO Y EN CUSTODIA OFICIAL</h2>
+                  <h2>DOCUMENTO AUTÉNTICO</h2>
                   <p class="cert-cite">CITE: <strong>{{ res.cite }}</strong></p>
                 </div>
                 <div class="cert-stamp">
@@ -262,28 +215,61 @@ export interface VerificacionResultado {
                   <mat-icon>download</mat-icon>
                   <span>{{ loadingPdf() ? 'Preparando Copia Oficial...' : 'Descargar Copia Certificada (PDF)' }}</span>
                 </button>
-
-                <button 
-                  type="button" 
-                  class="btn-toggle-preview" 
-                  (click)="togglePreview()"
-                  *ngIf="pdfUrl()"
-                >
-                  <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
-                  <span>{{ showPreview() ? 'Ocultar Visor' : 'Ver Documento en Pantalla' }}</span>
-                </button>
               </div>
 
-              <!-- Visor de Hoja Digital Integrada -->
-              <div *ngIf="pdfUrl() && showPreview()" class="pdf-frame-wrapper">
+              <!-- Visor Nativo Canvas PDF.js (Escritorio y Móvil en escala Carta/Oficio) -->
+              <div class="pdf-frame-wrapper">
                 <div class="pdf-toolbar">
                   <div class="toolbar-title">
                     <mat-icon>description</mat-icon>
                     <span>Copia Digital Verificada</span>
                   </div>
-                  <span class="sheet-badge">Formato Oficial</span>
+                  <span class="sheet-badge">{{ tipoHoja() === 'Oficio' ? 'Formato Oficio' : 'Formato Carta' }}</span>
                 </div>
-                <iframe [src]="pdfUrl()" class="pdf-iframe" title="Visor de Documento Oficial"></iframe>
+                <div *ngIf="loadingPdf()" class="pdf-canvas-loading">
+                  <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+                  <p>Cargando documento oficial...</p>
+                </div>
+                <div *ngIf="pdfBytes()" class="pdf-canvas-container">
+                  <app-pdf-canvas-viewer
+                    [pdfData]="pdfBytes()"
+                    (hojaDetectada)="tipoHoja.set($event)"
+                  ></app-pdf-canvas-viewer>
+                </div>
+              </div>
+
+              <!-- Panel de Autoridades y Firmantes Acreditados DEBAJO del PDF -->
+              <div class="signers-card signers-below-pdf">
+                <div class="signers-header">
+                  <mat-icon>how_to_reg</mat-icon>
+                  <h2>Autoridades y Firmantes Acreditados</h2>
+                </div>
+
+                <div *ngIf="res.firmantes && res.firmantes.length > 0; else noFirmantes" class="signers-list">
+                  <div *ngFor="let f of res.firmantes" class="signer-item">
+                    <div class="signer-badge">
+                      <mat-icon>security</mat-icon>
+                    </div>
+                    <div class="signer-info">
+                      <div class="signer-name">{{ f.nombres || '' }} {{ f.apellidos || '' }} {{ f.nombre_completo || '' }}</div>
+                      <div class="signer-cargo">{{ f.cargo || 'Usuario Autorizado' }}</div>
+                      <div class="signer-meta" *ngIf="f.fecha || f.fecha_firma">
+                        <span class="meta-label">Estampado Digital:</span>
+                        <span class="meta-val">{{ (f.fecha || f.fecha_firma) | date:'dd/MM/yyyy HH:mm' }}</span>
+                      </div>
+                    </div>
+                    <div class="signer-status">
+                      <span class="tag-valido">Firma Válida</span>
+                    </div>
+                  </div>
+                </div>
+
+                <ng-template #noFirmantes>
+                  <div class="empty-signers">
+                    <mat-icon>info</mat-icon>
+                    <span>El documento cuenta con aprobación oficial registrada en la base de datos central.</span>
+                  </div>
+                </ng-template>
               </div>
 
             </div>
@@ -466,7 +452,7 @@ export interface VerificacionResultado {
       flex: 1;
       padding: 0 24px 40px;
       max-width: 1280px;
-      margin: -42px auto 40px;
+      margin: 24px auto 40px;
       width: 100%;
       box-sizing: border-box;
       position: relative;
@@ -1084,13 +1070,53 @@ export interface VerificacionResultado {
       border-radius: 12px;
     }
 
-    .pdf-iframe {
+    .pdf-canvas-container {
       width: 100%;
-      height: 640px;
-      border: 1px solid #cbd5e1;
+      min-height: 520px;
       border-radius: 10px;
-      background: #ffffff;
-      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12);
+    }
+
+    .pdf-canvas-loading {
+      padding: 24px 16px;
+      text-align: center;
+      color: #475569;
+      font-size: 0.86rem;
+
+      p {
+        margin: 12px 0 0;
+      }
+    }
+
+    .signers-below-pdf {
+      margin: 0 1.5rem 1.5rem;
+      box-shadow: none;
+    }
+
+    @media (max-width: 640px) {
+      .cert-banner {
+        padding: 1.15rem;
+        gap: 0.75rem;
+      }
+      .cert-icon-wrap {
+        width: 42px;
+        height: 42px;
+        mat-icon {
+          font-size: 26px;
+          width: 26px;
+          height: 26px;
+        }
+      }
+      .cert-headline h2 {
+        font-size: 1rem;
+      }
+      .pdf-frame-wrapper {
+        padding: 1rem 0.75rem 1.25rem;
+      }
+      .signers-below-pdf {
+        margin: 0 0.75rem 1.25rem;
+      }
     }
 
     /* Pie de Página */
@@ -1160,7 +1186,6 @@ export class VerificarComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
-  private readonly sanitizer = inject(DomSanitizer);
 
   readonly verifyForm: FormGroup = this.fb.group({
     cite: ['', [Validators.required]],
@@ -1171,8 +1196,9 @@ export class VerificarComponent implements OnInit {
   readonly resultado = signal<VerificacionResultado | null>(null);
   readonly errorMensaje = signal<string | null>(null);
   readonly loadingPdf = signal(false);
-  readonly showPreview = signal(true);
-  readonly pdfUrl = signal<SafeResourceUrl | null>(null);
+  readonly pdfBytes = signal<Uint8Array | null>(null);
+  readonly tipoHoja = signal<'Letter' | 'Oficio'>('Letter');
+  readonly esAccesoDirectoQr = signal(false);
   private pdfBlob: Blob | null = null;
 
   ngOnInit(): void {
@@ -1214,12 +1240,15 @@ export class VerificarComponent implements OnInit {
   private aplicarParametrosYConsultar(): void {
     const { cite, codigo } = this.extraerParametros();
     if (cite || codigo) {
+      if (cite && codigo) {
+        this.esAccesoDirectoQr.set(true);
+      }
       this.verifyForm.patchValue({
         cite: cite || this.verifyForm.value.cite,
         codigo: codigo || this.verifyForm.value.codigo
       });
       if (cite && codigo && !this.loading() && !this.resultado()) {
-        setTimeout(() => this.consultar(), 120);
+        this.consultar();
       }
     }
   }
@@ -1242,18 +1271,19 @@ export class VerificarComponent implements OnInit {
   }
 
   consultar(): void {
-    if (this.verifyForm.invalid) return;
+    if (this.verifyForm.invalid || this.resultado()) return;
 
     this.loading.set(true);
     this.resultado.set(null);
     this.errorMensaje.set(null);
-    this.pdfUrl.set(null);
+    this.pdfBytes.set(null);
     this.pdfBlob = null;
 
+    const raw = this.verifyForm.getRawValue();
     const tokens = this.mosparoTokens();
     const payload: any = {
-      cite: this.verifyForm.value.cite.trim(),
-      codigo: this.verifyForm.value.codigo.trim().toUpperCase(),
+      cite: String(raw.cite || '').trim(),
+      codigo: String(raw.codigo || '').trim().toUpperCase(),
       recaptcha: 'bypass'
     };
 
@@ -1286,7 +1316,7 @@ export class VerificarComponent implements OnInit {
         if (res.tipoMensaje === 'EXITO' && res.datos) {
           this.procesarExito(res.datos, 'CIUDADANIA_DIGITAL');
         } else {
-          this.errorMensaje.set(res.mensaje || 'Documento no encontrado o código de seguridad inválido');
+          this.errorMensaje.set(res.mensaje || 'Documento no encontrado o código de verificación inválido');
         }
       },
       error: (err) => {
@@ -1298,17 +1328,19 @@ export class VerificarComponent implements OnInit {
 
   private procesarExito(datos: any, tipo: 'TOKEN' | 'CIUDADANIA_DIGITAL'): void {
     this.loading.set(false);
+    const raw = this.verifyForm.getRawValue();
     const resultado: VerificacionResultado = {
-      cite: datos.cite || this.verifyForm.value.cite.trim(),
+      cite: datos.cite || String(raw.cite || '').trim(),
       hash: datos.hash,
-      codigo: datos.codigo || this.verifyForm.value.codigo.trim().toUpperCase(),
+      codigo: datos.codigo || String(raw.codigo || '').trim().toUpperCase(),
       token: datos.token,
       firmantes: datos.firmantes || [],
       tipo_aprobacion: tipo
     };
     this.resultado.set(resultado);
+    this.verifyForm.disable();
 
-    // Cargar automáticamente el PDF verificado si hay token disponible
+    // Cargar automáticamente el PDF verificado en canvas si hay token disponible
     if (resultado.token) {
       this.cargarPdfVerificado(resultado.cite, resultado.token);
     }
@@ -1317,11 +1349,14 @@ export class VerificarComponent implements OnInit {
   private cargarPdfVerificado(cite: string, token: string): void {
     this.loadingPdf.set(true);
     this.http.post('/api/v1/seguridad/pdfVerificado', { cite, token }, { responseType: 'blob' }).subscribe({
-      next: (blob) => {
-        this.loadingPdf.set(false);
+      next: async (blob) => {
         this.pdfBlob = blob;
-        const objectUrl = URL.createObjectURL(blob);
-        this.pdfUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(objectUrl));
+        try {
+          const buf = await blob.arrayBuffer();
+          this.pdfBytes.set(new Uint8Array(buf));
+        } finally {
+          this.loadingPdf.set(false);
+        }
       },
       error: () => {
         this.loadingPdf.set(false);
@@ -1365,9 +1400,5 @@ export class VerificarComponent implements OnInit {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }
-
-  togglePreview(): void {
-    this.showPreview.update(v => !v);
   }
 }

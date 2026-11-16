@@ -1381,9 +1381,15 @@ export class DashboardComponent implements OnInit {
       error: () => {}
     });
 
-    // 1-rec. Documentos recientes propios
-    this.documentosService.getDocumentos(5, 1, 'NUEVO,RECHAZADO,ENVIADO,DERIVADO,APROBADO,CERRADO', '', 'documentos').subscribe({
-      next: (res) => this.docsRecientes.set(res?.datos?.resultado || []),
+    // 1-rec. Solo borradores guardados que no se enviaron aún (o devueltos para corrección)
+    this.documentosService.getDocumentos(5, 1, 'NUEVO,BORRADOR,RECHAZADO', '', 'documentos').subscribe({
+      next: (res) => {
+        const lista = Array.isArray(res?.datos?.resultado) ? res.datos.resultado : [];
+        const soloBorradores = lista.filter((d: any) =>
+          d.estado === 'NUEVO' || d.estado === 'BORRADOR' || d.estado === 'RECHAZADO' || d.estado === 'DEVUELTO'
+        );
+        this.docsRecientes.set(soloBorradores);
+      },
       error: () => this.docsRecientes.set([])
     });
 

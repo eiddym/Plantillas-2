@@ -132,8 +132,15 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
             <ng-container matColumnDef="nombre">
               <th mat-header-cell *matHeaderCellDef>CITE / DOCUMENTO</th>
               <td mat-cell *matCellDef="let d">
-                <span class="doc-cite" style="cursor: pointer;" (click)="abrirWorkbench(d)">{{ d.nombre }}</span>
-                <span class="doc-meta">{{ getReferencia(d) }}</span>
+                <span class="doc-cite" style="cursor: pointer;" (click)="verPdf(d)">{{ d.nombre }}</span>
+              </td>
+            </ng-container>
+
+            <!-- Referencia / Asunto Column -->
+            <ng-container matColumnDef="ref">
+              <th mat-header-cell *matHeaderCellDef>REF. / ASUNTO</th>
+              <td mat-cell *matCellDef="let d">
+                <span class="doc-ref-cell">{{ getReferencia(d) || 'Sin referencia' }}</span>
               </td>
             </ng-container>
 
@@ -297,7 +304,14 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
               <th mat-header-cell *matHeaderCellDef>CITE / DOCUMENTO</th>
               <td mat-cell *matCellDef="let d">
                 <span class="doc-cite" style="cursor: pointer;" (click)="verPdf(d)">{{ d.nombre }}</span>
-                <span class="doc-meta">{{ getReferencia(d) }}</span>
+              </td>
+            </ng-container>
+
+            <!-- Referencia / Asunto Column -->
+            <ng-container matColumnDef="ref">
+              <th mat-header-cell *matHeaderCellDef>REF. / ASUNTO</th>
+              <td mat-cell *matCellDef="let d">
+                <span class="doc-ref-cell">{{ getReferencia(d) || 'Sin referencia' }}</span>
               </td>
             </ng-container>
 
@@ -557,27 +571,53 @@ import { HistorialDocumentoDialogComponent } from './historial-documento-dialog.
 
     .table-responsive {
       width: 100%;
+      padding: 12px 16px 0;
+      box-sizing: border-box;
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
     }
 
     table {
       width: 100%;
-      min-width: 660px;
+      min-width: 720px;
+      border-collapse: separate !important;
+      border-spacing: 0 !important;
 
       th.mat-mdc-header-cell {
-        background-color: #0f2027 !important;
+        background: linear-gradient(180deg, #0b2e26 0%, #07221c 100%) !important;
         color: #ffffff !important;
         font-size: 12px;
         font-weight: 700;
         letter-spacing: 0.6px;
         padding: 14px 16px;
+        border-bottom: none !important;
+      }
+
+      th.mat-mdc-header-cell:first-child {
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+      }
+
+      th.mat-mdc-header-cell:last-child {
+        border-top-right-radius: 12px;
+        border-bottom-right-radius: 12px;
       }
 
       td.mat-mdc-cell {
         font-size: 0.86rem;
         padding: 12px 16px;
       }
+    }
+
+    .doc-ref-cell {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      color: #475569;
+      font-size: 0.84rem;
+      line-height: 1.35;
+      max-width: 240px;
     }
 
     .doc-cite {
@@ -745,7 +785,7 @@ export class DocumentosListComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
 
   readonly user = this.authService.currentUser;
-  readonly displayedColumns = ['nombre', 'participantes', 'clasificacion', 'estado', 'fecha', 'acciones'];
+  readonly displayedColumns = ['nombre', 'ref', 'participantes', 'clasificacion', 'estado', 'fecha', 'acciones'];
   readonly documentos = signal<Documento[]>([]);
   readonly total = signal(0);
   readonly pageSize = signal(10);
@@ -759,10 +799,10 @@ export class DocumentosListComponent implements OnInit {
   readonly loadingCopia = signal(false);
 
   puedePromover(): boolean {
-    return this.authService.hasRole('JEFE') || 
-           this.authService.hasRole('MAE') || 
-           this.authService.hasRole('ADMIN') || 
-           this.authService.isMae();
+    return this.authService.hasRole('JEFE') ||
+      this.authService.hasRole('MAE') ||
+      this.authService.hasRole('ADMIN') ||
+      this.authService.isMae();
   }
 
   esDocumentoDirectoAcuse(d: Documento): boolean {
@@ -1002,7 +1042,7 @@ export class DocumentosListComponent implements OnInit {
         const dg = pv?.datosGenerales || pv?.['datosGenerales-0'];
         if (dg?.ref) return String(dg.ref).trim();
         if (pv?.ref) return String(pv.ref).trim();
-      } catch {}
+      } catch { }
     }
     return doc.nombre_plantilla || 'Documento oficial en curso';
   }
@@ -1038,7 +1078,7 @@ export class DocumentosListComponent implements OnInit {
           const single = fmtUser(val);
           if (single) return single;
         }
-      } catch {}
+      } catch { }
     }
 
     const raw = (doc as any)[campo];
@@ -1056,7 +1096,7 @@ export class DocumentosListComponent implements OnInit {
           const names = val.map((item: any) => item?.abreviacion || item?.nombre || item).filter(Boolean);
           if (names.length > 0) return names.join(', ');
         }
-      } catch {}
+      } catch { }
     }
     return '';
   }
@@ -1066,18 +1106,34 @@ export class DocumentosListComponent implements OnInit {
     const u: any = this.authService.currentUser();
     const idUs = Number(u?.id || u?.id_usuario);
 
+    if (doc.estado === 'CERRADO' || doc.estado === 'APROBADO' || doc.estado === 'ANULADO') {
+      return false;
+    }
+
     // Para circulares, instructivos y convocatorias con CITE oficial directo, los destinatarios solo dan check de recepción
     if (this.esDocumentoDirectoAcuse(doc) && doc.nombre && doc.nombre.includes('/')) {
       return Number(doc._usuario_creacion) === idUs && (doc.estado === 'NUEVO' || doc.estado === 'BORRADOR');
     }
 
-    if (doc.estado === 'ENVIADO' || doc.estado === 'DERIVADO' || doc.estado === 'NUEVO' || doc.estado === 'RECHAZADO' || doc.estado === 'BORRADOR') {
-      return true;
+    // Borradores no enviados o devueltos para corrección (solo editables por su creador)
+    if (
+      doc.estado === 'NUEVO' ||
+      doc.estado === 'BORRADOR' ||
+      doc.estado === 'RECHAZADO' ||
+      doc.estado === 'DEVUELTO' ||
+      doc.estado === 'OBSERVADO'
+    ) {
+      return !doc._usuario_creacion || Number(doc._usuario_creacion) === idUs;
     }
-    if (doc.estado === 'CERRADO' || doc.estado === 'APROBADO' || doc.estado === 'ANULADO') {
-      return false;
+
+    // Un borrador ENVIADO no es editable en Mis Documentos / En Curso; solo revisable en bandejas de aprobación si está asignado al usuario
+    if (doc.estado === 'ENVIADO' || doc.estado === 'DERIVADO') {
+      const vista = this.modoVista();
+      const esBandejaRevision = vista === 'derivados' || vista === 'aprobar_documento';
+      return esBandejaRevision && Number((doc as any).via_actual) === idUs;
     }
-    return true;
+
+    return false;
   }
 
   abrirWorkbench(doc: Documento): void {
@@ -1091,10 +1147,10 @@ export class DocumentosListComponent implements OnInit {
     const esAprobado = doc.estado === 'APROBADO' || doc.estado === 'CERRADO';
 
     this.dialog.open(VisorPdfDialogComponent, {
-      width: '92vw',
-      maxWidth: '700px',
-      height: '86vh',
-      maxHeight: '86vh',
+      width: '94vw',
+      maxWidth: '940px',
+      height: '90vh',
+      maxHeight: '90vh',
       panelClass: ['modal-sin-padding', 'modal-vista-previa-escala'],
       autoFocus: false,
       data: {

@@ -871,8 +871,14 @@ module.exports = app => {
         return res.status(404).send(util.formatearMensaje("ERROR", "Documento no encontrado."));
       }
 
-      // REGLA INSTITUCIONAL: Solo los documentos APROBADOS o CERRADOS generan PDF oficial.
-      if (doc.estado !== 'APROBADO' && doc.estado !== 'CERRADO') {
+      // REGLA INSTITUCIONAL: Solo los documentos APROBADOS, CERRADOS o institucionales sirven PDF oficial.
+      const esOficialOInstitucional =
+        doc.estado === 'APROBADO' ||
+        doc.estado === 'CERRADO' ||
+        Boolean(doc.es_institucional) ||
+        doc.grupo === 'institucional' ||
+        (Boolean(doc.archivo_adjunto) && doc.estado !== 'NUEVO' && doc.estado !== 'BORRADOR' && doc.estado !== 'RECHAZADO');
+      if (!esOficialOInstitucional) {
         return res.status(403).send(util.formatearMensaje(
           "ERROR",
           "Los documentos en borrador o en curso de revisión no generan PDF oficial ni metadatos institucionales. Su visualización es exclusivamente HTML."
@@ -1156,15 +1162,24 @@ module.exports = app => {
         }));
       }
 
-      const esOficial = doc.estado === 'APROBADO' || doc.estado === 'CERRADO';
-      let codigoDoc = '';
-      if (esOficial) {
-        const firmaFound = await modelos.firma.findOne({ where: { fid_documento: doc.id_documento } });
-        if (firmaFound && firmaFound.codigo) {
-          codigoDoc = firmaFound.codigo;
-        }
+      let tipoHoja = 'Letter';
+      if (Array.isArray(plantillaJson) && plantillaJson.length > 0 && plantillaJson[0].templateOptions && plantillaJson[0].templateOptions.tipoHoja) {
+        tipoHoja = plantillaJson[0].templateOptions.tipoHoja;
       }
 
+      const esOficial = doc.estado === 'APROBADO' || doc.estado === 'CERRADO';
+      if (esOficial) {
+        return res.status(200).send(util.formatearMensaje("EXITO", "Documento oficial en formato PDF.", {
+          id_documento: doc.id_documento,
+          nombre: doc.nombre,
+          estado: doc.estado,
+          tipoHoja: tipoHoja,
+          esPdf: true,
+          pdfUrl: `/api/v1/documento/${doc.id_documento}/pdf`
+        }));
+      }
+
+      let codigoDoc = '';
       const usuarioPeticion = req.body?.audit_usuario || req.user;
       const datos = {
         doc: {
@@ -1185,16 +1200,11 @@ module.exports = app => {
         codigo: codigoDoc,
         pdf_codigo: codigoDoc,
         codigoSeguridad: codigoDoc,
-        es_borrador_html: !esOficial
+        es_borrador_html: true
       };
 
       if (datos.model_actual && datos.model_actual['cite-0'] && datos.model_actual['cite-0'].fecha) {
         datos.model_actual['cite-0'].fecha = util.formatearFecha(datos.model_actual['cite-0'].fecha);
-      }
-
-      let tipoHoja = 'Letter';
-      if (Array.isArray(plantillaJson) && plantillaJson.length > 0 && plantillaJson[0].templateOptions && plantillaJson[0].templateOptions.tipoHoja) {
-        tipoHoja = plantillaJson[0].templateOptions.tipoHoja;
       }
 
       const resultadoHtml = await util.generarHtml(datos);

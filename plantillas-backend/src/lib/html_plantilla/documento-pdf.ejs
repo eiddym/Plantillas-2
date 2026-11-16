@@ -129,7 +129,7 @@
         font-family: 'Open Sans', Arial, Helvetica, sans-serif !important;
       }
       .pdf-meta-izq {
-        width: 60% !important;
+        width: 35% !important;
         vertical-align: top !important;
         text-align: left !important;
         font-size: 8.5pt !important;
@@ -137,8 +137,14 @@
         color: #333 !important;
         padding: 0 !important;
       }
+      .pdf-meta-titulo {
+        width: 30% !important;
+        vertical-align: middle !important;
+        text-align: center !important;
+        padding: 14pt 4pt 0 4pt !important;
+      }
       .pdf-meta-der {
-        width: 40% !important;
+        width: 35% !important;
         vertical-align: top !important;
         text-align: right !important;
         padding: 0 !important;
@@ -169,13 +175,21 @@
         text-align: center !important;
       }
 
-      .bloque-campos {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 0 0 10pt 0;
+      .bloque-campos,
+      .table-sin-borde {
+        width: 100% !important;
+        border: none !important;
+        border-collapse: collapse !important;
+        margin: 0 0 10pt 0 !important;
+        background: transparent !important;
       }
-      .bloque-campos td {
+      .bloque-campos td,
+      .bloque-campos th,
+      .table-sin-borde td,
+      .table-sin-borde th {
+        border: none !important;
         vertical-align: top;
+        background: transparent !important;
       }
       .datosGenerales {
         width: 18mm;
@@ -187,8 +201,9 @@
         color: #000;
         vertical-align: top;
         text-align: left;
-        padding: 0;
+        padding: 0 0 2pt 0;
         white-space: nowrap;
+        border: none !important;
       }
       .datosGeneralesValor {
         font-family: 'Open Sans', Arial, Helvetica, sans-serif;
@@ -198,7 +213,8 @@
         color: #222;
         vertical-align: top;
         text-align: left;
-        padding: 0 0 0 2mm;
+        padding: 0 0 2pt 2mm;
+        border: none !important;
       }
       .lista ol, .lista ul{
         padding-left: 25px;
@@ -424,19 +440,41 @@
       <% } %>
       <% 
         var _esDocAprobado = (typeof doc !== 'undefined' && doc && (doc.estado === 'APROBADO' || doc.estado === 'CERRADO')) || (typeof estado !== 'undefined' && (estado === 'APROBADO' || estado === 'CERRADO'));
+        var _tituloPrincipalDoc = '';
+        if (_esDocAprobado && typeof form_actual !== 'undefined' && Array.isArray(form_actual)) {
+          for (var _tIdx = 0; _tIdx < form_actual.length; _tIdx++) {
+            var _tItem = form_actual[_tIdx];
+            if (!_tItem) continue;
+            if (_tItem.type === 'datosGenerales' || _tItem.type === 'encabezado' || _tItem.type === 'editorTexto') break;
+            if ((_tItem.type === 'texto' || _tItem.type === 'parrafo') && _tItem.templateOptions) {
+              var _tTipo = (_tItem.templateOptions.tipo || 'h2').toLowerCase();
+              var _tLbl = (_tItem.templateOptions.label || _tItem.templateOptions.texto || '').trim();
+              if (_tLbl && (_tTipo === 'h1' || _tTipo === 'h2' || _tTipo === 'h3' || (_tItem.templateOptions.className || '').indexOf('center') !== -1 || (_tItem.templateOptions.alineacion || '') === 'center')) {
+                _tituloPrincipalDoc = _tLbl;
+                _tItem._renderedInHeader = true;
+                break;
+              }
+            }
+          }
+        }
         if (_esDocAprobado) { 
       %>
-        <table class="pdf-page1-metadata" role="presentation" style="width: 100%; border: none !important; border-collapse: collapse; table-layout: fixed; margin: 0 0 8pt 0;">
+        <table class="pdf-page1-metadata table-sin-borde" role="presentation" style="width: 100%; border: none !important; border-collapse: collapse; table-layout: fixed; margin: 0 0 10pt 0;">
           <tr>
-            <td class="pdf-meta-izq" style="border: none !important; width: 68%; vertical-align: top; text-align: left; font-size: 10pt; line-height: 1.35; color: #222; padding: 0 !important;">
+            <td class="pdf-meta-izq" style="border: none !important; width: 35%; vertical-align: top; text-align: left; font-size: 8.5pt; line-height: 1.35; color: #222; padding: 0 !important;">
               <%= typeof pdf_cite !== 'undefined' && pdf_cite ? pdf_cite : (typeof doc !== 'undefined' && doc && doc.nombre ? doc.nombre.replace(/\.pdf$/i, '') : '') %><br>
               Expediente : <%= typeof pdf_expediente !== 'undefined' && pdf_expediente !== null ? pdf_expediente : (typeof exp !== 'undefined' ? exp : '') %><br>
               Código de verificación : <%= typeof pdf_codigo !== 'undefined' && pdf_codigo ? pdf_codigo : (typeof codigoSeguridad !== 'undefined' ? codigoSeguridad : '') %><br>
               Clasificación : <%= _cabClasificacion %>
             </td>
-            <td class="pdf-meta-der" style="border: none !important; width: 32%; vertical-align: top; text-align: right; padding: 0 !important;" align="right">
+            <td class="pdf-meta-titulo" style="border: none !important; width: 30%; vertical-align: middle; text-align: center; padding: 14pt 4pt 0 4pt !important;">
+              <% if (_tituloPrincipalDoc) { %>
+                <h2 style="margin: 0; font-size: 13pt; font-weight: 700; color: #111; text-align: center; text-transform: uppercase; letter-spacing: 0.3px; line-height: 1.2;"><%= _tituloPrincipalDoc %></h2>
+              <% } %>
+            </td>
+            <td class="pdf-meta-der" style="border: none !important; width: 35%; vertical-align: top; text-align: right; padding: 0 !important;" align="right">
               <div class="pdf-fecha-qr" style="display: inline-block; text-align: center;">
-                <div class="pdf-fecha" style="font-size: 9.5pt; font-weight: 600; line-height: 12pt; margin-bottom: 3px; color: #222; text-align: center;"><%= typeof pdf_fecha !== 'undefined' && pdf_fecha ? pdf_fecha : '' %></div>
+                <div class="pdf-fecha" style="font-size: 9pt; font-weight: 600; line-height: 12pt; margin-bottom: 3px; color: #222; text-align: center;"><%= typeof pdf_fecha !== 'undefined' && pdf_fecha ? pdf_fecha : '' %></div>
                 <% if (typeof qr_base64 !== 'undefined' && qr_base64) { %>
                   <img src="<%= qr_base64 %>" alt="QR" style="width: 68px; height: 68px; display: block; margin: 0 auto;">
                   <div class="pdf-qr-leyenda" style="font-size: 7.5pt; margin-top: 2px; color: #555; white-space: nowrap; text-align: center;">Escanear para verificar</div>
@@ -469,6 +507,9 @@
         switch(pItem.type) {
           case 'texto':
           case 'parrafo':
+            if (pItem._renderedInHeader) {
+              break;
+            }
             var _toTexto = pItem.templateOptions || {};
             claseArriba = (!_toTexto.mTop)? "parrafo-margin-top":"";
             claseAbajo = (!_toTexto.mBot)? "parrafo-margin-bottom":"";
@@ -645,37 +686,37 @@
               : (datosGenerales.copia ? [datosGenerales.copia] : []);
 
             if(pItem.templateOptions && pItem.templateOptions.showItem !== false){ %>
-              <table class="bloque-campos">
+              <table class="bloque-campos table-sin-borde" role="presentation" style="border: none !important; border-collapse: collapse;">
                 <tbody>
                   <% if(pItem.templateOptions.show.para && para.length > 0) { %>
                     <tr>
-                      <td class="datosGenerales">PARA:</td>
-                      <td class="datosGeneralesValor"><%=para[0].nombres%> <%=para[0].apellidos%><br/><%=para[0].cargo%></td>
+                      <td class="datosGenerales" style="border: none !important;">PARA:</td>
+                      <td class="datosGeneralesValor" style="border: none !important;"><%=para[0].nombres%> <%=para[0].apellidos%><br/><%=para[0].cargo%></td>
                     </tr>
                   <% }
                   if(pItem.templateOptions.show.via && via.length > 0) { %>
                         <tr>
-                          <td class="datosGenerales">VÍA:</td>
-                          <td class="datosGeneralesValor"><% for(var j = 0; j < via.length; j++){
+                          <td class="datosGenerales" style="border: none !important;">VÍA:</td>
+                          <td class="datosGeneralesValor" style="border: none !important;"><% for(var j = 0; j < via.length; j++){
                               var itemVia = via[j]; %><%= itemVia.nombres %> <%= itemVia.apellidos %><br /><%=itemVia.cargo%><% } %></td>
                         </tr>
                       <%}
                   if(pItem.templateOptions.show.de) { %>
                     <tr>
-                      <td class="datosGenerales">DE:</td>
-                      <td class="datosGeneralesValor"><% for(var j = 0; j < de.length; j++){
+                      <td class="datosGenerales" style="border: none !important;">DE:</td>
+                      <td class="datosGeneralesValor" style="border: none !important;"><% for(var j = 0; j < de.length; j++){
                           var itemDe = de[j]; %><%= itemDe.nombres %> <%= itemDe.apellidos %><br /><%=itemDe.cargo%><% } %></td>
                     </tr>
                   <% } if(copia && copia.length > 0) { %>
                     <tr>
-                      <td class="datosGenerales">CC:</td>
-                      <td class="datosGeneralesValor"><% for(var k = 0; k < copia.length; k++){
+                      <td class="datosGenerales" style="border: none !important;">CC:</td>
+                      <td class="datosGeneralesValor" style="border: none !important;"><% for(var k = 0; k < copia.length; k++){
                           var itemCc = copia[k]; %><%= itemCc.nombre || itemCc.abreviacion || itemCc %><% if(k < copia.length - 1){ %>, <% } %><% } %></td>
                     </tr>
                   <% } if(pItem.templateOptions.show.ref) { %>
                     <tr>
-                      <td class="datosGenerales"><%= pItem.templateOptions.labelRef || 'REF.:' %></td>
-                      <td class="datosGeneralesValor"><%= (pDatos[pItem.key] && pDatos[pItem.key].ref) ? pDatos[pItem.key].ref : '' %></td>
+                      <td class="datosGenerales" style="border: none !important;"><%= pItem.templateOptions.labelRef || 'REF.:' %></td>
+                      <td class="datosGeneralesValor" style="border: none !important;"><%= (pDatos[pItem.key] && pDatos[pItem.key].ref) ? pDatos[pItem.key].ref : '' %></td>
                     </tr>
                   <% } %>
                 </tbody>
@@ -697,44 +738,44 @@
               ? datosEncabezado.copia
               : (datosEncabezado.copia ? [datosEncabezado.copia] : []);
             %>
-            <table class="bloque-campos">
+            <table class="bloque-campos table-sin-borde" role="presentation" style="border: none !important; border-collapse: collapse;">
               <tbody>
                 <% if(pItem.templateOptions.show.para && paraEncabezado.length > 0) { %>
                   <tr>
-                    <td class="datosGenerales">PARA:</td>
-                    <td class="datosGeneralesValor"><% for(var z = 0; z < paraEncabezado.length; z++){
+                    <td class="datosGenerales" style="border: none !important;">PARA:</td>
+                    <td class="datosGeneralesValor" style="border: none !important;"><% for(var z = 0; z < paraEncabezado.length; z++){
                         var itemPara = paraEncabezado[z]; %><%= itemPara.nombres %> <%= itemPara.apellidos %><br /><% if(itemPara.mostrar_cargo || itemPara.cargo) { %><%= itemPara.cargo %><br /><% } %><% } %></td>
                   </tr>
                 <% } %>
 
                 <% if(pItem.templateOptions.show.via && viaEncabezado.length > 0) { %>
                   <tr>
-                    <td class="datosGenerales">VÍA:</td>
-                    <td class="datosGeneralesValor"><% for(var j = 0; j < viaEncabezado.length; j++){
+                    <td class="datosGenerales" style="border: none !important;">VÍA:</td>
+                    <td class="datosGeneralesValor" style="border: none !important;"><% for(var j = 0; j < viaEncabezado.length; j++){
                         var itemViaEncabezado = viaEncabezado[j]; %><%= itemViaEncabezado.nombres %> <%= itemViaEncabezado.apellidos %><br /><% if(itemViaEncabezado.mostrar_cargo || itemViaEncabezado.cargo) { %><%= itemViaEncabezado.cargo %><br /><% } %><% } %></td>
                   </tr>
                 <% } %>
 
                 <% if(pItem.templateOptions.show.de && deEncabezado.length > 0) { %>
                   <tr>
-                    <td class="datosGenerales">DE:</td>
-                    <td class="datosGeneralesValor"><% for(var j = 0; j < deEncabezado.length; j++){
+                    <td class="datosGenerales" style="border: none !important;">DE:</td>
+                    <td class="datosGeneralesValor" style="border: none !important;"><% for(var j = 0; j < deEncabezado.length; j++){
                         var itemDeEncabezado = deEncabezado[j]; %><%= itemDeEncabezado.nombres %> <%= itemDeEncabezado.apellidos %><br /><% if(itemDeEncabezado.mostrar_cargo || itemDeEncabezado.cargo) { %><%= itemDeEncabezado.cargo %><br /><% } %><% } %></td>
                   </tr>
                 <% } %>
 
                 <% if(copiaEncabezado && copiaEncabezado.length > 0) { %>
                   <tr>
-                    <td class="datosGenerales">CC:</td>
-                    <td class="datosGeneralesValor"><% for(var k = 0; k < copiaEncabezado.length; k++){
+                    <td class="datosGenerales" style="border: none !important;">CC:</td>
+                    <td class="datosGeneralesValor" style="border: none !important;"><% for(var k = 0; k < copiaEncabezado.length; k++){
                         var itemCcEnc = copiaEncabezado[k]; %><%= itemCcEnc.nombre || itemCcEnc.abreviacion || itemCcEnc %><% if(k < copiaEncabezado.length - 1){ %>, <% } %><% } %></td>
                   </tr>
                 <% } %>
 
                 <% if(pItem.templateOptions.show.ref) { %>
                   <tr>
-                    <td class="datosGenerales"><%= pItem.templateOptions.labelRef || 'REF.:' %></td>
-                    <td class="datosGeneralesValor"><%= datosEncabezado.ref || '' %></td>
+                    <td class="datosGenerales" style="border: none !important;"><%= pItem.templateOptions.labelRef || 'REF.:' %></td>
+                    <td class="datosGeneralesValor" style="border: none !important;"><%= datosEncabezado.ref || '' %></td>
                   </tr>
                 <% } %>
               </tbody>

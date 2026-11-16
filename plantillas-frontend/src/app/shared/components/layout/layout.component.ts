@@ -78,17 +78,6 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
           <!-- Menú Dinámico Agrupado en Acordeón -->
           <div class="sidebar-nav-scroll">
             <div class="sidebar-menu-accordion">
-              <!-- Enlace directo Inicio estilo Home de Emerald 24 -->
-              <a 
-                routerLink="/dashboard" 
-                routerLinkActive="active-subitem" 
-                class="subitem-link sidebar-home-pill"
-                (click)="onNavItemClick()"
-              >
-                <mat-icon class="subitem-icon">dashboard</mat-icon>
-                <span class="subitem-text">Inicio</span>
-              </a>
-
               <ng-container *ngFor="let group of menuGroups()">
                 <!-- Encabezado de Categoría / Sección -->
                 <div class="menu-category-header" (click)="toggleGroup(group.label)">

@@ -8,6 +8,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { HttpClient } from '@angular/common/http';
 import { DocumentosService } from '../../core/services/documentos.service';
+import { PdfCanvasViewerComponent } from '../../shared/components/pdf-canvas-viewer/pdf-canvas-viewer.component';
 
 export interface VisorPdfData {
   titulo: string;
@@ -28,7 +29,8 @@ export interface VisorPdfData {
     MatButtonModule,
     MatIconModule,
     MatProgressBarModule,
-    MatTooltipModule
+    MatTooltipModule,
+    PdfCanvasViewerComponent
   ],
   template: `
     <div class="visor-dialog-container">
@@ -73,8 +75,14 @@ export interface VisorPdfData {
               <span>Reintentar</span>
             </button>
           </div>
+        } @else if (pdfBuffer()) {
+          <app-pdf-canvas-viewer
+            [pdfData]="pdfBuffer()"
+            (hojaDetectada)="tipoHoja.set($event)"
+            (renderError)="errorMessage.set($event)"
+          ></app-pdf-canvas-viewer>
         } @else if (safeHtml) {
-          <!-- Viewport de la Hoja a Escala -->
+          <!-- Viewport de la Hoja a Escala (Solo Borradores HTML) -->
           <div class="sheet-viewport" #sheetViewport>
             <div class="sheet-scaler-wrapper" [style.width.px]="scaledWidth()" [style.height.px]="scaledHeight()">
               <div 
@@ -115,8 +123,8 @@ export interface VisorPdfData {
     .visor-dialog-container {
       display: flex;
       flex-direction: column;
-      height: 86vh;
-      max-height: 86vh;
+      height: 90vh;
+      max-height: 90vh;
       width: 100%;
       max-width: 700px;
       margin: 0 auto;
@@ -385,7 +393,10 @@ export interface VisorPdfData {
             }
           }
 
-          table {
+          .editor-texto table,
+          .editor-texto-html table,
+          .table-cajachica,
+          .table-cajachica-html {
             width: 100% !important;
             max-width: 100% !important;
             border-collapse: collapse !important;
@@ -396,7 +407,14 @@ export interface VisorPdfData {
             font-size: 9.5pt;
           }
 
-          td, th {
+          .editor-texto table td,
+          .editor-texto table th,
+          .editor-texto-html table td,
+          .editor-texto-html table th,
+          .table-cajachica td,
+          .table-cajachica th,
+          .table-cajachica-html td,
+          .table-cajachica-html th {
             border: 1px solid #94a3b8;
             padding: 7px 12px;
             overflow-wrap: break-word !important;
@@ -413,11 +431,13 @@ export interface VisorPdfData {
           .pdf-header-container table,
           .pdf-page1-metadata,
           table.pdf-page1-metadata,
+          .bloque-campos,
           table[role="presentation"],
           .table-sin-borde {
+            width: 100% !important;
             border: none !important;
             border-collapse: collapse !important;
-            margin: 0 !important;
+            margin: 0 0 10px 0 !important;
             background: transparent !important;
           }
 
@@ -425,20 +445,29 @@ export interface VisorPdfData {
           .pdf-header-container th,
           .pdf-page1-metadata td,
           .pdf-page1-metadata th,
+          .bloque-campos td,
+          .bloque-campos th,
           table[role="presentation"] td,
           table[role="presentation"] th,
           .table-sin-borde td,
-          .table-sin-borde th {
+          .table-sin-borde th,
+          .datosGenerales,
+          .datosGeneralesValor {
             border: none !important;
-            padding: 0 !important;
+            padding: 3px 8px 3px 0 !important;
             background: transparent !important;
+            vertical-align: top;
           }
 
           .datosGenerales {
             font-weight: 700;
-            width: 130px;
-            background: #f8fafc;
-            color: #334155;
+            width: 85px;
+            color: #0f172a;
+            white-space: nowrap;
+          }
+
+          .datosGeneralesValor {
+            color: #1e293b;
           }
 
           p {
@@ -524,6 +553,7 @@ export class VisorPdfDialogComponent implements OnInit, AfterViewInit, OnDestroy
   });
   readonly porcentajeEscala = computed(() => Math.round(this.escalaActual() * 100));
 
+  readonly pdfBuffer = signal<Uint8Array | null>(null);
   safePdfUrl: SafeResourceUrl | null = null;
   safeHtml: any = null;
   private localBlobUrl: string | null = null;
@@ -544,10 +574,13 @@ export class VisorPdfDialogComponent implements OnInit, AfterViewInit, OnDestroy
 
     if (this.data.htmlContent) {
       this.safeHtml = this.sanitizer.bypassSecurityTrustHtml(this.data.htmlContent);
+    } else if (!this.data.esBorrador && (this.data.idDocumento || this.data.docCite || this.data.pdfUrl)) {
+      const targetUrl = this.downloadUrl();
+      this.cargarPdfBuffer(targetUrl);
     } else if (this.data.idDocumento || this.data.docCite) {
       this.cargarHtmlDinamico(this.data.idDocumento || this.data.docCite!);
     } else if (this.data.pdfUrl) {
-      this.safePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.data.pdfUrl);
+      this.cargarPdfBuffer(this.data.pdfUrl);
     }
   }
 
@@ -602,9 +635,34 @@ export class VisorPdfDialogComponent implements OnInit, AfterViewInit, OnDestroy
     this.cdr.markForCheck();
   }
 
+  cargarPdfBuffer(pdfUrl: string): void {
+    this.loading.set(true);
+    this.errorMessage.set('');
+    this.pdfBuffer.set(null);
+    this.safeHtml = null;
+    this.safePdfUrl = null;
+    this.cdr.markForCheck();
+
+    this.http.get(pdfUrl, { responseType: 'arraybuffer' }).subscribe({
+      next: (buf) => {
+        this.loading.set(false);
+        this.pdfBuffer.set(new Uint8Array(buf));
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.errorMessage.set(
+          err?.error?.mensaje || 'No se pudo cargar el documento PDF oficial.'
+        );
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
   cargarHtmlDinamico(idOrCite: number | string): void {
     this.loading.set(true);
     this.errorMessage.set('');
+    this.pdfBuffer.set(null);
     this.safePdfUrl = null;
     this.cdr.markForCheck();
 
@@ -612,24 +670,7 @@ export class VisorPdfDialogComponent implements OnInit, AfterViewInit, OnDestroy
       next: (res) => {
         if (res.datos?.esPdf || (!res.datos?.html && res.datos?.pdfUrl)) {
           const pdfUrl = res.datos?.pdfUrl || `/api/v1/documento/${res.datos?.id_documento || idOrCite}/pdf`;
-          this.http.get(pdfUrl, { responseType: 'blob' }).subscribe({
-            next: (blob) => {
-              this.loading.set(false);
-              if (this.localBlobUrl) {
-                try { URL.revokeObjectURL(this.localBlobUrl); } catch { }
-              }
-              this.localBlobUrl = URL.createObjectURL(blob);
-              this.downloadUrl.set(this.localBlobUrl);
-              this.safePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.localBlobUrl);
-              this.safeHtml = null;
-              this.cdr.markForCheck();
-            },
-            error: () => {
-              this.loading.set(false);
-              this.errorMessage.set('No se pudo cargar el archivo PDF oficial.');
-              this.cdr.markForCheck();
-            }
-          });
+          this.cargarPdfBuffer(pdfUrl);
           return;
         }
 
@@ -646,11 +687,6 @@ export class VisorPdfDialogComponent implements OnInit, AfterViewInit, OnDestroy
       },
       error: (err) => {
         this.loading.set(false);
-        if (this.downloadUrl()) {
-          this.safePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.downloadUrl());
-          this.cdr.markForCheck();
-          return;
-        }
         this.errorMessage.set(
           err.error?.mensaje || err.message || 'No se pudo obtener la visualización del documento.'
         );
@@ -665,37 +701,17 @@ export class VisorPdfDialogComponent implements OnInit, AfterViewInit, OnDestroy
     this.cdr.markForCheck();
 
     this.documentosService.generarPdfDocumento(cite, force).subscribe({
-      next: (blob) => {
+      next: async (blob) => {
         this.loading.set(false);
-        if (this.localBlobUrl) {
-          try { URL.revokeObjectURL(this.localBlobUrl); } catch { }
-        }
-        this.localBlobUrl = URL.createObjectURL(blob);
-        this.downloadUrl.set(this.localBlobUrl);
-        this.safePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.localBlobUrl);
+        const buf = await blob.arrayBuffer();
+        this.pdfBuffer.set(new Uint8Array(buf));
+        this.safeHtml = null;
+        this.safePdfUrl = null;
         this.cdr.markForCheck();
       },
       error: (err) => {
         if (this.data.idDocumento) {
-          this.http.get(`/api/v1/documento/${this.data.idDocumento}/pdf`, { responseType: 'blob' }).subscribe({
-            next: (blob) => {
-              this.loading.set(false);
-              if (this.localBlobUrl) {
-                try { URL.revokeObjectURL(this.localBlobUrl); } catch { }
-              }
-              this.localBlobUrl = URL.createObjectURL(blob);
-              this.downloadUrl.set(this.localBlobUrl);
-              this.safePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.localBlobUrl);
-              this.cdr.markForCheck();
-            },
-            error: (errId) => {
-              this.loading.set(false);
-              this.errorMessage.set(
-                errId.error?.mensaje || errId.message || 'No se pudo generar el documento PDF.'
-              );
-              this.cdr.markForCheck();
-            }
-          });
+          this.cargarPdfBuffer(`/api/v1/documento/${this.data.idDocumento}/pdf`);
           return;
         }
         this.loading.set(false);
@@ -708,10 +724,12 @@ export class VisorPdfDialogComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   reintentar(): void {
-    if (this.data.idDocumento || this.data.docCite) {
+    if (!this.data.esBorrador && this.downloadUrl()) {
+      this.cargarPdfBuffer(this.downloadUrl());
+    } else if (this.data.idDocumento || this.data.docCite) {
       this.cargarHtmlDinamico(this.data.idDocumento || this.data.docCite!);
     } else if (this.data.pdfUrl) {
-      this.safePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.data.pdfUrl);
+      this.cargarPdfBuffer(this.data.pdfUrl);
     }
   }
 

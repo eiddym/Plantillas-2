@@ -4,6 +4,7 @@ import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-brows
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
@@ -988,16 +989,8 @@ export class ArchivoComponent implements OnInit {
       this.currentObjectUrl = null;
     }
 
-    // 1. Si no tiene plantilla Formly interactiva (documento PDF escaneado / institucional subido)
-    const tieneFormly = this.tienePlantillaFormly(doc);
-    if (!tieneFormly) {
-      // Streaming progresivo directo con PDF.js vía HTTP Range (Carga instantánea de página 1)
-      this.cargarPdfEnCanvas(`/api/v1/documento/${doc.id_documento}/pdf`);
-      return;
-    }
-
-    // 2. Documento interactivo redactado en Formly
-    this.cargarPreviewHtml(doc);
+    // Todos los documentos custodiados en Archivo se visualizan en el canvas oficial de PDF.js
+    this.cargarPdfEnCanvas(`/api/v1/documento/${doc.id_documento}/pdf`);
   }
 
   cargarPreviewHtml(doc: DocumentoArchivo): void {
@@ -1050,13 +1043,18 @@ export class ArchivoComponent implements OnInit {
         this.renderTaskEnCurso = null;
       }
 
-      const docParam: any = typeof src === 'string'
-        ? { url: src, cMapUrl: '/assets/pdfjs/cmaps/', cMapPacked: true }
-        : (src && src.url
-            ? { ...src, cMapUrl: '/assets/pdfjs/cmaps/', cMapPacked: true }
-            : { data: src, cMapUrl: '/assets/pdfjs/cmaps/', cMapPacked: true });
+      let docDataOrParam: any;
+      if (typeof src === 'string') {
+        const buffer = await firstValueFrom(this.http.get(src, { responseType: 'arraybuffer' }));
+        docDataOrParam = { data: new Uint8Array(buffer), cMapUrl: '/assets/pdfjs/cmaps/', cMapPacked: true };
+      } else if (src && src.url) {
+        const buffer = await firstValueFrom(this.http.get(src.url, { responseType: 'arraybuffer' }));
+        docDataOrParam = { data: new Uint8Array(buffer), cMapUrl: '/assets/pdfjs/cmaps/', cMapPacked: true };
+      } else {
+        docDataOrParam = { data: src, cMapUrl: '/assets/pdfjs/cmaps/', cMapPacked: true };
+      }
 
-      const loadingTask = pdfjsLib.getDocument(docParam);
+      const loadingTask = pdfjsLib.getDocument(docDataOrParam);
       const pdfDoc = await loadingTask.promise;
       this.loadedPdfDocument = pdfDoc;
       this.totalPaginasPdf.set(pdfDoc.numPages || 1);

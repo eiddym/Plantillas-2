@@ -402,23 +402,33 @@ import { AuthService } from '../../../core/auth/auth.service';
 
     @media (max-width: 900px) {
       .login-container {
-        justify-content: center;
-        padding: 30px 20px;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 30px 20px !important;
+        overflow-y: auto !important;
       }
 
       .login-footer {
+        position: relative;
         right: auto;
-        left: 50%;
-        transform: translateX(-50%);
-        bottom: 12px;
+        left: auto;
+        bottom: auto;
+        transform: none;
+        margin-top: 18px;
+        width: 100%;
+        justify-content: center;
+        text-align: center;
         white-space: nowrap;
       }
     }
 
     @media (max-width: 680px) {
       .login-container {
-        padding: 24px 16px 20px;
-        justify-content: center;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 24px 16px !important;
         background-position: center center;
         background-image:
           linear-gradient(rgba(1, 20, 14, 0.45), rgba(1, 20, 14, 0.45)),
@@ -427,14 +437,17 @@ import { AuthService } from '../../../core/auth/auth.service';
 
       .login-card-horizontal {
         flex-direction: column;
-        max-width: 360px;
-        width: 100%;
+        max-width: 400px !important;
+        width: 100% !important;
+        margin: 0 auto !important;
         min-height: auto;
         border-radius: 22px;
         box-shadow: 0 24px 48px rgba(0, 0, 0, 0.55);
       }
 
       .panel-izquierdo {
+        width: 100%;
+        box-sizing: border-box;
         padding: 22px 18px 14px;
         gap: 8px;
         border-right: none;
@@ -451,7 +464,9 @@ import { AuthService } from '../../../core/auth/auth.service';
       }
 
       .panel-derecho {
-        padding: 20px 18px 22px;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 22px 20px 24px;
       }
 
       .header-centrado {
@@ -470,6 +485,8 @@ import { AuthService } from '../../../core/auth/auth.service';
       .btn-sso-primary {
         height: 46px;
         font-size: 0.90rem;
+        padding: 0 14px;
+        box-sizing: border-box;
       }
 
       .enlaces-publicos-pills {
@@ -480,8 +497,8 @@ import { AuthService } from '../../../core/auth/auth.service';
       }
 
       .pill-publico {
-        padding: 9px 12px;
-        font-size: 0.76rem;
+        padding: 10px 12px;
+        font-size: 0.78rem;
       }
 
       .login-footer {
@@ -489,6 +506,7 @@ import { AuthService } from '../../../core/auth/auth.service';
         left: auto;
         bottom: auto;
         transform: none;
+        width: 100%;
         margin-top: 18px;
         text-align: center;
         justify-content: center;
