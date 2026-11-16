@@ -249,6 +249,51 @@ module.exports = app => {
   }
 
   /**
+   * Determina si un documento institucional corresponde a una carga externa directa al
+   * Archivo Institucional (no producido en el flujo de una unidad administrativa).
+   */
+  function esDocumentoInstitucionalExterno(doc) {
+    if (!doc || !doc.es_institucional) return false;
+    const origenRad = (doc.origen_radicacion || '').toUpperCase().trim();
+    if (origenRad === 'EXTERNO_INSTITUCIONAL') return true;
+    const alcance = (doc.alcance_archivo || '').toUpperCase().trim();
+    if (alcance === 'INSTITUCIONAL') return true;
+    const cite = (doc.nombre || '').toUpperCase().trim();
+    if (cite.startsWith('MARABUNTA/')) return true;
+    if (doc.plantilla) {
+      try {
+        const parsed = typeof doc.plantilla === 'string' ? JSON.parse(doc.plantilla) : doc.plantilla;
+        if (parsed && !Array.isArray(parsed) && parsed.tipo === 'institucional') {
+          return true;
+        }
+      } catch (_) {}
+    }
+    return false;
+  }
+
+  /**
+   * Preserva el autor y su cargo en todos los casos, y desvincula de unidad a los
+   * documentos cargados externamente en Archivo Institucional.
+   */
+  function normalizarAutorYAlcanceDoc(plain) {
+    if (!plain) return plain;
+    const esExternoInst = esDocumentoInstitucionalExterno(plain);
+    plain.es_carga_externa_institucional = esExternoInst;
+    plain.es_promovido_unidad = Boolean(plain.es_institucional && !esExternoInst);
+    if (esExternoInst && plain.usuario_creacion) {
+      plain.usuario_creacion = {
+        id_usuario: plain.usuario_creacion.id_usuario,
+        nombres: plain.usuario_creacion.nombres,
+        apellidos: plain.usuario_creacion.apellidos,
+        cargo: plain.usuario_creacion.cargo || 'Autoridad Institucional',
+        fid_unidad: null,
+        unidad: null
+      };
+    }
+    return plain;
+  }
+
+  /**
    * GET /api/v1/archivo/permisos
    * Devuelve los permisos jerárquicos exactos del usuario actual sobre los 3 niveles de Archivo.
    */
@@ -333,7 +378,7 @@ module.exports = app => {
       const etiquetasMap = {};
 
       const docs = docsRaw.map(d => {
-        const plain = d.toJSON();
+        const plain = normalizarAutorYAlcanceDoc(d.toJSON());
         const tipo = (plain.nombre_plantilla || 'Documento Oficial').trim();
         const clasificacion = (plain.clasificacion || 'Reservado').trim();
         const origen = resolverOrigenDocumento(plain);
@@ -483,14 +528,16 @@ module.exports = app => {
         order: [['_fecha_creacion', 'DESC']]
       });
 
-      const docs = docsRaw.map(d => {
-        const plain = d.toJSON();
-        plain.nombre_plantilla = (plain.nombre_plantilla || 'Documento Oficial').trim();
-        plain.clasificacion = (plain.clasificacion || 'Reservado').trim();
-        plain.origen_canal = resolverOrigenDocumento(plain);
-        plain.etiquetas = normalizarEtiquetasDoc(plain);
-        return plain;
-      });
+      const docs = docsRaw
+        .map(d => {
+          const plain = normalizarAutorYAlcanceDoc(d.toJSON());
+          plain.nombre_plantilla = (plain.nombre_plantilla || 'Documento Oficial').trim();
+          plain.clasificacion = (plain.clasificacion || 'Reservado').trim();
+          plain.origen_canal = resolverOrigenDocumento(plain);
+          plain.etiquetas = normalizarEtiquetasDoc(plain);
+          return plain;
+        })
+        .filter(d => !d.es_carga_externa_institucional);
 
       const tiposSet = new Set();
       const clasificacionesSet = new Set();
@@ -608,7 +655,7 @@ module.exports = app => {
       });
 
       const docs = docsRaw.map(d => {
-        const plain = d.toJSON();
+        const plain = normalizarAutorYAlcanceDoc(d.toJSON());
         plain.etiquetas = normalizarEtiquetasDoc(plain);
         return plain;
       });
@@ -657,9 +704,10 @@ module.exports = app => {
         }
       ];
 
+      const esExternoInst = esDocumentoInstitucionalExterno(doc);
       await doc.update({
         es_institucional: true,
-        alcance_archivo: 'INSTITUCIONAL',
+        alcance_archivo: esExternoInst ? 'INSTITUCIONAL' : 'UNIDAD',
         categoria_institucional: req.body.categoria || doc.nombre_plantilla || 'Resolución / Normativa',
         versiones: versionInicial,
         _usuario_modificacion: ctx.idUsuario || 1
@@ -728,8 +776,8 @@ module.exports = app => {
       const docsRaw = await Documento.findAll({
         attributes: [
           'id_documento', 'nombre', 'nombre_plantilla', 'abreviacion', 'estado',
-          'clasificacion', 'es_institucional', 'categoria_institucional',
-          'codigo_hoja_ruta', 'origen_radicacion', 'datos_remitente',
+          'clasificacion', 'es_institucional', 'alcance_archivo', 'categoria_institucional',
+          'codigo_hoja_ruta', 'origen_radicacion', 'datos_remitente', 'plantilla',
           'etiquetas', 'para', '_usuario_creacion', '_fecha_creacion', 'fecha'
         ],
         where: {
@@ -795,7 +843,7 @@ module.exports = app => {
       });
 
       docs.forEach(d => {
-        const plain = d.toJSON();
+        const plain = normalizarAutorYAlcanceDoc(d.toJSON());
         const orig = (plain.origen_radicacion || '').toUpperCase().trim();
         const esVentExterna = orig === 'EXTERNA' || orig === 'VENTANILLA_EXTERNA';
         const esVentInterna = orig === 'INTERNA' || orig === 'VENTANILLA_INTERNA';
@@ -872,7 +920,7 @@ module.exports = app => {
             }
             st.total_movimiento++;
           }
-        } else {
+        } else if (!plain.es_carga_externa_institucional) {
           resumenCanales.flujo_interno.total++;
           if (plain.estado === 'CERRADO') {
             resumenCanales.flujo_interno.cerrados++;
@@ -1049,20 +1097,24 @@ module.exports = app => {
         }
       }
 
+      const nombreAutor = ctx.usuario?.nombres
+        ? `${ctx.usuario.nombres} ${ctx.usuario.apellidos || ''}`.trim()
+        : (auditUser.nombres || 'Autoridad / Secretaría');
+      const cargoAutor = (ctx.cargo || auditUser.cargo || 'Autoridad Institucional').trim();
+
       const versiones = [
         {
           version: 1,
           nombre_archivo: nombre_archivo || `${sigla}_v1.pdf`,
           ruta: rutaArchivoFisico,
           fecha: new Date(),
-          usuario: ctx.usuario?.nombres ? `${ctx.usuario.nombres} ${ctx.usuario.apellidos || ''}`.trim() : (auditUser.nombres || 'Autoridad / Secretaría'),
+          usuario: nombreAutor,
           observacion: observacion || `Carga oficial de ${tituloDoc} en custodia institucional (v1)`
         }
       ];
 
       const todosActivos = await Usuario.findAll({ where: { estado: 'ACTIVO' }, attributes: ['id_usuario'] });
       const idsTodos = todosActivos.map(u => Number(u.id_usuario)).filter(n => n > 0);
-      const alcanceFinal = req.body.alcance_archivo || 'INSTITUCIONAL';
       const etiquetasIniciales = Array.isArray(etiquetas) ? etiquetas : [categoria || 'Normativa'];
 
       const nuevoDoc = await Documento.create({
@@ -1076,7 +1128,8 @@ module.exports = app => {
         archivo_adjunto: archivoData || null,
         de: JSON.stringify([ctx.idUsuario || 1]),
         para: JSON.stringify(idsTodos),
-        alcance_archivo: alcanceFinal,
+        origen_radicacion: 'EXTERNO_INSTITUCIONAL',
+        alcance_archivo: 'INSTITUCIONAL',
         plantilla: JSON.stringify({ tipo: 'institucional', nombre_documento: tituloDoc, sigla, descripcion: descDoc }),
         plantilla_valor: JSON.stringify({
           cite: citeFinal,
@@ -1085,12 +1138,14 @@ module.exports = app => {
           descripcion: descDoc,
           ref: referenciaFinal,
           observacion: observacion || '',
+          autor_nombre: nombreAutor,
+          autor_cargo: cargoAutor,
           datosGenerales: {
             para: [{ id_usuario: 'TODOS', todos: true, nombres: 'A TODO EL PERSONAL', todos_ids: idsTodos }]
           }
         }),
         estado: 'CERRADO',
-        es_institucional: alcanceFinal === 'INSTITUCIONAL',
+        es_institucional: true,
         versiones: versiones,
         _usuario_creacion: ctx.idUsuario || 1,
         _usuario_modificacion: ctx.idUsuario || 1,

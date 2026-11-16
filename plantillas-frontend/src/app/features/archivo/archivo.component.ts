@@ -51,6 +51,9 @@ export interface DocumentoArchivo {
   referencia?: string;
   estado: string;
   es_institucional?: boolean;
+  alcance_archivo?: string;
+  es_carga_externa_institucional?: boolean;
+  es_promovido_unidad?: boolean;
   versiones?: VersionArchivo[];
   _fecha_creacion?: string;
   fecha?: string;
@@ -643,7 +646,8 @@ export class ArchivoComponent implements OnInit {
         if (res.tipoMensaje === 'EXITO') {
           this.snackBar.open(`¡Documento ${doc.nombre} promovido a Archivo Institucional!`, 'Aceptar', { duration: 4000 });
           doc.es_institucional = true;
-          this.cargarArchivoInstitucional();
+          doc.es_promovido_unidad = !doc.es_carga_externa_institucional;
+          this.cargarDatos();
         }
       },
       error: (err) => {

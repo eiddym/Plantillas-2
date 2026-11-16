@@ -23,6 +23,7 @@ module.exports = app => {
   const SQL_FIRMADO = `d.estado IN ('CERRADO', 'APROBADO') AND (COALESCE(d.firmado, false) = true OR COALESCE(d.aprobado_cd, false) = true)`;
   const SQL_CUSTODIA = `d.estado IN ('CERRADO', 'APROBADO') AND COALESCE(d.firmado, false) = false AND COALESCE(d.aprobado_cd, false) = false AND d.firmante_actual IS NULL AND d.aprobador_cd_actual IS NULL`;
   const SQL_CONCLUIDO = `d.estado IN ('CERRADO', 'APROBADO') AND (COALESCE(d.firmado, false) = true OR COALESCE(d.aprobado_cd, false) = true OR (d.firmante_actual IS NULL AND d.aprobador_cd_actual IS NULL))`;
+  const SQL_NO_EXTERNO_INST = `COALESCE(d.origen_radicacion, '') != 'EXTERNO_INSTITUCIONAL' AND COALESCE(d.alcance_archivo, 'UNIDAD') != 'INSTITUCIONAL' AND LOWER(COALESCE(d.nombre, '')) NOT LIKE 'marabunta/%'`;
 
   /**
    * Consulta el método rector de firma/aprobación configurado en el sistema
@@ -91,7 +92,9 @@ module.exports = app => {
         FROM unidad un
         LEFT JOIN usuario us ON (us.fid_unidad = un.id_unidad AND us.estado = 'ACTIVO')
         LEFT JOIN documento d ON (
-          d.estado != 'ELIMINADO' AND (
+          d.estado != 'ELIMINADO'
+          AND (${SQL_NO_EXTERNO_INST})
+          AND (
             d.via_actual = us.id_usuario
             OR d.firmante_actual = us.id_usuario
             OR d.aprobador_cd_actual = us.id_usuario
@@ -288,7 +291,9 @@ module.exports = app => {
           COUNT(DISTINCT d.id_documento) FILTER (WHERE ${SQL_CONCLUIDO}) AS atendidos
         FROM usuario u
         LEFT JOIN documento d ON (
-          d.estado != 'ELIMINADO' AND (
+          d.estado != 'ELIMINADO'
+          AND (${SQL_NO_EXTERNO_INST})
+          AND (
             d.via_actual = u.id_usuario
             OR d.firmante_actual = u.id_usuario
             OR d.aprobador_cd_actual = u.id_usuario

@@ -319,7 +319,14 @@
 
                   <div class="meta-badges-group">
                     <span class="tipo-tag">{{ d.nombre_plantilla || 'Documento Oficial' }}</span>
-                    <span class="unit-tag">{{ d.usuario_creacion?.unidad?.nombre || 'Unidad Central' }}</span>
+                    @if (d.es_carga_externa_institucional) {
+                      <span class="unit-tag" style="background:#fef3c7; color:#92400e;">Institución (Carga Externa)</span>
+                    } @else {
+                      <span class="unit-tag">{{ d.usuario_creacion?.unidad?.nombre || 'Unidad' }}</span>
+                    }
+                    @if (d.usuario_creacion?.nombres) {
+                      <span class="unit-tag">Por: {{ d.usuario_creacion?.nombres }} {{ d.usuario_creacion?.apellidos }}{{ d.usuario_creacion?.cargo ? ' · ' + d.usuario_creacion?.cargo : '' }}</span>
+                    }
                     <span class="unit-tag" style="background:#f1f5f9; color:#334155;">{{ d.clasificacion || 'Reservado' }}</span>
                     @for (tag of (d.etiquetas || []); track tag) {
                       <span class="tipo-tag" style="background:#e0f2fe; color:#0369a1;">#{{ tag }}</span>
@@ -517,8 +524,11 @@
 
                   <div class="meta-badges-group">
                     <span class="tipo-tag">{{ d.nombre_plantilla }}</span>
+                    @if (d.es_institucional) {
+                      <span class="cat-pill" style="background:#fef3c7; color:#92400e;">En Archivo Institucional</span>
+                    }
                     @if (d.usuario_creacion?.nombres) {
-                      <span class="unit-tag">Por: {{ d.usuario_creacion?.nombres }} {{ d.usuario_creacion?.apellidos }}</span>
+                      <span class="unit-tag">Por: {{ d.usuario_creacion?.nombres }} {{ d.usuario_creacion?.apellidos }}{{ d.usuario_creacion?.cargo ? ' · ' + d.usuario_creacion?.cargo : '' }}</span>
                     }
                     <span class="date-badge">
                       <mat-icon class="icon-date">event</mat-icon>
@@ -712,6 +722,14 @@
                     <span class="tipo-tag">{{ d.nombre_plantilla || obtenerTituloDoc(d) }}</span>
                     @if (d.abreviacion) {
                       <span class="sigla-tag">{{ d.abreviacion }}</span>
+                    }
+                    @if (d.es_promovido_unidad && d.usuario_creacion?.unidad) {
+                      <span class="unit-tag" style="background:#dcfce7; color:#166534;">Unidad: {{ d.usuario_creacion?.unidad?.abreviacion || d.usuario_creacion?.unidad?.nombre }}</span>
+                    } @else {
+                      <span class="unit-tag" style="background:#fef3c7; color:#92400e;">Custodia Institucional (Sin Unidad)</span>
+                    }
+                    @if (d.usuario_creacion?.nombres) {
+                      <span class="unit-tag">Por: {{ d.usuario_creacion?.nombres }} {{ d.usuario_creacion?.apellidos }}{{ d.usuario_creacion?.cargo ? ' · ' + d.usuario_creacion?.cargo : '' }}</span>
                     }
                     <span class="cat-pill">{{ d.categoria_institucional || 'Normativa y Políticas' }}</span>
                     <span class="version-badge" (click)="verVersiones(d); $event.stopPropagation()" matTooltip="Ver historial de versiones">
