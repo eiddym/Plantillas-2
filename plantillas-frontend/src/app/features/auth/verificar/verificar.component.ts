@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
@@ -79,10 +79,19 @@ export interface VerificacionResultado {
 
       <!-- Contenedor Principal -->
       <main class="verif-main">
-        <div class="verif-layout">
+        <div class="verif-layout" [class.layout-single]="true">
           
-          <!-- Columna Izquierda: Formulario de Consulta -->
-          <div class="col-query">
+          <!-- Estado de Carga Inicial / Validación Automática -->
+          <div *ngIf="loading() && !resultado()" class="verif-loading-card">
+            <mat-progress-bar mode="indeterminate" class="query-progress"></mat-progress-bar>
+            <div class="loading-inner">
+              <mat-icon class="spin">sync</mat-icon>
+              <span>Validando documento en registros oficiales...</span>
+            </div>
+          </div>
+
+          <!-- Formulario de Consulta (solo cuando NO hay documento expuesto) -->
+          <div *ngIf="!resultado() && !loading()" class="col-query col-query-centered">
             
             <!-- Tarjeta de Búsqueda -->
             <div class="query-card">
@@ -95,8 +104,6 @@ export interface VerificacionResultado {
                   <p class="lead-desc">Ingrese el CITE y código de verificación impreso en el pie de página o código QR del documento.</p>
                 </div>
               </div>
-
-              <mat-progress-bar *ngIf="loading()" mode="indeterminate" class="query-progress"></mat-progress-bar>
 
               <form [formGroup]="verifyForm" (ngSubmit)="consultar()" class="verif-form">
                 <div class="field-row">
@@ -132,7 +139,7 @@ export interface VerificacionResultado {
 
                 <!-- Widget de Protección Mosparo (solo en consulta manual sin QR antes de validar) -->
                 <app-mosparo 
-                  *ngIf="!esAccesoDirectoQr() && !resultado()"
+                  *ngIf="!esAccesoDirectoQr()"
                   (verified)="onMosparoVerified($event)" 
                   (tokensChanged)="onMosparoTokensChanged($event)"
                 ></app-mosparo>
@@ -140,11 +147,10 @@ export interface VerificacionResultado {
                 <button 
                   type="submit" 
                   class="btn-validar" 
-                  [disabled]="verifyForm.invalid || loading() || !!resultado()"
+                  [disabled]="verifyForm.invalid || loading()"
                 >
-                  <mat-icon *ngIf="!loading()">search</mat-icon>
-                  <mat-icon *ngIf="loading()" class="spin">sync</mat-icon>
-                  <span>{{ loading() ? 'Validando en Registros Oficiales...' : 'Validar Documento Oficial' }}</span>
+                  <mat-icon>search</mat-icon>
+                  <span>Validar Documento Oficial</span>
                 </button>
               </form>
 
@@ -160,23 +166,10 @@ export interface VerificacionResultado {
 
           </div>
 
-          <!-- Columna Derecha: Certificación Oficial y Visor de Copia Digital -->
-          <div class="col-result">
-            
-            <div *ngIf="!resultado() && !loading()" class="placeholder-card">
-              <div class="placeholder-graphic">
-                <mat-icon>verified</mat-icon>
-              </div>
-              <h3>Esperando Consulta de Documento</h3>
-              <p>Ingrese los datos de verificación o escanee el código QR desde su dispositivo para consultar la autenticidad y el documento digital custodiado.</p>
-              <div class="badge-legal-notice">
-                <mat-icon>gavel</mat-icon>
-                <span>Conforme a la Ley N° 164 y D.S. 3525 de Validez Jurídica de Documentos Digitales</span>
-              </div>
-            </div>
+          <!-- Resultado Positivo del Documento Expuesto (protagonista centrado) -->
+          <div *ngIf="resultado() as res" class="col-result col-result-centered">
 
-            <!-- Vista del Resultado Positivo -->
-            <div *ngIf="resultado() as res" class="certified-card">
+            <div class="certified-card">
               
               <!-- Insignia de Validez: Check - Documento Auténtico - Válido -->
               <div class="cert-banner">
@@ -214,6 +207,15 @@ export interface VerificacionResultado {
                 >
                   <mat-icon>download</mat-icon>
                   <span>{{ loadingPdf() ? 'Preparando Copia Oficial...' : 'Descargar Copia Certificada (PDF)' }}</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="btn-verificar-otro"
+                  (click)="verificarOtroDocumento()"
+                >
+                  <mat-icon>manage_search</mat-icon>
+                  <span>Verificar otro documento</span>
                 </button>
               </div>
 
@@ -465,8 +467,52 @@ export interface VerificacionResultado {
       gap: 1.75rem;
       align-items: start;
 
+      &.layout-single {
+        grid-template-columns: 1fr;
+      }
+
       @media (max-width: 960px) {
         grid-template-columns: 1fr;
+      }
+    }
+
+    .col-query-centered {
+      width: 100%;
+      max-width: 500px;
+      margin: 12px auto 0;
+    }
+
+    .col-result-centered {
+      width: 100%;
+      max-width: 920px;
+      margin: 0 auto;
+    }
+
+    .verif-loading-card {
+      width: 100%;
+      max-width: 500px;
+      margin: 24px auto;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-top: 4px solid #0d5c63;
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: 0 12px 32px rgba(15, 32, 39, 0.08);
+
+      .loading-inner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 12px;
+        color: #0f2027;
+        font-weight: 600;
+        font-size: 0.92rem;
+
+        mat-icon {
+          color: #0d5c63;
+          animation: spin 1s linear infinite;
+        }
       }
     }
 
@@ -1003,7 +1049,7 @@ export interface VerificacionResultado {
       }
     }
 
-    .btn-toggle-preview {
+    .btn-verificar-otro {
       display: inline-flex;
       align-items: center;
       gap: 8px;
@@ -1186,6 +1232,7 @@ export class VerificarComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   readonly verifyForm: FormGroup = this.fb.group({
     cite: ['', [Validators.required]],
@@ -1202,26 +1249,26 @@ export class VerificarComponent implements OnInit {
   private pdfBlob: Blob | null = null;
 
   ngOnInit(): void {
-    this.route.queryParams.subscribe(() => {
-      this.aplicarParametrosYConsultar();
+    this.route.queryParams.subscribe((qp) => {
+      this.aplicarParametrosYConsultar(qp, false);
     });
-    this.aplicarParametrosYConsultar();
+    this.aplicarParametrosYConsultar(this.route.snapshot.queryParams, true);
   }
 
-  private extraerParametros(): { cite: string; codigo: string } {
-    const qp = this.route.snapshot.queryParams || {};
+  private extraerParametros(qpInput?: Record<string, any>, usarFallbackWindow = true): { cite: string; codigo: string } {
+    const qp = qpInput || this.route.snapshot.queryParams || {};
     let cite = qp['cite'] || '';
     let codigo = qp['codigo'] || '';
 
-    // 1. Fallback directo desde window.location.search (?cite=...&codigo=...)
-    if ((!cite || !codigo) && typeof window !== 'undefined' && window.location?.search) {
+    // 1. Fallback directo desde window.location.search (?cite=...&codigo=...) solo en carga inicial
+    if (usarFallbackWindow && (!cite || !codigo) && typeof window !== 'undefined' && window.location?.search) {
       const urlSearchParams = new URLSearchParams(window.location.search);
       cite = cite || urlSearchParams.get('cite') || '';
       codigo = codigo || urlSearchParams.get('codigo') || '';
     }
 
-    // 2. Fallback si vino en formato hash (/#/verificar?cite=...&codigo=...)
-    if ((!cite || !codigo) && typeof window !== 'undefined' && window.location?.hash) {
+    // 2. Fallback si vino en formato hash (/#/verificar?cite=...&codigo=...) solo en carga inicial
+    if (usarFallbackWindow && (!cite || !codigo) && typeof window !== 'undefined' && window.location?.hash) {
       const hash = window.location.hash;
       if (hash.includes('?')) {
         const hashQuery = hash.substring(hash.indexOf('?') + 1);
@@ -1237,8 +1284,8 @@ export class VerificarComponent implements OnInit {
     };
   }
 
-  private aplicarParametrosYConsultar(): void {
-    const { cite, codigo } = this.extraerParametros();
+  private aplicarParametrosYConsultar(qpInput?: Record<string, any>, usarFallbackWindow = true): void {
+    const { cite, codigo } = this.extraerParametros(qpInput, usarFallbackWindow);
     if (cite || codigo) {
       if (cite && codigo) {
         this.esAccesoDirectoQr.set(true);
@@ -1400,5 +1447,16 @@ export class VerificarComponent implements OnInit {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  verificarOtroDocumento(): void {
+    this.resultado.set(null);
+    this.errorMensaje.set(null);
+    this.pdfBytes.set(null);
+    this.pdfBlob = null;
+    this.esAccesoDirectoQr.set(false);
+    this.verifyForm.enable();
+    this.verifyForm.reset({ cite: '', codigo: '' });
+    this.router.navigate(['/verificar'], { queryParams: {}, replaceUrl: true });
   }
 }
