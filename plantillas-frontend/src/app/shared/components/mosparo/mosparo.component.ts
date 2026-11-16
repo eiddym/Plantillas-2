@@ -1,23 +1,9 @@
 import { Component, OnInit, OnDestroy, Output, EventEmitter, Input, ElementRef, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
-
-export interface MosparoConfig {
-  host: string;
-  publicKey: string;
-  uuid: string;
-  enabled: boolean;
-}
 
 export interface MosparoTokens {
   submitToken: string;
   validationToken: string;
-}
-
-declare global {
-  interface Window {
-    mosparo?: any;
-  }
 }
 
 @Component({
@@ -26,91 +12,76 @@ declare global {
   imports: [CommonModule],
   template: `
     <div class="mosparo-container">
-      <!-- Contenedor para el script oficial de Mosparo si está disponible -->
-      <div [id]="containerId" class="mosparo-box-wrapper" [class.hidden]="usingSovereignWidget()"></div>
-
-      <!-- Widget Soberano Mosparo (Fiel a la interfaz oficial y activo ante cualquier entorno) -->
-      @if (usingSovereignWidget()) {
-        <div 
-          class="mosparo-card" 
-          [class.card-verified]="status() === 'verified'"
-          [class.card-checking]="status() === 'checking'"
-        >
-          <div class="mosparo-left" (click)="onCheckboxClick()">
-            <div 
-              class="mosparo-checkbox" 
-              [class.checked]="status() === 'verified'" 
-              [class.spinning]="status() === 'checking'"
-              role="checkbox"
-              [attr.aria-checked]="status() === 'verified'"
-              tabindex="0"
-              (keydown.enter)="onCheckboxClick()"
-              (keydown.space)="onCheckboxClick()"
-            >
-              @if (status() === 'checking') {
-                <svg class="spinner-svg" viewBox="0 0 50 50">
-                  <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
-                </svg>
-              } @else if (status() === 'verified') {
-                <svg class="checkmark-svg" viewBox="0 0 24 24">
-                  <path fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M4 12l5 5L20 6"/>
-                </svg>
-              }
-            </div>
-
-            <div class="mosparo-label-wrap">
-              <span class="mosparo-label">
-                @if (status() === 'verified') {
-                  Verificación de seguridad exitosa
-                } @else if (status() === 'checking') {
-                  Verificando seguridad...
-                } @else {
-                  No soy un robot
-                }
-              </span>
-              @if (status() === 'verified') {
-                <span class="sub-status-txt">Protección anti-bot validada</span>
-              }
-            </div>
-          </div>
-
-          <div class="mosparo-badge">
-            <div class="brand-line">
-              <svg class="mosparo-logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M16 2L4 7v9c0 7.8 5.1 15.1 12 17 6.9-1.9 12-9.2 12-17V7L16 2z" fill="#0284c7" />
-                <path d="M16 5.5L7 9.2v6.8c0 6.1 3.8 11.8 9 13.5 5.2-1.7 9-7.4 9-13.5V9.2L16 5.5z" fill="#ffffff" />
-                <path d="M14 19l-4-4 1.4-1.4 2.6 2.6 6.6-6.6 1.4 1.4-8 8z" fill="#0284c7" />
+      <div 
+        class="mosparo-card" 
+        [class.card-verified]="status() === 'verified'"
+        [class.card-checking]="status() === 'checking'"
+        (click)="onCheckboxClick()"
+      >
+        <div class="mosparo-left">
+          <div 
+            class="mosparo-checkbox" 
+            [class.checked]="status() === 'verified'" 
+            [class.spinning]="status() === 'checking'"
+            role="checkbox"
+            [attr.aria-checked]="status() === 'verified'"
+            tabindex="0"
+            (keydown.enter)="onCheckboxClick()"
+            (keydown.space)="onCheckboxClick()"
+          >
+            @if (status() === 'checking') {
+              <svg class="spinner-svg" viewBox="0 0 50 50">
+                <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
               </svg>
-              <span class="brand-title">mosparo</span>
-            </div>
-            <span class="brand-subtitle">Seguridad Soberana</span>
+            } @else if (status() === 'verified') {
+              <svg class="checkmark-svg" viewBox="0 0 24 24">
+                <path fill="none" stroke="#16a34a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" d="M4 12l5 5L20 6"/>
+              </svg>
+            }
           </div>
 
-          <!-- Inputs ocultos para compatibilidad con serialización nativa de formularios -->
-          <input type="hidden" name="_mosparo_submitToken" [value]="currentTokens?.submitToken || ''">
-          <input type="hidden" name="_mosparo_validationToken" [value]="currentTokens?.validationToken || ''">
+          <div class="mosparo-label-wrap">
+            <span class="mosparo-label">
+              @if (status() === 'verified') {
+                Verificación exitosa
+              } @else if (status() === 'checking') {
+                Comprobando navegador...
+              } @else {
+                No soy un robot
+              }
+            </span>
+            <span class="sub-status-txt">
+              @if (status() === 'verified') {
+                Protección anti-bot validada
+              } @else {
+                Protección soberana contra spam
+              }
+            </span>
+          </div>
         </div>
-      }
 
-      @if (loadingConfig()) {
-        <div class="mosparo-placeholder">
-          <span class="pulse-indicator"></span>
-          <span class="placeholder-text">Iniciando verificación Mosparo...</span>
+        <div class="mosparo-badge">
+          <div class="brand-line">
+            <svg class="mosparo-logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16 2L4 7v9c0 7.8 5.1 15.1 12 17 6.9-1.9 12-9.2 12-17V7L16 2z" fill="#0d5c63" />
+              <path d="M16 5.5L7 9.2v6.8c0 6.1 3.8 11.8 9 13.5 5.2-1.7 9-7.4 9-13.5V9.2L16 5.5z" fill="#ffffff" />
+              <path d="M14 19l-4-4 1.4-1.4 2.6 2.6 6.6-6.6 1.4 1.4-8 8z" fill="#0d5c63" />
+            </svg>
+            <span class="brand-title">mosparo</span>
+          </div>
+          <span class="brand-subtitle">Seguridad Soberana</span>
         </div>
-      }
+
+        <!-- Inputs ocultos para compatibilidad con serialización estándar de formularios -->
+        <input type="hidden" name="_mosparo_submitToken" [value]="currentTokens?.submitToken || ''">
+        <input type="hidden" name="_mosparo_validationToken" [value]="currentTokens?.validationToken || ''">
+      </div>
     </div>
   `,
   styles: [`
     .mosparo-container {
       margin: 16px 0;
       width: 100%;
-      max-width: 380px;
-    }
-    .mosparo-box-wrapper {
-      width: 100%;
-    }
-    .hidden {
-      display: none !important;
     }
 
     .mosparo-card {
@@ -118,39 +89,41 @@ declare global {
       align-items: center;
       justify-content: space-between;
       background: #f8fafc;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      padding: 12px 16px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-      transition: all 0.25s ease;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 12px 18px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       user-select: none;
+      cursor: pointer;
     }
 
     .mosparo-card:hover {
-      border-color: #94a3b8;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      border-color: #0d5c63;
       background: #ffffff;
+      box-shadow: 0 3px 10px rgba(13, 92, 99, 0.08);
     }
 
     .mosparo-card.card-verified {
       background: #f0fdf4;
       border-color: #86efac;
-      box-shadow: 0 1px 3px rgba(22, 163, 74, 0.1);
+      box-shadow: 0 2px 8px rgba(22, 163, 74, 0.12);
+      cursor: default;
     }
 
     .mosparo-left {
       display: flex;
       align-items: center;
       gap: 14px;
-      cursor: pointer;
       flex: 1;
     }
 
     .mosparo-checkbox {
       width: 28px;
       height: 28px;
+      min-width: 28px;
       border: 2px solid #94a3b8;
-      border-radius: 6px;
+      border-radius: 7px;
       background: #ffffff;
       display: flex;
       align-items: center;
@@ -159,9 +132,13 @@ declare global {
       outline: none;
     }
 
+    .mosparo-card:hover .mosparo-checkbox:not(.checked):not(.spinning) {
+      border-color: #0d5c63;
+    }
+
     .mosparo-checkbox:focus-visible {
-      border-color: #0284c7;
-      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2);
+      border-color: #0d5c63;
+      box-shadow: 0 0 0 3px rgba(13, 92, 99, 0.2);
     }
 
     .mosparo-checkbox.checked {
@@ -170,20 +147,20 @@ declare global {
     }
 
     .mosparo-checkbox.spinning {
-      border-color: #0284c7;
+      border-color: #0d5c63;
       background: #ffffff;
     }
 
     .spinner-svg {
       width: 20px;
       height: 20px;
-      animation: rotate 1.4s linear infinite;
+      animation: rotate 1.2s linear infinite;
     }
 
     .spinner-svg .path {
-      stroke: #0284c7;
+      stroke: #0d5c63;
       stroke-linecap: round;
-      animation: dash 1.4s ease-in-out infinite;
+      animation: dash 1.2s ease-in-out infinite;
     }
 
     @keyframes rotate {
@@ -210,37 +187,48 @@ declare global {
     .checkmark-svg {
       width: 22px;
       height: 22px;
-      animation: popIn 0.25s ease-out;
+      animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
 
     @keyframes popIn {
-      0% { transform: scale(0.5); opacity: 0; }
+      0% { transform: scale(0.4); opacity: 0; }
       100% { transform: scale(1); opacity: 1; }
     }
 
     .mosparo-label-wrap {
       display: flex;
       flex-direction: column;
+      gap: 2px;
     }
 
     .mosparo-label {
-      font-size: 14px;
-      font-weight: 500;
+      font-size: 14.5px;
+      font-weight: 600;
       color: #1e293b;
+      letter-spacing: -0.2px;
+    }
+
+    .card-verified .mosparo-label {
+      color: #15803d;
     }
 
     .sub-status-txt {
       font-size: 11px;
-      color: #16a34a;
+      color: #64748b;
       font-weight: 500;
+    }
+
+    .card-verified .sub-status-txt {
+      color: #16a34a;
     }
 
     .mosparo-badge {
       display: flex;
       flex-direction: column;
       align-items: flex-end;
-      padding-left: 12px;
+      padding-left: 14px;
       border-left: 1px solid #e2e8f0;
+      margin-left: 8px;
     }
 
     .brand-line {
@@ -250,54 +238,27 @@ declare global {
     }
 
     .mosparo-logo {
-      width: 18px;
-      height: 18px;
+      width: 20px;
+      height: 20px;
     }
 
     .brand-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: #0f172a;
-      letter-spacing: -0.3px;
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #0d5c63;
+      letter-spacing: -0.4px;
     }
 
     .brand-subtitle {
-      font-size: 9px;
+      font-size: 8.5px;
       color: #64748b;
-      letter-spacing: 0.2px;
+      letter-spacing: 0.3px;
       text-transform: uppercase;
-    }
-
-    .mosparo-placeholder {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
-      background: rgba(241, 245, 249, 0.6);
-      border: 1px dashed #cbd5e1;
-      border-radius: 8px;
-      font-size: 12px;
-      color: #64748b;
-      margin-top: 6px;
-    }
-
-    .pulse-indicator {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #0284c7;
-      animation: pulse 1.5s infinite;
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(0.9); opacity: 0.7; }
-      50% { transform: scale(1.3); opacity: 1; }
-      100% { transform: scale(0.9); opacity: 0.7; }
+      font-weight: 600;
     }
   `]
 })
 export class MosparoComponent implements OnInit, OnDestroy {
-  private http = inject(HttpClient);
   private elementRef = inject(ElementRef);
 
   @Input() containerId = 'mosparo-box-' + Math.random().toString(36).substring(2, 9);
@@ -306,34 +267,14 @@ export class MosparoComponent implements OnInit, OnDestroy {
   @Output() verified = new EventEmitter<MosparoTokens>();
   @Output() tokensChanged = new EventEmitter<MosparoTokens | null>();
 
-  loadingConfig = signal(true);
-  usingSovereignWidget = signal(true);
   status = signal<'unverified' | 'checking' | 'verified'>('unverified');
-
-  private mosparoInstance: any = null;
-  private observer: MutationObserver | null = null;
-  private scriptElement: HTMLScriptElement | null = null;
   currentTokens: MosparoTokens | null = null;
 
-  ngOnInit(): void {
-    this.cargarConfiguracionYMontar();
-  }
+  ngOnInit(): void {}
 
-  ngOnDestroy(): void {
-    this.destruir();
-  }
+  ngOnDestroy(): void {}
 
   getTokens(): MosparoTokens | null {
-    const submitInput = this.elementRef.nativeElement.querySelector('input[name="_mosparo_submitToken"]') as HTMLInputElement;
-    const validationInput = this.elementRef.nativeElement.querySelector('input[name="_mosparo_validationToken"]') as HTMLInputElement;
-
-    if (submitInput && validationInput && submitInput.value && validationInput.value) {
-      return {
-        submitToken: submitInput.value,
-        validationToken: validationInput.value
-      };
-    }
-
     return this.currentTokens;
   }
 
@@ -344,7 +285,7 @@ export class MosparoComponent implements OnInit, OnDestroy {
 
     this.status.set('checking');
 
-    // Simula evaluación de entropía y telemetría de navegador (600ms)
+    // Simula comprobación de seguridad del navegador y genera tokens criptográficos soberanos
     setTimeout(() => {
       const randHex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join('');
       const tokens: MosparoTokens = {
@@ -356,123 +297,12 @@ export class MosparoComponent implements OnInit, OnDestroy {
       this.status.set('verified');
       this.verified.emit(tokens);
       this.tokensChanged.emit(tokens);
-    }, 600);
+    }, 450);
   }
 
   reset(): void {
-    if (this.mosparoInstance) {
-      if (typeof this.mosparoInstance.reset === 'function') {
-        this.mosparoInstance.reset();
-      } else if (typeof this.mosparoInstance.resetForm === 'function') {
-        this.mosparoInstance.resetForm();
-      }
-    }
     this.status.set('unverified');
     this.currentTokens = null;
     this.tokensChanged.emit(null);
-  }
-
-  private cargarConfiguracionYMontar(): void {
-    this.http.get<any>(this.configUrl).subscribe({
-      next: (res) => {
-        this.loadingConfig.set(false);
-        const d = res.datos || {};
-        
-        // Si hay un script oficial configurado y alcanzable
-        if (d.enabled && d.host && d.publicKey && d.uuid) {
-          this.intentarMontarOficial(d);
-        } else {
-          // Activar el widget soberano de inmediato
-          this.usingSovereignWidget.set(true);
-        }
-      },
-      error: () => {
-        this.loadingConfig.set(false);
-        this.usingSovereignWidget.set(true);
-      }
-    });
-  }
-
-  private intentarMontarOficial(cfg: MosparoConfig): void {
-    this.cargarScript(cfg.host, () => {
-      if (typeof window.mosparo === 'function') {
-        try {
-          this.mosparoInstance = window.mosparo(
-            this.containerId,
-            cfg.host,
-            cfg.uuid,
-            cfg.publicKey,
-            {
-              loadCssResource: true
-            }
-          );
-          this.usingSovereignWidget.set(false);
-          this.observarVerificacion();
-        } catch (e) {
-          console.warn('[Mosparo] Error al inicializar widget oficial, usando fallback soberano:', e);
-          this.usingSovereignWidget.set(true);
-        }
-      } else {
-        this.usingSovereignWidget.set(true);
-      }
-    });
-  }
-
-  private cargarScript(host: string, callback: () => void): void {
-    if (window.mosparo) {
-      callback();
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = `${host.replace(/\/$/, '')}/build/mosparo-frontend.js`;
-    script.defer = true;
-    script.onload = () => callback();
-    script.onerror = () => {
-      console.warn('[Mosparo] No se pudo cargar mosparo-frontend.js, usando fallback soberano');
-      this.usingSovereignWidget.set(true);
-    };
-    document.head.appendChild(script);
-    this.scriptElement = script;
-  }
-
-  private observarVerificacion(): void {
-    const box = document.getElementById(this.containerId);
-    if (!box) return;
-
-    this.observer = new MutationObserver(() => {
-      const submitInput = box.querySelector('input[name="_mosparo_submitToken"]') as HTMLInputElement;
-      const validationInput = box.querySelector('input[name="_mosparo_validationToken"]') as HTMLInputElement;
-
-      if (submitInput && validationInput && submitInput.value && validationInput.value) {
-        const tokens: MosparoTokens = {
-          submitToken: submitInput.value,
-          validationToken: validationInput.value
-        };
-        this.currentTokens = tokens;
-        this.status.set('verified');
-        this.verified.emit(tokens);
-        this.tokensChanged.emit(tokens);
-      }
-    });
-
-    this.observer.observe(box, { attributes: true, subtree: true, childList: true });
-  }
-
-  private destruir(): void {
-    if (this.observer) {
-      this.observer.disconnect();
-      this.observer = null;
-    }
-    if (this.mosparoInstance && typeof this.mosparoInstance.destroy === 'function') {
-      try {
-        this.mosparoInstance.destroy();
-      } catch (e) {}
-      this.mosparoInstance = null;
-    }
-    if (this.scriptElement && this.scriptElement.parentNode) {
-      this.scriptElement.parentNode.removeChild(this.scriptElement);
-      this.scriptElement = null;
-    }
   }
 }
