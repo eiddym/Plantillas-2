@@ -190,18 +190,33 @@ import { CatalogoDialogComponent } from './catalogo-dialog.component';
     .table-responsive {
       width: 100%;
       overflow-x: auto;
+      padding: 12px 16px 0;
+      box-sizing: border-box;
     }
 
     .catalogos-table {
       width: 100%;
+      border-collapse: separate !important;
+      border-spacing: 0 !important;
 
       th.mat-mdc-header-cell {
-        background-color: #0f2027 !important;
+        background: linear-gradient(180deg, #0b2e26 0%, #07221c 100%) !important;
         color: #ffffff !important;
         font-size: 12px;
         font-weight: 700;
         letter-spacing: 0.6px;
         padding: 14px 16px;
+        border-bottom: none !important;
+      }
+
+      th.mat-mdc-header-cell:first-child {
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+      }
+
+      th.mat-mdc-header-cell:last-child {
+        border-top-right-radius: 12px;
+        border-bottom-right-radius: 12px;
       }
 
       td.mat-mdc-cell {

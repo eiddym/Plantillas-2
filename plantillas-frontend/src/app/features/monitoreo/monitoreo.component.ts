@@ -878,7 +878,7 @@ export type MonitoreoTab = 'global' | 'unidad' | 'personal' | 'historico';
     /* GRÁFICOS */
     .charts-grid-2 {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 20px;
       margin-bottom: 24px;
     }
@@ -1454,11 +1454,11 @@ export class MonitoreoComponent implements OnInit {
             borderColor: '#334155',
             textStyle: { color: '#f8fafc', fontSize: 12 }
           },
-          grid: { top: 28, left: '3%', right: '4%', bottom: '8%', containLabel: true },
+          grid: { top: 28, left: '5%', right: '5%', bottom: '8%', containLabel: true },
           xAxis: {
             type: 'category',
             data: ['Emitidos CITE', 'Pend. Firma', 'Firmados Token', 'Aprobados CD', 'Custodia Inst.'],
-            axisLabel: { color: '#334155', fontSize: 11, fontWeight: 'bold', interval: 0, rotate: 12 }
+            axisLabel: { color: '#334155', fontSize: 11, fontWeight: 'bold', interval: 0, rotate: 0 }
           },
           yAxis: {
             type: 'value',

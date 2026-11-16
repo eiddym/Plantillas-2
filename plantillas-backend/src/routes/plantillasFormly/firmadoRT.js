@@ -223,13 +223,17 @@ module.exports = app => {
   app.get('/api/v1/documento/firmar', filtros, (req, res) => {
     let order;
     const usuario = req.body.audit_usuario.id_usuario;
-    const estadosValidos = ['CERRADO'];
+    const estadosValidos = ['CERRADO', 'APROBADO'];
     const opcionesDocumento = {
-      attributes: ['id_documento', 'nombre', 'nombre_plantilla', 'fecha', 'estado', 'impreso', '_fecha_creacion', '_fecha_modificacion', '_usuario_creacion', 'firmado', 'firmaron'],
+      attributes: [
+        'id_documento', 'nombre', 'nombre_plantilla', 'referencia', 'clasificacion',
+        'de', 'para', 'via', 'copia', 'plantilla_valor', 'fecha', 'estado', 'impreso',
+        '_fecha_creacion', '_fecha_modificacion', '_usuario_creacion', 'firmado', 'firmaron'
+      ],
       where: {
         firmante_actual: usuario,
         estado: { [Op.in]: estadosValidos },
-        firmado: false,
+        [Op.or]: [{ firmado: false }, { firmado: null }],
         nombre: { [Op.like]: '%/%' }
       },
     };
@@ -241,8 +245,8 @@ module.exports = app => {
       req.query.order = (req.query.order.charAt(0)=='-')? req.query.order.substring(1,req.query.order.length) : req.query.order;
       opcionesDocumento.order = [[req.query.order, order]];
     }
-    if(req.query.filter) {
-      opcionesDocumento.where[Op.or] = req.xfilter;
+    if(req.query.filter && req.xfilter) {
+      opcionesDocumento.where[Op.and] = [{ [Op.or]: req.xfilter }];
     }
     Documento.findAndCountAll(opcionesDocumento)
     .then(resp => {
@@ -255,7 +259,7 @@ module.exports = app => {
   });
 
   function filtros (req,res,next){
-      if(req.query.filter!='')
+      if(req.query && req.query.filter && String(req.query.filter).trim() !== '')
         Util.consulta(req,res,next,Documento);
       else next();
   }

@@ -92,8 +92,9 @@ import { CambioUsuarioDialogComponent } from '../cambio-usuario-dialog/cambio-us
                 <div class="category-subitems" *ngIf="isGroupExpanded(group.label)">
                   <ng-container *ngFor="let sub of group.items">
                     <a 
-                      [routerLink]="'/' + sub.url" 
+                      [routerLink]="'/' + (sub.url || 'dashboard')" 
                       routerLinkActive="active-subitem" 
+                      [routerLinkActiveOptions]="{ exact: true }"
                       (click)="onNavItemClick()" 
                       class="subitem-link"
                     >
@@ -712,12 +713,15 @@ export class LayoutComponent implements OnInit, OnDestroy {
     if (url.startsWith('/documentos')) return 'Documentos';
     if (url.startsWith('/plantillas')) return 'Plantillas';
     if (url.startsWith('/aprobacion')) return 'Pendientes';
+    if (url.startsWith('/en_curso')) return 'Documentos en Curso';
     if (url.startsWith('/firmar')) return 'Firmar';
+    if (url.startsWith('/aprobar_documento')) return 'Aprobar con CD';
     if (url.startsWith('/archivo')) return 'Archivo';
     if (url.startsWith('/usuario')) return 'Usuarios';
     if (url.startsWith('/rol')) return 'Roles';
     if (url.startsWith('/unidad')) return 'Unidades';
     if (url.startsWith('/menu')) return 'Menús';
+    if (url.startsWith('/admin/firma')) return 'Método de Firma';
     if (url.startsWith('/catalogos')) return 'Catálogos';
     if (url.startsWith('/compartidos')) return 'Catálogos Compartidos';
     if (url.startsWith('/contactos')) return 'Contactos';
@@ -841,7 +845,62 @@ export class LayoutComponent implements OnInit, OnDestroy {
       }
     }
 
-    // 3. Administración: asegurar Método de Firma
+    // 3. Saneamiento canónico de rutas/íconos por etiqueta (repara sesiones previas en localStorage)
+    const canonicalByGroup: Record<string, Record<string, { label: string; url: string; icon: string }>> = {
+      'CONFIGURACIÓN': {
+        'PLANTILLAS': { label: 'PLANTILLAS', url: 'plantillas', icon: 'settings' },
+        'CONTACTOS': { label: 'CONTACTOS', url: 'contactos', icon: 'person' }
+      },
+      'ADMINISTRACIÓN': {
+        'USUARIOS': { label: 'USUARIOS', url: 'usuario', icon: 'group' },
+        'ROLES': { label: 'ROLES', url: 'rol', icon: 'security' },
+        'MENÚS': { label: 'MENÚS', url: 'menu', icon: 'menu' },
+        'MENUS': { label: 'MENÚS', url: 'menu', icon: 'menu' },
+        'UNIDADES': { label: 'UNIDADES', url: 'unidad', icon: 'business' },
+        'MÉTODO DE FIRMA': { label: 'MÉTODO DE FIRMA', url: 'admin/firma', icon: 'verified' },
+        'METODO DE FIRMA': { label: 'MÉTODO DE FIRMA', url: 'admin/firma', icon: 'verified' }
+      },
+      'DOCUMENTOS': {
+        'MIS DOCUMENTOS': { label: 'MIS DOCUMENTOS', url: 'documentos', icon: 'description' },
+        'PENDIENTES': { label: 'PENDIENTES', url: 'aprobacion', icon: 'low_priority' },
+        'DOCUMENTOS PENDIENTES': { label: 'PENDIENTES', url: 'aprobacion', icon: 'low_priority' },
+        'IMPRIMIR DOCUMENTOS': { label: 'IMPRIMIR DOCUMENTOS', url: 'impresion', icon: 'print' },
+        'MONITOREO': { label: 'MONITOREO', url: 'monitoreo', icon: 'speed' },
+        'FIRMAR': { label: 'FIRMAR', url: 'firmar', icon: 'edit' },
+        'APROBAR CON CD': { label: 'APROBAR CON CD', url: 'aprobar_documento', icon: 'fingerprint' },
+        'EN CURSO': { label: 'EN CURSO', url: 'en_curso', icon: 'autorenew' }
+      },
+      'CATALOGOS': {
+        'MIS CATALOGOS': { label: 'MIS CATALOGOS', url: 'catalogos', icon: 'folder' },
+        'MIS CATÁLOGOS': { label: 'MIS CATALOGOS', url: 'catalogos', icon: 'folder' },
+        'COMPARTIDOS': { label: 'COMPARTIDOS', url: 'compartidos', icon: 'share' }
+      }
+    };
+
+    for (const grp of enrichedMenus) {
+      const grpKey = String(grp.label || '').trim().toUpperCase();
+      const mapGrupo = canonicalByGroup[grpKey];
+      if (!mapGrupo || !Array.isArray(grp.submenu)) continue;
+
+      const vistos = new Set<string>();
+      const normalizados: Array<{ label: string; url: string; icon: string }> = [];
+
+      for (const s of grp.submenu) {
+        const subKey = String(s.label || '').trim().toUpperCase();
+        if (grpKey === 'DOCUMENTOS' && subKey === 'DERIVADOS') continue;
+        const canon = mapGrupo[subKey];
+        const entry = canon
+          ? { label: canon.label, url: canon.url, icon: canon.icon }
+          : { label: s.label, url: s.url, icon: subIconMap[s.url] || s.icon || 'arrow_right' };
+        if (entry.url && !vistos.has(entry.url)) {
+          vistos.add(entry.url);
+          normalizados.push(entry);
+        }
+      }
+      grp.submenu = normalizados;
+    }
+
+    // 4. Administración: asegurar Método de Firma sin duplicar
     const adminGroup = enrichedMenus.find((m: any) => m.label?.toUpperCase() === 'ADMINISTRACIÓN');
     if (adminGroup && adminGroup.submenu) {
       const tieneFirma = adminGroup.submenu.some((s: any) => s.url === 'admin/firma' || s.label?.toUpperCase().includes('FIRMA'));
@@ -850,7 +909,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
       }
     }
 
-    // 4. Documentos: asegurar En Curso y Aprobar con CD
+    // 5. Documentos: asegurar En Curso y Aprobar con CD sin duplicar
     const docsGroup = enrichedMenus.find((m: any) => m.label?.toUpperCase() === 'DOCUMENTOS');
     if (docsGroup && docsGroup.submenu) {
       if (!docsGroup.submenu.some((s: any) => s.url === 'en_curso')) {

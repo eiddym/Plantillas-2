@@ -1238,8 +1238,11 @@ const formatoNombreDoc = (pCadena) => {
 };
 
 const consulta = (req,res,next, pModelo) => {
+  if (!req.query || !req.query.filter || String(req.query.filter).trim() === '') {
+    return next();
+  }
   console.log('FILTRANDO FILTER')
-  const attributes = req.query.fields.split(',') || null;
+  const attributes = (req.query && req.query.fields) ? String(req.query.fields).split(',') : null;
   if(req.query.filter !== undefined ){
     pModelo.describe().then( fields => {
       const xfilter = [];

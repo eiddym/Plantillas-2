@@ -122,7 +122,8 @@ module.exports = app => {
           COUNT(*) FILTER (WHERE d.estado IN ('CERRADO', 'APROBADO') AND COALESCE(d.aprobado_cd, false) = true) AS aprobados_cd,
           COUNT(*) AS total_global
         FROM documento d
-        WHERE d.estado != 'ELIMINADO';
+        WHERE d.estado != 'ELIMINADO'
+          AND (${SQL_NO_EXTERNO_INST});
       `;
       const [ciclo] = await sequelize.query(qryCiclo, { type: sequelize.QueryTypes.SELECT });
 
@@ -154,6 +155,7 @@ module.exports = app => {
           COUNT(*) AS total
         FROM documento d
         WHERE d.estado != 'ELIMINADO'
+          AND (${SQL_NO_EXTERNO_INST})
         GROUP BY COALESCE(NULLIF(TRIM(d.nombre_plantilla), ''), 'Documento General')
         ORDER BY total DESC, tipo ASC
         LIMIT 10;
@@ -169,7 +171,9 @@ module.exports = app => {
           COUNT(*) FILTER (WHERE ${SQL_PEND_FIRMA}) AS pendientes_firma,
           COUNT(*) FILTER (WHERE ${SQL_CONCLUIDO}) AS concluidos
         FROM documento d
-        WHERE d._fecha_creacion >= (NOW() - INTERVAL '6 months') AND d.estado != 'ELIMINADO'
+        WHERE d._fecha_creacion >= (NOW() - INTERVAL '6 months')
+          AND d.estado != 'ELIMINADO'
+          AND (${SQL_NO_EXTERNO_INST})
         GROUP BY TO_CHAR(d._fecha_creacion, 'YYYY-MM')
         ORDER BY mes ASC;
       `;

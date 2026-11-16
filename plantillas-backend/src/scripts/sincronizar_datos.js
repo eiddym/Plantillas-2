@@ -100,25 +100,25 @@ async function sincronizar() {
     const menusData = JSON.parse(fs.readFileSync(path.join(seedDir, 'menus.json'), 'utf8'));
     let mInsertados = 0;
     for (const m of menusData) {
-      const existe = await models.menu.findOne({
-        where: {
-          [Op.or]: [
-            { id_menu: m.id_menu },
-            { nombre: m.nombre }
-          ]
-        }
-      });
+      let existe = await models.menu.findByPk(m.id_menu);
+      if (!existe) {
+        existe = await models.menu.findOne({ where: { nombre: m.nombre } });
+      }
       if (existe) {
         await existe.update({
-          descripcion: m.descripcion || existe.descripcion,
-          icono: m.icono || existe.icono,
+          nombre: m.nombre,
+          fid_menu_padre: m.fid_menu_padre !== undefined ? m.fid_menu_padre : null,
+          descripcion: m.descripcion !== undefined ? m.descripcion : existe.descripcion,
+          icono: m.icono !== undefined ? m.icono : existe.icono,
           ruta: m.ruta !== undefined ? m.ruta : existe.ruta,
-          orden: m.orden || existe.orden,
-          estado: m.estado || existe.estado
+          orden: m.orden !== undefined ? m.orden : existe.orden,
+          estado: m.estado || 'ACTIVO',
+          _usuario_modificacion: 1
         });
       } else {
         await models.menu.create({
           id_menu: m.id_menu,
+          fid_menu_padre: m.fid_menu_padre !== undefined ? m.fid_menu_padre : null,
           nombre: m.nombre,
           descripcion: m.descripcion,
           icono: m.icono,
@@ -131,6 +131,13 @@ async function sincronizar() {
         mInsertados++;
       }
     }
+    await sequelize.query(`UPDATE rol_menu SET estado = 'INACTIVO', _usuario_modificacion = 1 WHERE fid_menu = 12;`);
+    await sequelize.query(`
+      UPDATE rol_menu
+      SET estado = 'ACTIVO', _usuario_modificacion = 1
+      WHERE fid_rol IN (1, 2, 3, 4, 8)
+        AND fid_menu IN (8, 9, 10, 11, 13, 14, 15, 16, 18, 19, 20);
+    `);
     console.log(`[Menús] Procesados: ${menusData.length} (Nuevos: ${mInsertados})`);
 
     // 4. SINCRONIZAR USUARIOS BASE (sys_default y 10794552-1J Ciudadanía Digital Demo AGETIC)

@@ -458,7 +458,7 @@ module.exports = app => {
   });
 
   function filtros (req,res,next){
-      if(req.query.filter!='')
+      if(req.query && req.query.filter && String(req.query.filter).trim() !== '')
         Util.consulta(req,res,next,Documento);
       else next();
   }
